@@ -1,0 +1,9 @@
+[package]
+name = "efi"
+version = "0.1.0"
+authors = ["Gurinder Singh <frederick.the.fool@gmail.com>"]
+
+[dependencies.failure]
+version = "0.1.1"
+default-features = false
+features = ["derive"]
