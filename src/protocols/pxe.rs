@@ -78,6 +78,8 @@ impl PxeBaseCodeProtocol {
     }
 }
 
+pub const BOOT_LAYER_INITIAL: u16 = 0;
+
 #[repr(u16)]
 pub enum BootType {
     Bootstrap = 0,
