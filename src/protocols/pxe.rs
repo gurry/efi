@@ -1,7 +1,7 @@
 use ::{Result, Guid, IpAddress, to_boolean, from_boolean, to_res};
 use protocols::Protocol;
 use ffi::UINT16;
-use core::mem;
+use core::{mem, ptr};
 
 
 use ::ffi::pxe::{
@@ -60,9 +60,11 @@ impl PxeBaseCodeProtocol {
         to_res((), status)
     }
 
-    pub fn discover(&self, boot_type: BootType, layer: u16, use_bis: bool, info: &DiscoverInfo) -> Result<()> {
+    pub fn discover(&self, boot_type: BootType, layer: u16, use_bis: bool, info: Option<&DiscoverInfo>) -> Result<()> {
         let layer_ptr = &layer as *const UINT16;
-        let status = unsafe { ((*self.0).Discover)(self.0, mem::transmute(boot_type), layer_ptr, to_boolean(use_bis), info.ffi_type()) };
+        let info_ptr = if let Some(info) = info { unsafe { info.ffi_type() } } else { ptr::null() };
+
+        let status = unsafe { ((*self.0).Discover)(self.0, mem::transmute(boot_type), layer_ptr, to_boolean(use_bis), info_ptr) };
         to_res((), status)
     }
 
