@@ -60,12 +60,12 @@ impl PxeBaseCodeProtocol {
         to_res((), status)
     }
 
-    pub fn discover(&self, boot_type: BootType, layer: u16, use_bis: bool, info: Option<&DiscoverInfo>) -> Result<()> {
+    pub fn discover(&self, boot_type: BootType, layer: u16, use_bis: bool, info: Option<&DiscoverInfo>) -> Result<u16> {
         let layer_ptr = &layer as *const UINT16;
         let info_ptr = if let Some(info) = info { unsafe { info.ffi_type() } } else { ptr::null() };
 
         let status = unsafe { ((*self.0).Discover)(self.0, mem::transmute(boot_type), layer_ptr, to_boolean(use_bis), info_ptr) };
-        to_res((), status)
+        to_res(layer, status)
     }
 
     pub fn mtftp() -> Result<()> {
