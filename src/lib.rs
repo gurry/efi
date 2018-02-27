@@ -183,8 +183,6 @@ pub struct WithWarning<T> {
     pub warning: Option<EfiWarning>
 }
 
-// TODO: Create a common macro or something which can be used everywhere to go from EFI_STATUS+value to Result
-// Right now we having to write the same match statement everywhere
 pub type Result<T> = core::result::Result<T, EfiError>;
 
 pub type IpAddress = ffi::EFI_IP_ADDRESS;
