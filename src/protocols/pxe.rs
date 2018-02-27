@@ -162,6 +162,7 @@ pub struct SrvList {
     curr_pos: u32
 }
 
+#[repr(C)]
 pub struct SrvListEntry(EFI_PXE_BASE_CODE_SRVLIST);
 
 impl SrvListEntry {
