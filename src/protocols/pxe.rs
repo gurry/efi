@@ -1,7 +1,7 @@
 use ::{Result, Guid, IpAddress, to_boolean, from_boolean, to_res};
 use protocols::Protocol;
 use ffi::UINT16;
-use core::{slice, marker::PhantomData, mem};
+use core::mem;
 
 
 use ::ffi::pxe::{
@@ -105,7 +105,7 @@ pub enum BootType {
 
 pub struct DiscoverInfo<'a> {
     inner: EFI_PXE_BASE_CODE_DISCOVER_INFO,
-    phantom: PhantomData<&'a EFI_PXE_BASE_CODE_SRVLIST>
+    srvlist: &'a[SrvListEntry]
 }
 
 impl<'a> DiscoverInfo<'a> {
@@ -120,7 +120,7 @@ impl<'a> DiscoverInfo<'a> {
                 IpCnt: srvlist.len() as u16, // TODO: can we replace this cast with something safer?
                 SrvList: unsafe { mem::transmute(srvlist.as_ptr()) } // Here be dragons
             },
-            phantom: PhantomData
+            srvlist
         }
     }
 
@@ -144,13 +144,8 @@ impl<'a> DiscoverInfo<'a> {
         self.inner.ServerMCastIp
     }
 
-    pub fn ip_cnt(&self) -> u16 {
-        self.inner.IpCnt
-    }
-
     pub fn srvlist(&self) -> &'a[SrvListEntry] {
-        // TODO: can we replace the cast to usize in the line below with something safer?
-        unsafe { slice::from_raw_parts(mem::transmute(self.inner.SrvList), self.inner.IpCnt as usize) } // Broken glass all over. Tread carefully!
+        self.srvlist
     }
 
     unsafe fn ffi_type(&self) -> *const EFI_PXE_BASE_CODE_DISCOVER_INFO {
