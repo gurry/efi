@@ -1,6 +1,6 @@
-use ::{Result, Guid, EfiError, IpAddress, to_boolean, from_boolean};
+use ::{Result, Guid, IpAddress, to_boolean, from_boolean, to_res};
 use protocols::Protocol;
-use ffi::{EFI_SUCCESS, UINT16};
+use ffi::UINT16;
 use core::{slice, marker::PhantomData, mem};
 
 
@@ -47,40 +47,23 @@ impl From<*const EFI_PXE_BASE_CODE_PROTOCOL> for PxeBaseCodeProtocol {
 impl PxeBaseCodeProtocol {
     pub fn start(&self, use_ipv6: bool) -> Result<()> {
         let status = unsafe { ((*self.0).Start)(self.0, to_boolean(use_ipv6)) };
-
-        match status {
-            EFI_SUCCESS => Ok(()),
-            s => Err(EfiError::from(s))
-        }
+        to_res((), status)
     }
 
     pub fn stop(&self) -> Result<()> {
         let status = unsafe { ((*self.0).Stop)(self.0) };
-
-        match status {
-            EFI_SUCCESS => Ok(()),
-            s => Err(EfiError::from(s))
-        }
+        to_res((), status)
     }
 
     pub fn dhcp(&self, sort_offers: bool) -> Result<()> {
         let status = unsafe { ((*self.0).Dhcp)(self.0, to_boolean(sort_offers)) };
-
-        match status {
-            EFI_SUCCESS => Ok(()),
-            s => Err(EfiError::from(s))
-        }
-
+        to_res((), status)
     }
 
     pub fn discover(&self, boot_type: BootType, layer: u16, use_bis: bool, info: &DiscoverInfo) -> Result<()> {
         let layer_ptr = &layer as *const UINT16;
         let status = unsafe { ((*self.0).Discover)(self.0, mem::transmute(boot_type), layer_ptr, to_boolean(use_bis), info.ffi_type()) };
-
-        match status {
-            EFI_SUCCESS => Ok(()),
-            s => Err(EfiError::from(s))
-        }
+        to_res((), status)
     }
 
     pub fn mtftp() -> Result<()> {

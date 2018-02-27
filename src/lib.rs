@@ -164,6 +164,13 @@ pub enum EfiWarning {
     WriteFailure = ffi::EFI_WARN_WRITE_FAILURE, // The handle was closed, but the data to the file was not flushed properly.
     BufferTooSmall = ffi::EFI_WARN_BUFFER_TOO_SMALL, // The resulting buffer was too small, and the data was truncated to the buffer size.
     StaleData = ffi::EFI_WARN_STALE_DATA, // The data has not been updated within the timeframe set by local policy for this type of data.
+    UnrecognizedWarning = <EFI_STATUS>::max_value()
+}
+
+impl From<EFI_STATUS> for EfiWarning {
+    fn from(status: ffi::EFI_STATUS) -> Self {
+        if ffi::IsWarning(status) { unsafe { transmute(status) } } else { EfiWarning::UnrecognizedWarning }
+    }
 }
 
 #[derive(Debug, Fail)]
@@ -193,6 +200,21 @@ fn to_boolean(val: bool) -> ffi::BOOLEAN {
 fn from_boolean(val: ffi::BOOLEAN) -> bool {
     val != 0
 }
+
+fn to_res<T>(value: T, status: ffi::EFI_STATUS) -> Result<T> {
+    match ffi::StatusType(status) {
+        ffi::EFI_STATUS_TYPE::SUCCESS => Ok(value),
+        _ => Err(EfiError::from(status))
+    }
+}
+
+// fn to_res_with_warning<T>(value: T, status: ffi::EFI_STATUS) -> Result<WithWarning<T>> {
+//     match ffi::StatusType(status) {
+//         ffi::EFI_STATUS_TYPE::SUCCESS => Ok(WithWarning { value, warning: None }),
+//         ffi::EFI_STATUS_TYPE::WARNING => Ok(WithWarning { value, warning: Some(EfiWarning::from(status))}),
+//         ffi::EFI_STATUS_TYPE::ERROR => Err(EfiError::from(status))
+//     }
+// }
 
 pub struct EfiSystemTable(pub *const EFI_SYSTEM_TABLE);
 
