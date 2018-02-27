@@ -1,5 +1,5 @@
-use ffi::{EFI_SUCCESS, boot_services::EFI_BOOT_SERVICES};
-use ::{Result, Guid, Void, EfiError};
+use ffi::{boot_services::EFI_BOOT_SERVICES};
+use ::{Result, Guid, Void, to_res};
 use protocols::Protocol;
 use core::{ptr, mem, convert::From};
 
@@ -16,12 +16,7 @@ impl BootServices {
             ((*self.0).LocateProtocol)(guid_ptr, registration, mem::transmute::<&mut *mut T::FfiType, *mut *mut Void>(&mut protocol))
         };
 
-        match status {
-            EFI_SUCCESS => Ok(T::from(protocol)),
-            _ => { 
-                Err(EfiError::from(status)) 
-            }
-        }
+        to_res(T::from(protocol), status)
     }
 }
 
