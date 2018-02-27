@@ -6,7 +6,7 @@ use core::{ptr, mem, convert::From};
 pub struct BootServices(*const EFI_BOOT_SERVICES);
 
 impl BootServices {
-
+    // TODO: add the 'registration' argument also to this method
     pub fn locate_protocol<T: Protocol>(&self) -> Result<T> {
         let guid_ptr = &T::guid() as *const Guid;
         let registration: *mut Void = ptr::null_mut();
