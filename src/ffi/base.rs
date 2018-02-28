@@ -62,7 +62,7 @@ pub union EFI_IP_ADDRESS {
 // Had to implement by hand 'cause Debug derive not allowed for unions
 impl fmt::Debug for EFI_IP_ADDRESS {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", unsafe { self.Addr })
+        write!(f, "EFI_IP_ADDRESS {{ Addr: {:?} }}", unsafe { self.Addr })
     }
 }
 

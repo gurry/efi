@@ -109,6 +109,7 @@ pub struct EFI_PXE_BASE_CODE_DHCPV4_PACKET {
 
 impl fmt::Debug for EFI_PXE_BASE_CODE_DHCPV4_PACKET {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "EFI_PXE_BASE_CODE_DHCPV4_PACKET: {{ ")?;
         write!(f, "BootpOpcode: {:?}, BootpHwType: {:?}, BootpHwAddrLen: {:?}, BootpGateHops: {:?}, BootpIdent: {:?}, BootpSeconds: {:?}, BootpFlags: {:?}", self.BootpOpcode, self.BootpHwType, self.BootpHwAddrLen, self.BootpGateHops, self.BootpIdent, self.BootpSeconds, self.BootpFlags)?;
         write!(f, ", BootpCiAddr: ")?;
         self.BootpCiAddr.fmt(f)?;
@@ -127,7 +128,9 @@ impl fmt::Debug for EFI_PXE_BASE_CODE_DHCPV4_PACKET {
         write!(f, ", DhcpMagik: ")?;
         self.DhcpMagik.fmt(f)?;
         write!(f, ", DhcpOptions: ")?;
-        self.DhcpOptions.fmt(f)
+        self.DhcpOptions.fmt(f)?;
+        write!(f, " }}")
+
     }
 }
 
@@ -140,8 +143,10 @@ pub struct EFI_PXE_BASE_CODE_DHCPV6_PACKET {
 
 impl fmt::Debug for EFI_PXE_BASE_CODE_DHCPV6_PACKET {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "EFI_PXE_BASE_CODE_DHCPV6_PACKET : {{ ")?;
         write!(f, "BitField: {:?}, DhcpOptions: ", self.BitField)?;
-        self.DhcpOptions.fmt(f)
+        self.DhcpOptions.fmt(f)?;
+        write!(f, " }}")
     }
 }
 
@@ -185,7 +190,7 @@ pub union TempUnionIcmpErr {
 
 impl fmt::Debug for TempUnionIcmpErr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", unsafe { self.reserved })
+        write!(f, "TempUnionIcmpErr: {{ {:?} }}", unsafe { self.reserved })
     }
 }
 
@@ -201,8 +206,9 @@ pub struct EFI_PXE_BASE_CODE_ICMP_ERROR {
 
 impl fmt::Debug for EFI_PXE_BASE_CODE_ICMP_ERROR {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Type: {:?}, Code: {:?}, Checksum: {:?}, u: {:?}, Data: ", self.Type, self.Code, self.Checksum, self.u)?;
-        self.Data.fmt(f)
+        write!(f, "EFI_PXE_BASE_CODE_ICMP_ERROR: {{ Type: {:?}, Code: {:?}, Checksum: {:?}, u: {:?}, Data: ", self.Type, self.Code, self.Checksum, self.u)?;
+        self.Data.fmt(f)?;
+        write!(f, " }}")
     }
 }
 
@@ -214,8 +220,9 @@ pub struct EFI_PXE_BASE_CODE_TFTP_ERROR {
 
 impl fmt::Debug for EFI_PXE_BASE_CODE_TFTP_ERROR   {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "ErrorCode: {:?}, ErrorString: ", self.ErrorCode)?;
-        self.ErrorString.fmt(f)
+        write!(f, "EFI_PXE_BASE_CODE_TFTP_ERROR: {{ ErrorCode: {:?}, ErrorString: ", self.ErrorCode)?;
+        self.ErrorString.fmt(f)?;
+        write!(f, " }}")
     }
 }
 
