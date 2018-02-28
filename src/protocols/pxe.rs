@@ -347,11 +347,11 @@ impl<'a> Packet<'a> {
         unsafe { &(*self.0).Raw }
     }
 
-    pub fn dhcpv4(&self) -> Dhcpv4Packet {
+    pub fn as_dhcpv4(&self) -> Dhcpv4Packet {
         unsafe { Dhcpv4Packet(&(*self.0).Dhcpv4) }
     }
 
-    pub fn dhcpv6(&self) -> Dhcpv6Packet {
+    pub fn as_dhcpv6(&self) -> Dhcpv6Packet {
         unsafe { Dhcpv6Packet(&(*self.0).Dhcpv6) }
     }
 }
