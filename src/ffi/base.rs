@@ -1,5 +1,5 @@
 
-use core::mem;
+use core::{mem, fmt};
 
 /// EFI Time Abstraction:
 ///  Year:       1900 - 9999
@@ -11,6 +11,7 @@ use core::mem;
 ///  Nanosecond: 0 - 999,999,999
 ///  TimeZone:   -1440 to 1440 or 2047
 #[repr(C)]
+#[derive(Debug)]
 pub struct EFI_Time {
   Year:   UINT16,
   Month: UINT8,
@@ -27,7 +28,7 @@ pub struct EFI_Time {
 
 
 /// 4-byte buffer. An IPv4 internet protocol address.
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 #[repr(C)]
 pub struct EFI_IPv4_ADDRESS {
   pub Addr: [UINT8; 4],
@@ -35,13 +36,14 @@ pub struct EFI_IPv4_ADDRESS {
 
 
 /// 16-byte buffer. An IPv6 internet protocol address.
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 #[repr(C)]
 pub struct EFI_IPv6_ADDRESS {
   pub Addr: [UINT8; 16],
 }
 
 /// 32-byte buffer containing a network Media Access Control address.
+#[derive(Debug)]
 #[repr(C)]
 pub struct EFI_MAC_ADDRESS {
   pub Addr: [UINT8; 32],
@@ -57,6 +59,14 @@ pub union EFI_IP_ADDRESS {
   pub v6: EFI_IPv6_ADDRESS,
 }
 
+// Had to implement by hand 'cause Debug derive not allowed for unions
+impl fmt::Debug for EFI_IP_ADDRESS {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", unsafe { self.Addr })
+    }
+}
+
+#[derive(Debug)]
 #[repr(C)]
 pub struct EFI_TABLE_HEADER {
     Signature : UINT64,
@@ -111,7 +121,7 @@ pub const EFI_WARN_WRITE_FAILURE: UINTN = 3; // The handle was closed, but the d
 pub const EFI_WARN_BUFFER_TOO_SMALL: UINTN = 4; // The resulting buffer was too small, and the data was truncated to the buffer size.
 pub const EFI_WARN_STALE_DATA: UINTN = 5; // The data has not been updated within the timeframe set by local policy for this type of data.
 
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum EFI_STATUS_TYPE {
     SUCCESS,
     ERROR,
@@ -159,6 +169,7 @@ pub type UINTN = usize;
 pub type VOID = ();
 pub type EFI_HANDLE = *const VOID;
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct EFI_GUID(pub UINT32, pub UINT16, pub UINT16, pub [UINT8; 8]);
 
