@@ -11,7 +11,6 @@ use core::mem;
 ///  Nanosecond: 0 - 999,999,999
 ///  TimeZone:   -1440 to 1440 or 2047
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct EFI_Time {
   Year:   UINT16,
   Month: UINT8,
@@ -43,7 +42,6 @@ pub struct EFI_IPv6_ADDRESS {
 }
 
 /// 32-byte buffer containing a network Media Access Control address.
-#[derive(Copy, Clone)]
 #[repr(C)]
 pub struct EFI_MAC_ADDRESS {
   pub Addr: [UINT8; 32],
