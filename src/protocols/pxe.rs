@@ -1,7 +1,7 @@
 use ::{Result, Guid, IpAddress, to_boolean, from_boolean, to_res};
 use protocols::Protocol;
 use ffi::UINT16;
-use core::{mem, ptr, default::Default};
+use core::{mem, ptr, default::Default, fmt};
 
 
 use ::ffi::pxe::{
@@ -211,7 +211,6 @@ impl SrvListEntry {
     }
 }
 
-#[derive(Debug)]
 pub struct Mode(*const EFI_PXE_BASE_CODE_MODE);
 
 impl Mode {
@@ -319,4 +318,13 @@ impl Mode {
     // pub fn TftpError(&self) -> EFI_PXE_BASE_CODE_TFTP_ERROR {
     //     unimplemented!()
     // }
+}
+
+impl fmt::Debug for Mode   {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("Mode")
+            .field("ptr", unsafe { &*self.0 })
+            .field("inner", unsafe { &(*self.0) })
+            .finish()
+    }
 }
