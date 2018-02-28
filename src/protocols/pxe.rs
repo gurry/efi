@@ -74,8 +74,8 @@ impl PxeBaseCodeProtocol {
     }
 
     // TODO: some missing methods here
-    pub fn mode() -> Result<()> {
-        unimplemented!()
+    pub fn mode(&self) -> Mode {
+        Mode(unsafe { (*self.0).Mode })
     }
 }
 
