@@ -1,7 +1,7 @@
 use ::{Result, Guid, IpAddress, to_boolean, from_boolean, to_res};
 use protocols::Protocol;
 use ffi::UINT16;
-use core::{mem, ptr};
+use core::{mem, ptr, default::Default};
 
 
 use ::ffi::pxe::{
@@ -109,11 +109,11 @@ pub enum BootType {
 
 pub struct DiscoverInfo<'a> {
     inner: EFI_PXE_BASE_CODE_DISCOVER_INFO,
-    srvlist: &'a[SrvListEntry]
+    srvlist: Option<&'a[SrvListEntry]>
 }
 
 impl<'a> DiscoverInfo<'a> {
-    pub fn new(use_mcast: bool, use_bcast: bool, use_ucast: bool, must_use_list: bool, server_mcast_ip: IpAddress, srvlist: &'a[SrvListEntry]) -> Self {
+    pub fn new(use_mcast: bool, use_bcast: bool, use_ucast: bool, must_use_list: bool, server_mcast_ip: IpAddress, srvlist: Option<&'a[SrvListEntry]>) -> Self {
         Self { 
             inner: EFI_PXE_BASE_CODE_DISCOVER_INFO {
                 UseMCast: to_boolean(use_mcast), 
@@ -121,8 +121,8 @@ impl<'a> DiscoverInfo<'a> {
                 UseUCast: to_boolean(use_ucast), 
                 MustUseList: to_boolean(must_use_list), 
                 ServerMCastIp: server_mcast_ip, 
-                IpCnt: srvlist.len() as u16, // TODO: can we replace this cast with something safer?
-                SrvList: unsafe { mem::transmute(srvlist.as_ptr()) } // Here be dragons
+                IpCnt: if let Some(slist) = srvlist { slist.len() as u16 } else { 0 }, // TODO: can we replace this cast with something safer?
+                SrvList: unsafe { if let Some(slist) = srvlist { mem::transmute(slist.as_ptr()) } else { ptr::null()} } // Here be dragons
             },
             srvlist
         }
@@ -148,7 +148,7 @@ impl<'a> DiscoverInfo<'a> {
         self.inner.ServerMCastIp
     }
 
-    pub fn srvlist(&self) -> &'a[SrvListEntry] {
+    pub fn srvlist(&self) -> Option<&'a[SrvListEntry]> {
         self.srvlist
     }
 
@@ -156,6 +156,13 @@ impl<'a> DiscoverInfo<'a> {
         &(self.inner) as *const EFI_PXE_BASE_CODE_DISCOVER_INFO 
     }
 }
+
+impl<'a> Default for DiscoverInfo<'a> {
+    fn default() -> Self {
+        DiscoverInfo::new(false, true, false, false, IpAddress::zero(), None)
+    }
+}
+
 
 #[repr(C)]
 pub struct SrvList {
