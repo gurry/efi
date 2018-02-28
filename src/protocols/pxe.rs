@@ -29,6 +29,7 @@ use ::ffi::pxe::{
 //     Mode: *const EFI_PXE_BASE_CODE_MODE,
 // }
 
+#[derive(Debug)]
 pub struct PxeBaseCodeProtocol(*const EFI_PXE_BASE_CODE_PROTOCOL);
 
 impl Protocol for PxeBaseCodeProtocol {
@@ -80,6 +81,7 @@ impl PxeBaseCodeProtocol {
 
 pub const BOOT_LAYER_INITIAL: u16 = 0;
 
+#[derive(Debug)]
 #[repr(u16)]
 pub enum BootType {
     Bootstrap = 0,
@@ -107,6 +109,7 @@ pub enum BootType {
     Pxetest = 65535,
 }
 
+#[derive(Debug)]
 pub struct DiscoverInfo<'a> {
     inner: EFI_PXE_BASE_CODE_DISCOVER_INFO,
     srvlist: Option<&'a[SrvListEntry]>
@@ -167,6 +170,7 @@ impl<'a> Default for DiscoverInfo<'a> {
 }
 
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct SrvList {
     ptr: *const EFI_PXE_BASE_CODE_SRVLIST, 
@@ -174,6 +178,7 @@ pub struct SrvList {
     curr_pos: u32
 }
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct SrvListEntry(EFI_PXE_BASE_CODE_SRVLIST);
 
@@ -206,6 +211,7 @@ impl SrvListEntry {
     }
 }
 
+#[derive(Debug)]
 pub struct Mode(*const EFI_PXE_BASE_CODE_MODE);
 
 impl Mode {
