@@ -112,6 +112,9 @@ pub struct DiscoverInfo<'a> {
     srvlist: Option<&'a[SrvListEntry]>
 }
 
+
+// TODO: it seems SrvList as per UEFI must contain at least one parameter. Not documented anywhere but the OVMF code seems to expect it.
+// So we may have to create a new type that enforces at least one element requirement instead of taking a ref to a plain array.
 impl<'a> DiscoverInfo<'a> {
     pub fn new(use_mcast: bool, use_bcast: bool, use_ucast: bool, must_use_list: bool, server_mcast_ip: IpAddress, srvlist: Option<&'a[SrvListEntry]>) -> Self {
         Self { 
