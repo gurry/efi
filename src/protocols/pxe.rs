@@ -267,12 +267,13 @@ impl Mode {
         unsafe { (*self.0).ToS }
     }
 
-    // pub fn StationIp(&self) -> IpAddress {
-    //     unimplemented!()
-    // }
-    // pub fn SubnetMask(&self) -> IpAddress {
-    //     unimplemented!()
-    // }
+    pub fn station_ip(&self) -> IpAddress {
+        unsafe { (*self.0).StationIp }
+    }
+    pub fn subnet_mask(&self) -> IpAddress {
+        unsafe { (*self.0).SubnetMask }
+    }
+    
     // pub fn DhcpDiscover(&self) -> EFI_PXE_BASE_CODE_PACKET {
     //     unimplemented!()
     // }
