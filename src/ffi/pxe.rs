@@ -2,6 +2,8 @@
 ///  devices for network access and network booting.
 ///  This Protocol is introduced in EFI Specification 1.10.           
 
+use core::fmt;
+
 use ffi::base::{
     EFI_GUID, 
     EFI_IP_ADDRESS, 
@@ -43,6 +45,7 @@ pub const EFI_PXE_BASE_CODE_MAX_ROUTE_ENTRIES: UINTN = 8;
 /// The data values in this structure are read-only and
 /// are updated by the code that produces the
 /// EFI_PXE_BASE_CODE_PROTOCOL functions. 
+#[derive(Debug)]
 #[repr(C)]
 pub struct EFI_PXE_BASE_CODE_MODE {
     pub Started: BOOLEAN,
@@ -83,8 +86,8 @@ pub struct EFI_PXE_BASE_CODE_MODE {
 
 pub type EFI_PXE_BASE_CODE_UDP_PORT = UINT16;
 
-#[repr(C)]
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub struct EFI_PXE_BASE_CODE_DHCPV4_PACKET {
     pub BootpOpcode: UINT8,
     pub BootpHwType: UINT8,
@@ -104,11 +107,42 @@ pub struct EFI_PXE_BASE_CODE_DHCPV4_PACKET {
     pub DhcpOptions: [UINT8; 56],
 }
 
-#[repr(C)]
+impl fmt::Debug for EFI_PXE_BASE_CODE_DHCPV4_PACKET {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "BootpOpcode: {:?}, BootpHwType: {:?}, BootpHwAddrLen: {:?}, BootpGateHops: {:?}, BootpIdent: {:?}, BootpSeconds: {:?}, BootpFlags: {:?}", self.BootpOpcode, self.BootpHwType, self.BootpHwAddrLen, self.BootpGateHops, self.BootpIdent, self.BootpSeconds, self.BootpFlags)?;
+        write!(f, ", BootpCiAddr: ")?;
+        self.BootpCiAddr.fmt(f)?;
+        write!(f, ", BootpYiAddr: ")?;
+        self.BootpYiAddr.fmt(f)?;
+        write!(f, ", BootpSiAddr: ")?;
+        self.BootpSiAddr.fmt(f)?;
+        write!(f, ", BootpGiAddr: ")?;
+        self.BootpGiAddr.fmt(f)?;
+        write!(f, ", BootpHwAddr: ")?;
+        self.BootpHwAddr.fmt(f)?;
+        write!(f, ", BootpSrvName: ")?;
+        self.BootpSrvName.fmt(f)?;
+        write!(f, ", BootpBootFile: ")?;
+        self.BootpBootFile.fmt(f)?;
+        write!(f, ", DhcpMagik: ")?;
+        self.DhcpMagik.fmt(f)?;
+        write!(f, ", DhcpOptions: ")?;
+        self.DhcpOptions.fmt(f)
+    }
+}
+
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub struct EFI_PXE_BASE_CODE_DHCPV6_PACKET {
     BitField: UINT32, // Contains both MessageType and TransactionId as bit fields
     pub DhcpOptions: [UINT8; 1024]
+}
+
+impl fmt::Debug for EFI_PXE_BASE_CODE_DHCPV6_PACKET {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "BitField: {:?}, DhcpOptions: ", self.BitField)?;
+        self.DhcpOptions.fmt(f)
+    }
 }
 
 impl EFI_PXE_BASE_CODE_DHCPV6_PACKET {
@@ -128,8 +162,14 @@ pub union EFI_PXE_BASE_CODE_PACKET {
     pub Dhcpv6: EFI_PXE_BASE_CODE_DHCPV6_PACKET,
 }
 
+impl fmt::Debug for EFI_PXE_BASE_CODE_PACKET {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        unsafe { self.Raw.fmt(f) }
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct TempStructIcmpErr {
     pub Identifier: UINT16,
     pub Sequence: UINT16,
@@ -143,6 +183,13 @@ pub union TempUnionIcmpErr {
     pub Echo: TempStructIcmpErr,
 }
 
+impl fmt::Debug for TempUnionIcmpErr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", unsafe { self.reserved })
+    }
+}
+
+
 #[repr(C)]
 pub struct EFI_PXE_BASE_CODE_ICMP_ERROR {
     pub Type: UINT8,
@@ -152,6 +199,12 @@ pub struct EFI_PXE_BASE_CODE_ICMP_ERROR {
     pub Data: [UINT8; 494],
 }
 
+impl fmt::Debug for EFI_PXE_BASE_CODE_ICMP_ERROR {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Type: {:?}, Code: {:?}, Checksum: {:?}, u: {:?}, Data: ", self.Type, self.Code, self.Checksum, self.u)?;
+        self.Data.fmt(f)
+    }
+}
 
 #[repr(C)]
 pub struct EFI_PXE_BASE_CODE_TFTP_ERROR {
@@ -159,8 +212,16 @@ pub struct EFI_PXE_BASE_CODE_TFTP_ERROR {
     pub ErrorString: [INT8; 127]
 }
 
+impl fmt::Debug for EFI_PXE_BASE_CODE_TFTP_ERROR   {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "ErrorCode: {:?}, ErrorString: ", self.ErrorCode)?;
+        self.ErrorString.fmt(f)
+    }
+}
+
 pub const EFI_PXE_BASE_CODE_MAX_IPCNT: UINTN = 8;
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct EFI_PXE_BASE_CODE_IP_FILTER {
     pub Filters: UINT8,
@@ -174,12 +235,14 @@ pub const EFI_PXE_BASE_CODE_IP_FILTER_BROADCAST: UINT32 = 0x0002;
 pub const EFI_PXE_BASE_CODE_IP_FILTER_PROMISCUOUS: UINT32 = 0x0004;
 pub const EFI_PXE_BASE_CODE_IP_FILTER_PROMISCUOUS_MULTICAST: UINT32 = 0x0008;
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct EFI_PXE_BASE_CODE_ARP_ENTRY {
     pub IpAddr: EFI_IP_ADDRESS,
     pub MacAddr: EFI_MAC_ADDRESS,
 }
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct EFI_PXE_BASE_CODE_ROUTE_ENTRY {
     pub IpAddr: EFI_IP_ADDRESS,
@@ -258,6 +321,7 @@ pub type EFI_PXE_BASE_CODE_MTFTP = extern "win64" fn(
     DontUseBuffe: BOOLEAN,
 ) -> EFI_STATUS;
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct EFI_PXE_BASE_CODE_DISCOVER_INFO {
     pub UseMCast: BOOLEAN, 
@@ -271,6 +335,7 @@ pub struct EFI_PXE_BASE_CODE_DISCOVER_INFO {
     pub SrvList: *const EFI_PXE_BASE_CODE_SRVLIST
 }
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct EFI_PXE_BASE_CODE_SRVLIST {
    pub Type: UINT16,
@@ -280,6 +345,7 @@ pub struct EFI_PXE_BASE_CODE_SRVLIST {
 }
 
 
+#[derive(Debug)]
 #[repr(C)]
 pub enum EFI_PXE_BASE_CODE_TFTP_OPCODE {
     EFI_PXE_BASE_CODE_TFTP_FIRST,
@@ -293,6 +359,7 @@ pub enum EFI_PXE_BASE_CODE_TFTP_OPCODE {
     EFI_PXE_BASE_CODE_MTFTP_LAST
 }
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct EFI_PXE_BASE_CODE_MTFTP_INFO {
     pub MCastIp: EFI_IP_ADDRESS, 
