@@ -9,7 +9,10 @@ use ::ffi::pxe::{
     EFI_PXE_BASE_CODE_PROTOCOL_GUID, 
     EFI_PXE_BASE_CODE_MODE,
     EFI_PXE_BASE_CODE_DISCOVER_INFO, 
-    EFI_PXE_BASE_CODE_SRVLIST
+    EFI_PXE_BASE_CODE_SRVLIST,
+    EFI_PXE_BASE_CODE_PACKET,
+    EFI_PXE_BASE_CODE_DHCPV4_PACKET,
+    EFI_PXE_BASE_CODE_DHCPV6_PACKET
 };
 
 // pub struct EFI_PXE_BASE_CODE_PROTOCOL {
@@ -279,27 +282,34 @@ impl Mode {
         unsafe { (*self.0).SubnetMask }
     }
     
-    // pub fn DhcpDiscover(&self) -> EFI_PXE_BASE_CODE_PACKET {
-    //     unimplemented!()
-    // }
-    // pub fn DhcpAck(&self) -> EFI_PXE_BASE_CODE_PACKET {
-    //     unimplemented!()
-    // }
-    // pub fn ProxyOffer(&self) -> EFI_PXE_BASE_CODE_PACKET {
-    //     unimplemented!()
-    // }
-    // pub fn PxeDiscover(&self) -> EFI_PXE_BASE_CODE_PACKET {
-    //     unimplemented!()
-    // }
-    // pub fn PxeReply(&self) -> EFI_PXE_BASE_CODE_PACKET {
-    //     unimplemented!()
-    // }
-    // pub fn PxeBisReply(&self) -> EFI_PXE_BASE_CODE_PACKET {
-    //     unimplemented!()
-    // }
+    pub fn dhcp_discover(&self) -> Packet {
+        unsafe { Packet(&(*self.0).DhcpDiscover) }
+    }
+
+    pub fn dhcp_ack(&self) -> Packet {
+        unsafe { Packet(&(*self.0).DhcpAck) }
+    }
+
+    pub fn proxy_offer(&self) -> Packet {
+        unsafe { Packet(&(*self.0).ProxyOffer) }
+    }
+
+    pub fn pxe_discover(&self) -> Packet {
+        unsafe { Packet(&(*self.0).PxeDiscover) }
+    }
+    
+    pub fn pxe_reply(&self) -> Packet {
+        unsafe { Packet(&(*self.0).PxeReply) }
+    }
+    
+    pub fn pxe_bis_reply(&self) -> Packet {
+        unsafe { Packet(&(*self.0).PxeBisReply) }
+    }
+    
     // pub fn IpFilter(&self) -> EFI_PXE_BASE_CODE_IP_FILTER {
-    //     unimplemented!()
+    //     unsafe { Packet(&(*self.0).IpFilter) }
     // }
+    
     // pub fn ArpCacheEntries(&self) -> u32 {
     //     unimplemented!()
     // }
@@ -326,5 +336,104 @@ impl fmt::Debug for Mode   {
             .field("ptr", unsafe { &*self.0 })
             .field("inner", unsafe { &(*self.0) })
             .finish()
+    }
+}
+
+#[derive(Debug)]
+pub struct Packet<'a>(&'a EFI_PXE_BASE_CODE_PACKET);
+
+impl<'a> Packet<'a> {
+    pub fn raw(&self) -> &[u8; 1472] {
+        unsafe { &(*self.0).Raw }
+    }
+
+    pub fn dhcpv4(&self) -> Dhcpv4Packet {
+        unsafe { Dhcpv4Packet(&(*self.0).Dhcpv4) }
+    }
+
+    pub fn dhcpv6(&self) -> Dhcpv6Packet {
+        unsafe { Dhcpv6Packet(&(*self.0).Dhcpv6) }
+    }
+}
+
+#[derive(Debug)]
+pub struct Dhcpv4Packet<'a>(&'a EFI_PXE_BASE_CODE_DHCPV4_PACKET);
+
+impl<'a> Dhcpv4Packet<'a> {
+    pub fn bootp_opcode(&self) -> u8 {
+        (*self.0).BootpOpcode
+    }
+
+    pub fn bootp_hw_type(&self) -> u8 {
+        (*self.0).BootpHwType
+    }
+    
+    pub fn bootp_hw_addr_len(&self) -> u8 {
+        (*self.0).BootpHwAddrLen
+    }
+    
+    pub fn bootp_gate_hops(&self) -> u8 {
+        (*self.0).BootpGateHops
+    }
+    
+    pub fn bootp_ident(&self) -> u32 {
+        (*self.0).BootpIdent
+    }
+    
+    pub fn bootp_seconds(&self) -> u16 {
+        (*self.0).BootpSeconds
+    }
+    
+    pub fn bootp_flags(&self) -> u16 {
+        (*self.0).BootpFlags
+    }
+    
+    pub fn bootp_ci_addr(&self) -> &[u8; 4] {
+        &(*self.0).BootpCiAddr
+    }
+    
+    pub fn bootp_yi_addr(&self) -> &[u8; 4] {
+        &(*self.0).BootpYiAddr
+    }
+    
+    pub fn bootp_si_addr(&self) -> &[u8; 4] {
+        &(*self.0).BootpSiAddr
+    }
+    
+    pub fn bootp_gi_addr(&self) -> &[u8; 4] {
+        &(*self.0).BootpGiAddr
+    }
+    
+    pub fn bootp_hw_addr(&self) -> &[u8; 16] {
+        &(*self.0).BootpHwAddr
+    }
+    
+    pub fn bootp_srv_name(&self) -> &[u8; 64] {
+        &(*self.0).BootpSrvName
+    }
+    
+    pub fn bootp_boot_file(&self) -> &[u8; 128] {
+        &(*self.0).BootpBootFile
+    }
+    
+    pub fn dhcp_magik(&self) -> u32 {
+        (*self.0).DhcpMagik
+    }
+    
+    pub fn dhcp_options(&self) -> &[u8; 56] {
+        &(*self.0).DhcpOptions
+    }
+}
+
+#[derive(Debug)]
+pub struct Dhcpv6Packet<'a>(&'a EFI_PXE_BASE_CODE_DHCPV6_PACKET);
+
+impl<'a> Dhcpv6Packet<'a> {
+    pub fn bit_field(&self) -> u32 { // Contains both MessageType and TransactionId as bit fields
+        (*self.0).BitField
+    }
+    
+    pub fn dhcp_options(&self) -> &[u8; 1024] {
+        &(*self.0).DhcpOptions
     }
 }

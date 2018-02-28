@@ -137,7 +137,7 @@ impl fmt::Debug for EFI_PXE_BASE_CODE_DHCPV4_PACKET {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct EFI_PXE_BASE_CODE_DHCPV6_PACKET {
-    BitField: UINT32, // Contains both MessageType and TransactionId as bit fields
+    pub BitField: UINT32, // Contains both MessageType and TransactionId as bit fields
     pub DhcpOptions: [UINT8; 1024]
 }
 
