@@ -1,3 +1,4 @@
+
 use ::{Result, Guid, IpAddress, to_boolean, from_boolean, to_res};
 use protocols::Protocol;
 use ffi::UINT16;
@@ -12,7 +13,15 @@ use ::ffi::pxe::{
     EFI_PXE_BASE_CODE_SRVLIST,
     EFI_PXE_BASE_CODE_PACKET,
     EFI_PXE_BASE_CODE_DHCPV4_PACKET,
-    EFI_PXE_BASE_CODE_DHCPV6_PACKET
+    EFI_PXE_BASE_CODE_DHCPV6_PACKET,
+    EFI_PXE_BASE_CODE_IP_FILTER,
+    EFI_PXE_BASE_CODE_MAX_IPCNT,
+    EFI_PXE_BASE_CODE_ARP_ENTRY,
+    EFI_PXE_BASE_CODE_ROUTE_ENTRY,
+    EFI_PXE_BASE_CODE_MAX_ARP_ENTRIES,
+    EFI_PXE_BASE_CODE_MAX_ROUTE_ENTRIES,
+    EFI_PXE_BASE_CODE_ICMP_ERROR,
+    EFI_PXE_BASE_CODE_TFTP_ERROR
 };
 
 // pub struct EFI_PXE_BASE_CODE_PROTOCOL {
@@ -220,57 +229,75 @@ impl Mode {
     pub fn started(&self) -> bool {
         unsafe { (*self.0).Started == 1 }
     }
+
     pub fn ipv6_available(&self) -> bool {
         unsafe { (*self.0).Ipv6Available == 1 }
     }
+
     pub fn ipv6_supported(&self) -> bool {
         unsafe { (*self.0).Ipv6Supported == 1 }
     }
+
     pub fn using_ipv6(&self) -> bool {
         unsafe { (*self.0).UsingIpv6 == 1 }
     }
+
     pub fn bis_supported(&self) -> bool {
         unsafe { (*self.0).BisSupported == 1 }
     }
+
     pub fn bis_detected(&self) -> bool {
         unsafe { (*self.0).BisDetected == 1 }
     }
+
     pub fn auto_arp(&self) -> bool {
         unsafe { (*self.0).AutoArp == 1 }
     }
+
     pub fn send_guid(&self) -> bool {
         unsafe { (*self.0).SendGUID == 1 }
     }
+
     pub fn dhcp_discover_valid(&self) -> bool {
         unsafe { (*self.0).DhcpDiscoverValid == 1 }
     }
+
     pub fn dhcp_ack_received(&self) -> bool {
         unsafe { (*self.0).DhcpAckReceived == 1 }
     }
+
     pub fn proxy_offer_received(&self) -> bool {
         unsafe { (*self.0).ProxyOfferReceived == 1 }
     }
+
     pub fn pxe_discover_valid(&self) -> bool {
         unsafe { (*self.0).PxeDiscoverValid == 1 }
     }
+
     pub fn pxe_reply_received(&self) -> bool {
         unsafe { (*self.0).PxeReplyReceived == 1 }
     }
+
     pub fn pxe_bis_reply_received(&self) -> bool {
         unsafe { (*self.0).PxeBisReplyReceived == 1 }
     }
+
     pub fn icmp_error_received(&self) -> bool {
         unsafe { (*self.0).IcmpErrorReceived == 1 }
     }
+
     pub fn tftp_error_received(&self) -> bool {
         unsafe { (*self.0).TftpErrorReceived == 1 }
     }
+
     pub fn make_callbacks(&self) -> bool {
         unsafe { (*self.0).MakeCallbacks == 1 }
     }
+
     pub fn ttl(&self) -> u8 {
         unsafe { (*self.0).TTL }
     }
+
     pub fn tos(&self) -> u8 {
         unsafe { (*self.0).ToS }
     }
@@ -306,28 +333,33 @@ impl Mode {
         unsafe { Packet(&(*self.0).PxeBisReply) }
     }
     
-    // pub fn IpFilter(&self) -> EFI_PXE_BASE_CODE_IP_FILTER {
-    //     unsafe { Packet(&(*self.0).IpFilter) }
-    // }
+    pub fn ip_filter(&self) -> IpFilter {
+        unsafe { IpFilter(&(*self.0).IpFilter)}
+    }
     
-    // pub fn ArpCacheEntries(&self) -> u32 {
-    //     unimplemented!()
-    // }
-    // pub fn ArpCache(&self) -> [EFI_PXE_BASE_CODE_ARP_ENTRY; EFI_PXE_BASE_CODE_MAX_ARP_ENTRIES] {
-    //     unimplemented!()
-    // }
-    // pub fn RouteTableEntries(&self) -> u32 {
-    //     unimplemented!()
-    // }
-    // pub fn RouteTable(&self) -> [EFI_PXE_BASE_CODE_ROUTE_ENTRY; EFI_PXE_BASE_CODE_MAX_ROUTE_ENTRIES] {
-    //     unimplemented!()
-    // }
-    // pub fn IcmpError(&self) -> EFI_PXE_BASE_CODE_ICMP_ERROR {
-    //     unimplemented!()
-    // }
-    // pub fn TftpError(&self) -> EFI_PXE_BASE_CODE_TFTP_ERROR {
-    //     unimplemented!()
-    // }
+    pub fn arp_cache_entries(&self) -> u32 {
+        unsafe { (*self.0).ArpCacheEntries }
+    }
+
+    pub fn arp_cache(&self) -> impl Iterator<Item=ArpEntry> {
+        unsafe { ArpEntryIter::new(&(*self.0).ArpCache, self.arp_cache_entries()) }
+    }
+
+    pub fn route_table_entries(&self) -> u32 {
+        unsafe { (*self.0). RouteTableEntries }
+    }
+
+    pub fn route_table(&self) -> impl Iterator<Item=RouteEntry> {
+        unsafe { RouteEntryIter::new(&(*self.0).RouteTable, self.route_table_entries()) }
+    }
+
+    pub fn icmp_error(&self) -> IcpmError {
+        unsafe { IcpmError(&(*self.0).IcmpError) }
+    }
+
+    pub fn tftp_error(&self) -> TftpError {
+        unsafe { TftpError(&(*self.0).TftpError) }
+    }
 }
 
 impl fmt::Debug for Mode   {
@@ -435,5 +467,118 @@ impl<'a> Dhcpv6Packet<'a> {
     
     pub fn dhcp_options(&self) -> &[u8; 1024] {
         &(*self.0).DhcpOptions
+    }
+}
+
+#[derive(Debug)]
+pub struct IpFilter(*const EFI_PXE_BASE_CODE_IP_FILTER);
+
+pub const MAX_IPCNT: usize = EFI_PXE_BASE_CODE_MAX_IPCNT;
+
+impl IpFilter {
+    pub fn filters(&self) -> u8 {
+        unsafe { (*self.0).Filters }
+    }
+    pub fn ip_cnt(&self) -> u8 {
+        unsafe { (*self.0).IpCnt }
+    }
+    pub fn reserved(&self)  -> u16 {
+        unsafe { (*self.0).reserved }
+    }
+    pub fn ip_list(&self) -> &[IpAddress; MAX_IPCNT] {
+        unsafe { &(*self.0).IpList }
+    }
+}
+
+#[derive(Debug)]
+pub struct ArpEntry<'a>(&'a EFI_PXE_BASE_CODE_ARP_ENTRY);
+
+struct ArpEntryIter<'a> {
+    inner: &'a[EFI_PXE_BASE_CODE_ARP_ENTRY; EFI_PXE_BASE_CODE_MAX_ARP_ENTRIES],
+    count: u32,
+    curr_pos: u32
+}
+
+impl<'a> ArpEntryIter<'a> {
+    fn new(inner: &'a[EFI_PXE_BASE_CODE_ARP_ENTRY; EFI_PXE_BASE_CODE_MAX_ARP_ENTRIES], count: u32) -> Self {
+        Self { inner, count, curr_pos: 0}
+    }
+}
+
+impl<'a> Iterator for ArpEntryIter<'a> {
+    type Item = ArpEntry<'a>;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.curr_pos >= self.count {
+            return None;
+        }
+
+        let res = Some(ArpEntry(&(self.inner[self.curr_pos as usize]))); // Todo: is it safe to make this case?
+        self.curr_pos += 1;
+        res
+    }
+}
+
+#[derive(Debug)]
+pub struct RouteEntry<'a>(&'a EFI_PXE_BASE_CODE_ROUTE_ENTRY);
+
+struct RouteEntryIter<'a> {
+    inner: &'a[EFI_PXE_BASE_CODE_ROUTE_ENTRY; EFI_PXE_BASE_CODE_MAX_ROUTE_ENTRIES],
+    count: u32,
+    curr_pos: u32
+}
+
+impl<'a> RouteEntryIter<'a> {
+    fn new(inner: &'a[EFI_PXE_BASE_CODE_ROUTE_ENTRY; EFI_PXE_BASE_CODE_MAX_ROUTE_ENTRIES], count: u32) -> Self {
+        Self { inner, count, curr_pos: 0}
+    }
+}
+impl<'a> Iterator for RouteEntryIter<'a> {
+    type Item = RouteEntry<'a>;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.curr_pos >= self.count {
+            return None;
+        }
+
+        let res = Some(RouteEntry(&(self.inner[self.curr_pos as usize]))); // Todo: is it safe to make this case?
+        self.curr_pos += 1;
+        res
+    }
+}
+
+#[derive(Debug)]
+pub struct IcpmError(*const EFI_PXE_BASE_CODE_ICMP_ERROR);
+
+impl IcpmError {
+    pub fn type_(&self) -> u8 {
+        unsafe { (*self.0).Type }
+    }
+
+    pub fn code(&self) -> u8 {
+        unsafe { (*self.0).Code }
+    }
+
+    pub fn checksum(&self) -> u16 {
+        unsafe { (*self.0).Checksum }
+    }
+
+    // TODO: will do this later
+    // pub fn u(&self) -> TempUnionIcmpErr {
+    //     (*self.0).u
+    // }
+
+    pub fn data(&self) ->[u8; 494] {
+        unsafe { (*self.0).Data }
+    }
+}
+
+pub struct TftpError(*const EFI_PXE_BASE_CODE_TFTP_ERROR);
+
+impl TftpError {
+    pub fn error_code(&self) -> u8 {
+        unsafe { (*self.0).ErrorCode }
+    }
+
+    pub fn error_string(&self) -> &[i8; 127] {
+        unsafe { &(*self.0).ErrorString }
     }
 }
