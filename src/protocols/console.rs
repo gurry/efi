@@ -53,6 +53,7 @@ fn to_ptr<T>(slice: &[T]) -> (*const T, usize) {
     }
 }
 
+// TODO is this really needed? Doesn't core expose mem::transmute?
 extern "rust-intrinsic" {
     fn transmute<T,U>(val: T) -> U;
 }
