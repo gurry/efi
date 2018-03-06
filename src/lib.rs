@@ -189,7 +189,7 @@ pub type Result<T> = core::result::Result<T, EfiError>;
 pub type IpAddress = ffi::EFI_IP_ADDRESS;
 
 impl IpAddress {
-    fn zero() -> Self {
+    pub fn zero() -> Self {
         Self { Addr: [0, 0, 0, 0] }
     }
 }
