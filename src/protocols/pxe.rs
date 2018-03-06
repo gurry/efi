@@ -82,34 +82,21 @@ impl PxeBaseCodeProtocol {
             let true_ptr: *const BOOLEAN = &1;
             let false_ptr: *const BOOLEAN = &0;
             let map_bool_opt = |b: Option<bool>| b.map_or(ptr::null(), |v| if v { true_ptr } else { false_ptr });
-            let new_dhcp_discover_valid = map_bool_opt(new_dhcp_discover_valid);
-            let new_dhcp_ack_received = map_bool_opt(new_dhcp_ack_received);
-            let new_proxy_offer_received= map_bool_opt(new_proxy_offer_received);
-            let new_pxe_discover_valid= map_bool_opt(new_pxe_discover_valid);
-            let new_pxe_reply_received= map_bool_opt(new_pxe_reply_received);
-            let new_pxe_bis_reply_received= map_bool_opt(new_pxe_bis_reply_received);
-
-            let map_packet = |b: Option<&Packet>| b.map_or(ptr::null(), |v| unsafe { mem::transmute(v) });
-            let new_dhcp_discover= map_packet(new_dhcp_discover);
-            let new_dhcp_ack= map_packet(new_dhcp_ack);
-            let new_proxy_offer= map_packet(new_proxy_offer);
-            let new_pxe_discover= map_packet(new_pxe_discover);
-            let new_pxe_reply= map_packet(new_pxe_reply);
-            let new_pxe_bis_reply= map_packet(new_pxe_bis_reply);
+            let map_packet_opt = |b: Option<&Packet>| b.map_or(ptr::null(), |v| unsafe { mem::transmute(v) });
 
             let status = (self.0.SetPackets)(&self.0,
-                                new_dhcp_discover_valid, 
-                                new_dhcp_ack_received, 
-                                new_proxy_offer_received,
-                                new_pxe_discover_valid,
-                                new_pxe_reply_received,
-                                new_pxe_bis_reply_received,
-                                new_dhcp_discover,
-                                new_dhcp_ack,
-                                new_proxy_offer,
-                                new_pxe_discover,
-                                new_pxe_reply,
-                                new_pxe_bis_reply);
+                                map_bool_opt(new_dhcp_discover_valid),
+                                map_bool_opt(new_dhcp_ack_received),
+                                map_bool_opt(new_proxy_offer_received),
+                                map_bool_opt(new_pxe_discover_valid),
+                                map_bool_opt(new_pxe_reply_received),
+                                map_bool_opt(new_pxe_bis_reply_received),
+                                map_packet_opt(new_dhcp_discover),
+                                map_packet_opt(new_dhcp_ack),
+                                map_packet_opt(new_proxy_offer),
+                                map_packet_opt(new_pxe_discover),
+                                map_packet_opt(new_pxe_reply),
+                                map_packet_opt(new_pxe_bis_reply));
             to_res((), status)
         } 
 
