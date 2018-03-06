@@ -21,23 +21,6 @@ use ::ffi::pxe::{
     EFI_PXE_BASE_CODE_TFTP_ERROR
 };
 
-// pub struct EFI_PXE_BASE_CODE_PROTOCOL {
-//     Revision: UINT64,
-//     Start: EFI_PXE_BASE_CODE_START,
-//     Stop: EFI_PXE_BASE_CODE_STOP,
-//     Dhcp: EFI_PXE_BASE_CODE_DHCP,
-//     Discover: EFI_PXE_BASE_CODE_DISCOVER,
-//     Mtftp: EFI_PXE_BASE_CODE_MTFTP,
-//     UdpWrite: EFI_PXE_BASE_CODE_UDP_WRITE,
-//     UdpRead: EFI_PXE_BASE_CODE_UDP_READ,
-//     SetIpFilter: EFI_PXE_BASE_CODE_SET_IP_FILTER,
-//     Arp: EFI_PXE_BASE_CODE_ARP,
-//     SetParameters: EFI_PXE_BASE_CODE_SET_PARAMETERS,
-//     SetStationIp: EFI_PXE_BASE_CODE_SET_STATION_IP,
-//     SetPackets: EFI_PXE_BASE_CODE_SET_PACKETS,
-//     Mode: *const EFI_PXE_BASE_CODE_MODE,
-// }
-
 #[repr(C)]
 pub struct PxeBaseCodeProtocol(EFI_PXE_BASE_CODE_PROTOCOL);
 
