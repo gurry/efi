@@ -1,7 +1,7 @@
 
 use ::{Result, Guid, IpAddress, to_boolean, from_boolean, to_res};
 use protocols::Protocol;
-use ffi::UINT16;
+use ffi::{UINT16, BOOLEAN};
 use core::{mem, ptr, default::Default};
 
 
@@ -18,7 +18,7 @@ use ::ffi::pxe::{
     EFI_PXE_BASE_CODE_ARP_ENTRY,
     EFI_PXE_BASE_CODE_ROUTE_ENTRY,
     EFI_PXE_BASE_CODE_ICMP_ERROR,
-    EFI_PXE_BASE_CODE_TFTP_ERROR
+    EFI_PXE_BASE_CODE_TFTP_ERROR,
 };
 
 // TODO: This is a lot of boilerplate. Can we find a way to generate this code?
@@ -65,6 +65,53 @@ impl PxeBaseCodeProtocol {
     pub fn mtftp() -> Result<()> {
         unimplemented!()
     }
+
+    pub fn set_packets(&self, 
+        new_dhcp_discover_valid: Option<bool>, 
+        new_dhcp_ack_received: Option<bool>, 
+        new_proxy_offer_received: Option<bool>,
+        new_pxe_discover_valid: Option<bool>,
+        new_pxe_reply_received: Option<bool>,
+        new_pxe_bis_reply_received: Option<bool>,
+        new_dhcp_discover: Option<&Packet>,
+        new_dhcp_ack:  Option<&Packet>,
+        new_proxy_offer:  Option<&Packet>,
+        new_pxe_discover:  Option<&Packet>,
+        new_pxe_reply:  Option<&Packet>,
+        new_pxe_bis_reply: Option<&Packet>) -> Result<()> {
+            let true_ptr: *const BOOLEAN = &1;
+            let false_ptr: *const BOOLEAN = &0;
+            let map_bool_opt = |b: Option<bool>| b.map_or(ptr::null(), |v| if v { true_ptr } else { false_ptr });
+            let new_dhcp_discover_valid = map_bool_opt(new_dhcp_discover_valid);
+            let new_dhcp_ack_received = map_bool_opt(new_dhcp_ack_received);
+            let new_proxy_offer_received= map_bool_opt(new_proxy_offer_received);
+            let new_pxe_discover_valid= map_bool_opt(new_pxe_discover_valid);
+            let new_pxe_reply_received= map_bool_opt(new_pxe_reply_received);
+            let new_pxe_bis_reply_received= map_bool_opt(new_pxe_bis_reply_received);
+
+            let map_packet = |b: Option<&Packet>| b.map_or(ptr::null(), |v| unsafe { mem::transmute(v) });
+            let new_dhcp_discover= map_packet(new_dhcp_discover);
+            let new_dhcp_ack= map_packet(new_dhcp_ack);
+            let new_proxy_offer= map_packet(new_proxy_offer);
+            let new_pxe_discover= map_packet(new_pxe_discover);
+            let new_pxe_reply= map_packet(new_pxe_reply);
+            let new_pxe_bis_reply= map_packet(new_pxe_bis_reply);
+
+            let status = (self.0.SetPackets)(&self.0,
+                                new_dhcp_discover_valid, 
+                                new_dhcp_ack_received, 
+                                new_proxy_offer_received,
+                                new_pxe_discover_valid,
+                                new_pxe_reply_received,
+                                new_pxe_bis_reply_received,
+                                new_dhcp_discover,
+                                new_dhcp_ack,
+                                new_proxy_offer,
+                                new_pxe_discover,
+                                new_pxe_reply,
+                                new_pxe_bis_reply);
+            to_res((), status)
+        } 
 
     // TODO: some missing methods here
     pub fn mode(&self) -> &Mode {
