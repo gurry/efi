@@ -222,19 +222,19 @@ fn to_res<T>(value: T, status: ffi::EFI_STATUS) -> Result<T> {
 //     }
 // }
 
-pub struct EfiSystemTable(pub *const EFI_SYSTEM_TABLE);
+pub struct SystemTable(pub *const EFI_SYSTEM_TABLE);
 
-impl EfiSystemTable {
+impl SystemTable {
     pub fn boot_services(&self) -> &boot_services::BootServices {
         unsafe { 
-            let &EfiSystemTable(table) = self;
+            let &SystemTable(table) = self;
             transmute((*table).BootServices) 
         }
     }
 
     pub fn console(&self) -> Console {
         unsafe {
-            let &EfiSystemTable(table) = self;
+            let &SystemTable(table) = self;
             Console { input:  (*table).ConIn, output: (*table).ConOut }
         }
     }
