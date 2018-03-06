@@ -21,6 +21,7 @@ use ::ffi::pxe::{
     EFI_PXE_BASE_CODE_TFTP_ERROR
 };
 
+// TODO: This is a lot of boilerplate. Can we find a way to generate this code?
 #[repr(C)]
 pub struct PxeBaseCodeProtocol(EFI_PXE_BASE_CODE_PROTOCOL);
 
