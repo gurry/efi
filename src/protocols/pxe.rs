@@ -102,8 +102,7 @@ impl PxeBaseCodeProtocol {
 
     // TODO: some missing methods here
     pub fn mode(&self) -> &Mode {
-        unsafe { mem::transmute(&self.0.Mode) }
-    }
+        unsafe { mem::transmute(self.0.Mode) } }
 }
 
 pub const BOOT_LAYER_INITIAL: u16 = 0;
