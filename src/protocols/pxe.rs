@@ -192,9 +192,12 @@ impl<'a> DiscoverInfo<'a> {
 
 impl<'a> Default for DiscoverInfo<'a> {
     fn default() -> Self {
-        DiscoverInfo::new(false, true, false, false, IpAddress::zero(), None)
+        DiscoverInfo::new(false, true, false, false, IpAddress::zero(), Some(&DEFAULT_SRV_LIST_ENTRY)) // By default UEFI expects at least one srvlistentry. That's why we couldn't have used None for last parameter
     }
 }
+
+// Should've implemented Default trait for SrvListEntry and used that here intead of explicitly constructing SrvListEntry but function calls are not allowed on const expressions unfortunately :(. Not yet anyway.
+const DEFAULT_SRV_LIST_ENTRY: [SrvListEntry; 1] = [SrvListEntry(EFI_PXE_BASE_CODE_SRVLIST { Type: 0, AcceptAnyResponse: 1, reserved: 0, IpAddr: IpAddress{ Addr: [0, 0, 0, 0]}})];
 
 #[derive(Debug)]
 #[repr(C)]
