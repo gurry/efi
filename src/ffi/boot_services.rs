@@ -78,7 +78,6 @@ pub type EFI_WAIT_FOR_EVENT = *const NOT_DEFINED;
 pub type EFI_SIGNAL_EVENT = *const NOT_DEFINED;
 pub type EFI_CLOSE_EVENT = *const NOT_DEFINED;
 pub type EFI_CHECK_EVENT = *const NOT_DEFINED;
-pub type EFI_INSTALL_PROTOCOL_INTERFACE = *const NOT_DEFINED;
 pub type EFI_REINSTALL_PROTOCOL_INTERFACE = *const NOT_DEFINED;
 pub type EFI_UNINSTALL_PROTOCOL_INTERFACE = *const NOT_DEFINED;
 pub type EFI_HANDLE_PROTOCOL = *const NOT_DEFINED;
@@ -106,6 +105,20 @@ pub type EFI_CALCULATE_CRC32 = *const NOT_DEFINED;
 pub type EFI_COPY_MEM = *const NOT_DEFINED;
 pub type EFI_SET_MEM = *const NOT_DEFINED;
 pub type EFI_CREATE_EVENT_EX = *const NOT_DEFINED;
+
+
+
+#[derive(Debug)]
+pub enum EFI_INTERFACE_TYPE {
+    EFI_NATIVE_INTERFACE = 0
+}
+
+pub type EFI_INSTALL_PROTOCOL_INTERFACE = extern "win64" fn(
+    Handle: EFI_HANDLE,
+    Protocol: *const EFI_GUID,
+    InterfaceType: EFI_INTERFACE_TYPE,
+    Interface: *const VOID
+) -> EFI_STATUS;
 
 pub type EFI_CLOSE_PROTOCOL = extern "win64" fn(
   Handle: EFI_HANDLE,
