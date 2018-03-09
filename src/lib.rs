@@ -240,6 +240,7 @@ impl SystemTable {
         }
     }
 
+    // TODO: return a reference to Console here. That will help enforce lifetimes
     pub fn console(&self) -> Console {
         unsafe {
             let &SystemTable(table) = self;
