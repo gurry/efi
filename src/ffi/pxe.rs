@@ -401,7 +401,7 @@ pub type EFI_PXE_BASE_CODE_UDP_READ = extern "win64" fn(
     HeaderSize: *const UINTN, 
     HeaderPtr: *const VOID, 
     BufferSize: *const UINTN, 
-    BufferPt: *const VOID
+    BufferPtr: *const VOID
 ) -> EFI_STATUS;
 
 
