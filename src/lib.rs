@@ -54,6 +54,12 @@ impl From<EFI_STATUS> for EfiError {
     }
 }
 
+impl From<EfiError> for EFI_STATUS {
+    fn from(error: EfiError) -> Self {
+        error.kind().into()
+    }
+}
+
 impl Fail for EfiError {
     fn cause(&self) -> Option<&Fail> {
         self.inner.cause()
