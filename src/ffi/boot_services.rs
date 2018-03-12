@@ -1,4 +1,4 @@
-use ffi::base::{EFI_GUID, EFI_HANDLE, EFI_STATUS, EFI_TABLE_HEADER, VOID, NOT_DEFINED};
+use ffi::base::{EFI_GUID, EFI_HANDLE, EFI_STATUS, EFI_TABLE_HEADER, UINT32, VOID, NOT_DEFINED};
 // use base::{Event, Handle, Handles, MemoryType, Status};
 // use guid;
 // use table;
@@ -95,7 +95,6 @@ pub type EFI_STALL = *const NOT_DEFINED;
 pub type EFI_SET_WATCHDOG_TIMER = *const NOT_DEFINED;
 pub type EFI_CONNECT_CONTROLLER = *const NOT_DEFINED;
 pub type EFI_DISCONNECT_CONTROLLER = *const NOT_DEFINED;
-pub type EFI_OPEN_PROTOCOL = *const NOT_DEFINED;
 pub type EFI_OPEN_PROTOCOL_INFORMATION = *const NOT_DEFINED;
 pub type EFI_PROTOCOLS_PER_HANDLE = *const NOT_DEFINED;
 pub type EFI_LOCATE_HANDLE_BUFFER = *const NOT_DEFINED;
@@ -118,6 +117,22 @@ pub type EFI_INSTALL_PROTOCOL_INTERFACE = extern "win64" fn(
     Protocol: *const EFI_GUID,
     InterfaceType: EFI_INTERFACE_TYPE,
     Interface: *const VOID
+) -> EFI_STATUS;
+
+pub const EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL: UINT32 = 0x00000001;
+pub const EFI_OPEN_PROTOCOL_GET_PROTOCOL: UINT32 = 0x00000002;
+pub const EFI_OPEN_PROTOCOL_TEST_PROTOCOL: UINT32 = 0x00000004;
+pub const EFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER: UINT32 = 0x00000008;
+pub const EFI_OPEN_PROTOCOL_BY_DRIVER: UINT32 = 0x00000010;
+pub const EFI_OPEN_PROTOCOL_EXCLUSIVE: UINT32 = 0x00000020;
+
+pub type EFI_OPEN_PROTOCOL =  extern "win64" fn(
+    Handle: EFI_HANDLE,
+    Protocol: *const EFI_GUID,
+    Interface: *mut *mut VOID,
+    AgentHandle: EFI_HANDLE,
+    ControllerHandle: EFI_HANDLE,
+    Attributes: UINT32
 ) -> EFI_STATUS;
 
 pub type EFI_CLOSE_PROTOCOL = extern "win64" fn(

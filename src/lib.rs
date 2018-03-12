@@ -4,6 +4,7 @@
 #![feature(conservative_impl_trait)]
 
 #[macro_use] extern crate failure;
+#[macro_use] extern crate bitflags;
 
 pub mod ffi;
 pub mod boot_services;
