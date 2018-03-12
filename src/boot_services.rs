@@ -11,6 +11,8 @@ pub struct DeviceHandle(EFI_HANDLE);
 pub struct BootServices(EFI_BOOT_SERVICES);
 
  impl<'a> BootServices {
+     // TODO: the lifetime annotations on this method may not be enough enforce the lifetime required on the  protocol argument (i.e. it should remain alive as long as it's installed)
+     // So take a look at them again
     pub fn install_protocol_interface<T: Protocol + Wrapper>(&'a self, handle: Option<&'a DeviceHandle>, protocol: &'a T, interface_type: InterfaceType) -> Result<&'a DeviceHandle> {
         let guid_ptr = &T::guid() as *const Guid;
         
