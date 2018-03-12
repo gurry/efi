@@ -5,6 +5,7 @@ use core::{ptr, mem};
 
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct DeviceHandle(EFI_HANDLE);
 
 #[repr(C)]
@@ -13,13 +14,12 @@ pub struct BootServices(EFI_BOOT_SERVICES);
  impl<'a> BootServices {
      // TODO: the lifetime annotations on this method may not be enough enforce the lifetime required on the  protocol argument (i.e. it should remain alive as long as it's installed)
      // So take a look at them again
-    pub fn install_protocol_interface<T: Protocol + Wrapper>(&'a self, handle: Option<&'a DeviceHandle>, protocol: &'a T, interface_type: InterfaceType) -> Result<&'a DeviceHandle> {
+    pub fn install_protocol_interface<T: Protocol + Wrapper>(&'a self, handle: Option<DeviceHandle>, protocol: &'a T, interface_type: InterfaceType) -> Result<&'a DeviceHandle> {
+        let handle_ptr: EFI_HANDLE = handle.map_or(ptr::null(), |v| unsafe { mem::transmute(v) });
         let guid_ptr = &T::guid() as *const Guid;
-        
-        let handle_ptr: *const EFI_HANDLE = handle.map_or(ptr::null(), |v| unsafe { mem::transmute(v) });
 
         let status = unsafe {
-            (self.0.InstallProtocolInterface)(mem::transmute(handle), guid_ptr, mem::transmute(interface_type), mem::transmute(protocol.inner_ptr()))
+            (self.0.InstallProtocolInterface)(handle_ptr, guid_ptr, mem::transmute(interface_type), mem::transmute(protocol.inner_ptr()))
         };
 
         to_res(unsafe { mem::transmute(handle_ptr) }, status)
