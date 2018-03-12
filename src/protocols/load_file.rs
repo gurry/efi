@@ -15,15 +15,13 @@ use protocols::Protocol;
 use super::device_path::DevicePathProtocol;
 use ::utils::Wrapper;
 
-type Callback = FnMut(&DevicePathProtocol, &mut [u8]) -> Result<usize>;
-
 pub struct LoadFileProtocol<'a> {
     inner: EFI_LOAD_FILE_PROTOCOL,
-    load_file: &'a mut Callback // TODO: going with dyn dispatch for now. Will come back to it later.
+    load_file: &'a mut FnMut(&DevicePathProtocol, &mut [u8]) -> Result<usize> // TODO: going with dyn dispatch for now. Will come back to it later.
 }
 
 impl<'a> LoadFileProtocol<'a> {
-    pub fn new(load_file: &'a mut Callback) -> Self {
+    pub fn new(load_file: &'a mut FnMut(&DevicePathProtocol, &mut [u8]) -> Result<usize>) -> Self {
         Self { inner: EFI_LOAD_FILE_PROTOCOL { LoadFile: load_file_callback }, load_file }
     }
 }
