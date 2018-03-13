@@ -1,4 +1,4 @@
-use ffi::{boot_services::{EFI_BOOT_SERVICES, EFI_INTERFACE_TYPE}, EFI_HANDLE, UINT32};
+use ffi::{boot_services::{EFI_BOOT_SERVICES, EFI_INTERFACE_TYPE}, EFI_HANDLE};
 use ::{Result, Guid, Void, to_res, utils::Wrapper, Opaque, OpaqueDevice, OpaqueAgent, OpaqueController};
 use protocols::Protocol;
 use core::{ptr, mem};
@@ -42,6 +42,18 @@ pub struct BootServices(EFI_BOOT_SERVICES);
         };
 
         to_res(unsafe { mem::transmute(protocol) }, status)
+
+    }
+
+    pub fn close_protocol<T: Protocol>(&self, handle: &Opaque, agent_handle: &OpaqueAgent, controller_handle: Option<&OpaqueController>) -> Result<()> {
+        let guid_ptr = &T::guid() as *const Guid;
+        let controller_handle_ptr: EFI_HANDLE = controller_handle.map_or(ptr::null(), |v| unsafe { mem::transmute(v) });
+
+        let status = unsafe {
+            (self.0.CloseProtocol)(mem::transmute(handle), guid_ptr, mem::transmute(agent_handle), controller_handle_ptr)
+        };
+
+        to_res((), status)
 
     }
 
