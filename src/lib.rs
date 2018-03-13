@@ -255,8 +255,32 @@ pub struct Opaque { _private: [u8; 0] } // The zero sized _private field prevent
 
 pub struct OpaqueImage { _private: [u8; 0] }
 
+impl<'a> Into<&'a Opaque> for &'a OpaqueImage {
+    fn into(self) -> &'a Opaque {
+        unsafe { transmute(self) }
+    }
+}
+
 pub struct OpaqueDevice { _private: [u8; 0] }
+
+impl<'a> Into<&'a Opaque> for &'a OpaqueDevice {
+    fn into(self) -> &'a Opaque {
+        unsafe { transmute(self) }
+    }
+}
 
 pub struct OpaqueAgent { _private: [u8; 0] }
 
+impl<'a> Into<&'a Opaque> for &'a OpaqueAgent {
+    fn into(self) -> &'a Opaque {
+        unsafe { transmute(self) }
+    }
+}
+
 pub struct OpaqueController { _private: [u8; 0] }
+
+impl<'a> Into<&'a Opaque> for &'a OpaqueController {
+    fn into(self) -> &'a Opaque {
+        unsafe { transmute(self) }
+    }
+}
