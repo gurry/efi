@@ -170,6 +170,7 @@ pub type UINTN = usize;
 
 pub type VOID = ();
 pub type EFI_HANDLE = *const VOID;
+pub type EFI_EVENT = *const VOID;
 
 #[derive(Debug)]
 #[repr(C)]

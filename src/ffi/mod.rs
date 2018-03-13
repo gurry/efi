@@ -8,6 +8,10 @@ pub mod pxe;
 pub mod load_file;
 pub mod device_path;
 pub mod loaded_image;
+pub mod simple_network;
+pub mod managed_network;
+pub mod ip4;
+pub mod tcp4;
 pub mod console;
 pub mod boot_services;
 
