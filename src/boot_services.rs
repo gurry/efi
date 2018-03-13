@@ -1,13 +1,8 @@
 use ffi::{boot_services::{EFI_BOOT_SERVICES, EFI_INTERFACE_TYPE}, EFI_HANDLE, UINT32};
-use ::{Result, Guid, Void, to_res, utils::Wrapper};
+use ::{Result, Guid, Void, to_res, utils::Wrapper, Opaque, OpaqueDevice, OpaqueAgent, OpaqueController};
 use protocols::Protocol;
 use core::{ptr, mem};
 
-
-// TODO: We should declare a trait called Handle which all types of handles should implement
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct Handle(EFI_HANDLE);
 
 bitflags! {
     pub struct OpenProtocolAttributes: u32 {
@@ -26,7 +21,7 @@ pub struct BootServices(EFI_BOOT_SERVICES);
  impl<'a> BootServices {
      // TODO: the lifetime annotations on this method may not be enough enforce the lifetime required on the  protocol argument (i.e. it should remain alive as long as it's installed)
      // So take a look at them again
-    pub fn install_protocol_interface<T: Protocol + Wrapper>(&'a self, handle: Option<Handle>, protocol: &'a T, interface_type: InterfaceType) -> Result<Handle> {
+    pub fn install_protocol_interface<T: Protocol + Wrapper>(&'a self, handle: Option<&'a OpaqueDevice>, protocol: &'a T, interface_type: InterfaceType) -> Result<&'a OpaqueDevice> {
         let handle_ptr: EFI_HANDLE = handle.map_or(ptr::null(), |v| unsafe { mem::transmute(v) });
         let guid_ptr = &T::guid() as *const Guid;
 
@@ -37,15 +32,13 @@ pub struct BootServices(EFI_BOOT_SERVICES);
         to_res(unsafe { mem::transmute(handle_ptr) }, status)
     }
 
-    pub fn open_protocol<T: Protocol>(&self, handle: Handle, agent_handle: Handle, controller_handle: Option<Handle>, attributes: OpenProtocolAttributes) -> Result<&T> {
-        let handle_ptr = handle.0;
+    pub fn open_protocol<T: Protocol>(&self, handle: &Opaque, agent_handle: &OpaqueAgent, controller_handle: Option<&OpaqueController>, attributes: OpenProtocolAttributes) -> Result<&T> {
         let guid_ptr = &T::guid() as *const Guid;
-        let agent_handle_ptr = agent_handle.0;
         let controller_handle_ptr: EFI_HANDLE = controller_handle.map_or(ptr::null(), |v| unsafe { mem::transmute(v) });
         let mut protocol: *mut T::FfiType = ptr::null_mut();
 
         let status = unsafe {
-            (self.0.OpenProtocol)(handle_ptr, guid_ptr, mem::transmute::<&mut *mut T::FfiType, *mut *mut Void>(&mut protocol), agent_handle_ptr, controller_handle_ptr, attributes.bits())
+            (self.0.OpenProtocol)(mem::transmute(handle), guid_ptr, mem::transmute::<&mut *mut T::FfiType, *mut *mut Void>(&mut protocol), mem::transmute(agent_handle), controller_handle_ptr, attributes.bits())
         };
 
         to_res(unsafe { mem::transmute(protocol) }, status)

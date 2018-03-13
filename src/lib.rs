@@ -249,3 +249,14 @@ impl SystemTable {
         }
     }
 }
+
+// Used for opaque pointers such as efi handles
+pub struct Opaque { _private: [u8; 0] } // The zero sized _private field prevents instantiation
+
+pub struct OpaqueImage { _private: [u8; 0] }
+
+pub struct OpaqueDevice { _private: [u8; 0] }
+
+pub struct OpaqueAgent { _private: [u8; 0] }
+
+pub struct OpaqueController { _private: [u8; 0] }
