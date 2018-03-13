@@ -7,6 +7,7 @@ mod base;
 pub mod pxe;
 pub mod load_file;
 pub mod device_path;
+pub mod loaded_image;
 pub mod console;
 pub mod boot_services;
 

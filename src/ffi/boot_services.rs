@@ -1,5 +1,5 @@
 use ffi::{
-    base::{EFI_GUID, EFI_HANDLE, EFI_STATUS, EFI_TABLE_HEADER, UINT32, UINTN, CHAR16, BOOLEAN, VOID, NOT_DEFINED},
+    base::{EFI_GUID, EFI_HANDLE, EFI_STATUS, EFI_TABLE_HEADER, UINT32, UINT64, UINTN, CHAR16, BOOLEAN, VOID, NOT_DEFINED},
     device_path::EFI_DEVICE_PATH_PROTOCOL
 };
 // use base::{Event, Handle, Handles, MemoryType, Status};
@@ -163,3 +163,35 @@ pub type EFI_IMAGE_START = extern "win64" fn(
     ExitDataSize: *mut UINTN,
     ExitData: *mut *const CHAR16
 ) -> EFI_STATUS;
+
+
+#[derive(Debug, Copy, Clone)]
+#[repr(C)]
+pub enum EFI_ALLOCATE_TYPE {
+    AllocateAnyPages,
+    AllocateMaxAddress,
+    AllocateAddress,
+    MaxAllocateType
+}
+
+#[derive(Debug, Copy, Clone)]
+#[repr(C)]
+pub enum EFI_MEMORY_TYPE {
+    EfiReservedMemoryType,
+    EfiLoaderCode,
+    EfiLoaderData,
+    EfiBootServicesCode,
+    EfiBootServicesData,
+    EfiRuntimeServicesCode,
+    EfiRuntimeServicesData,
+    EfiConventionalMemory,
+    EfiUnusableMemory,
+    EfiACPIReclaimMemory,
+    EfiACPIMemoryNVS,
+    EfiMemoryMappedIO,
+    EfiMemoryMappedIOPortSpace,
+    EfiPalCode,
+    EfiMaxMemoryType
+} 
+
+pub type EFI_PHYSICAL_ADDRESS = UINT64;

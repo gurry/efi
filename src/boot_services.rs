@@ -1,4 +1,4 @@
-use ffi::{boot_services::{EFI_BOOT_SERVICES, EFI_INTERFACE_TYPE}, EFI_HANDLE, UINTN, CHAR16, VOID};
+use ffi::{boot_services::{EFI_BOOT_SERVICES, EFI_INTERFACE_TYPE, EFI_ALLOCATE_TYPE, EFI_MEMORY_TYPE}, EFI_HANDLE, UINTN, CHAR16, VOID};
 use ::{Result, Guid, Void, to_res, utils::Wrapper, Opaque, OpaqueDevice, OpaqueAgent, OpaqueImage, OpaqueController, to_boolean};
 use protocols::{Protocol, DevicePathProtocol};
 use core::{ptr, mem, slice};
@@ -115,3 +115,7 @@ impl From<InterfaceType> for EFI_INTERFACE_TYPE {
         }
     }
 }
+
+pub type AllocateType = EFI_ALLOCATE_TYPE;
+
+pub type MemoryType = EFI_MEMORY_TYPE;
