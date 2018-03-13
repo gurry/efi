@@ -1,7 +1,7 @@
-use ffi::{boot_services::{EFI_BOOT_SERVICES, EFI_INTERFACE_TYPE}, EFI_HANDLE};
-use ::{Result, Guid, Void, to_res, utils::Wrapper, Opaque, OpaqueDevice, OpaqueAgent, OpaqueController};
-use protocols::Protocol;
-use core::{ptr, mem};
+use ffi::{boot_services::{EFI_BOOT_SERVICES, EFI_INTERFACE_TYPE}, EFI_HANDLE, UINTN, CHAR16, VOID};
+use ::{Result, Guid, Void, to_res, utils::Wrapper, Opaque, OpaqueDevice, OpaqueAgent, OpaqueImage, OpaqueController, to_boolean};
+use protocols::{Protocol, DevicePathProtocol};
+use core::{ptr, mem, slice};
 
 
 bitflags! {
@@ -68,6 +68,31 @@ pub struct BootServices(EFI_BOOT_SERVICES);
         };
 
         to_res(unsafe { mem::transmute(protocol) }, status)
+    }
+
+    // TODO: instead of exposing both image params and source buffer should we put these options inside an enum and take an enum?
+    // That way there's no chance of the caller specifying both kinds of inputs
+    pub fn load_image(&'a self, boot_policy: bool, parent_image_handle: &'a OpaqueImage, device_path: &'a DevicePathProtocol, source_buffer: Option<&'a [u8]>) -> Result<&'a OpaqueImage> {
+        let source_buf_ptr : *const VOID = source_buffer.map_or(ptr::null(), |v| unsafe { mem::transmute(v.as_ptr()) });
+        let source_buf_len = source_buffer.map_or(0, |v| v.len());
+        let image_handle: *mut *const VOID = ptr::null_mut();
+
+        let status = unsafe {
+            (self.0.LoadImage)(to_boolean(boot_policy), mem::transmute(parent_image_handle), mem::transmute(device_path), source_buf_ptr, source_buf_len, image_handle)
+        };
+
+        to_res(unsafe { mem::transmute(image_handle) }, status)
+    }
+
+    pub fn start_image(&'a self,  image_handle: &'a OpaqueImage) -> Result<&[u16]> {
+        let exit_data_size: UINTN = 0;
+        let exit_data: *const CHAR16 = ptr::null();
+
+        let status = unsafe {
+            (self.0.StartImage)(mem::transmute(image_handle), mem::transmute(&exit_data_size), mem::transmute(&exit_data))
+        };
+
+        to_res(unsafe { slice::from_raw_parts(exit_data, exit_data_size) }, status)
     }
 }
 

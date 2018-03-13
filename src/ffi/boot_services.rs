@@ -1,4 +1,7 @@
-use ffi::base::{EFI_GUID, EFI_HANDLE, EFI_STATUS, EFI_TABLE_HEADER, UINT32, VOID, NOT_DEFINED};
+use ffi::{
+    base::{EFI_GUID, EFI_HANDLE, EFI_STATUS, EFI_TABLE_HEADER, UINT32, UINTN, CHAR16, BOOLEAN, VOID, NOT_DEFINED},
+    device_path::EFI_DEVICE_PATH_PROTOCOL
+};
 // use base::{Event, Handle, Handles, MemoryType, Status};
 // use guid;
 // use table;
@@ -85,8 +88,6 @@ pub type EFI_REGISTER_PROTOCOL_NOTIFY = *const NOT_DEFINED;
 pub type EFI_LOCATE_HANDLE = *const NOT_DEFINED;
 pub type EFI_LOCATE_DEVICE_PATH = *const NOT_DEFINED;
 pub type EFI_INSTALL_CONFIGURATION_TABLE = *const NOT_DEFINED;
-pub type EFI_IMAGE_LOAD = *const NOT_DEFINED;
-pub type EFI_IMAGE_START = *const NOT_DEFINED;
 pub type EFI_EXIT = *const NOT_DEFINED;
 pub type EFI_IMAGE_UNLOAD = *const NOT_DEFINED;
 pub type EFI_EXIT_BOOT_SERVICES = *const NOT_DEFINED;
@@ -146,4 +147,19 @@ pub type EFI_LOCATE_PROTOCOL = extern "win64" fn(
     Protocol: *const EFI_GUID,
     Registration: *mut VOID,
     Interface: *mut *mut VOID
+) -> EFI_STATUS;
+
+pub type EFI_IMAGE_LOAD = extern "win64" fn(
+    BootPolicy: BOOLEAN,
+    ParentImageHandle: EFI_HANDLE,
+    DevicePath: *const EFI_DEVICE_PATH_PROTOCOL,
+    SourceBuffer: *const VOID,
+    SourceSize: UINTN,
+    ImageHandle: *mut EFI_HANDLE
+) -> EFI_STATUS;
+
+pub type EFI_IMAGE_START = extern "win64" fn(
+    ImageHandle: EFI_HANDLE,
+    ExitDataSize: *mut UINTN,
+    ExitData: *mut *const CHAR16
 ) -> EFI_STATUS;
