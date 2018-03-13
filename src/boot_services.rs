@@ -11,12 +11,12 @@ pub struct Handle(EFI_HANDLE);
 
 bitflags! {
     pub struct OpenProtocolAttributes: u32 {
-        const ByHandleProtocol = 0x00000001;
-        const GetProtocol =  0x00000002;
-        const ByTestProtocol = 0x00000004;
-        const ByChildController = 0x00000008;
-        const ByDriver = 0x00000010;
-        const Exclusive = 0x00000020;
+        const BY_HANDLE_PROTOCOL = 0x00000001;
+        const GET_PROTOCOL =  0x00000002;
+        const BY_TEST_PROTOCOL = 0x00000004;
+        const BY_CHILD_CONTROLLER = 0x00000008;
+        const BY_DRIVER = 0x00000010;
+        const EXCLUSIVE = 0x00000020;
     }
 }
 
@@ -40,7 +40,6 @@ pub struct BootServices(EFI_BOOT_SERVICES);
     pub fn open_protocol<T: Protocol>(&self, handle: Handle, agent_handle: Handle, controller_handle: Option<Handle>, attributes: OpenProtocolAttributes) -> Result<&T> {
         let handle_ptr = handle.0;
         let guid_ptr = &T::guid() as *const Guid;
-        let registration: *mut Void = ptr::null_mut();
         let agent_handle_ptr = agent_handle.0;
         let controller_handle_ptr: EFI_HANDLE = controller_handle.map_or(ptr::null(), |v| unsafe { mem::transmute(v) });
         let mut protocol: *mut T::FfiType = ptr::null_mut();
