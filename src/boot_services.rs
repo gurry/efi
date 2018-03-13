@@ -38,7 +38,7 @@ pub struct BootServices(EFI_BOOT_SERVICES);
         let mut protocol: *mut T::FfiType = ptr::null_mut();
 
         let status = unsafe {
-            (self.0.OpenProtocol)(mem::transmute(handle), guid_ptr, mem::transmute::<&mut *mut T::FfiType, *mut *mut Void>(&mut protocol), mem::transmute(agent_handle), controller_handle_ptr, attributes.bits())
+            (self.0.OpenProtocol)(mem::transmute(handle), guid_ptr, mem::transmute(&mut protocol), mem::transmute(agent_handle), controller_handle_ptr, attributes.bits())
         };
 
         to_res(unsafe { mem::transmute(protocol) }, status)
@@ -64,7 +64,7 @@ pub struct BootServices(EFI_BOOT_SERVICES);
         let mut protocol: *mut T::FfiType = ptr::null_mut();
 
         let status = unsafe {
-            (self.0.LocateProtocol)(guid_ptr, registration, mem::transmute::<&mut *mut T::FfiType, *mut *mut Void>(&mut protocol))
+            (self.0.LocateProtocol)(guid_ptr, registration, mem::transmute(&mut protocol))
         };
 
         to_res(unsafe { mem::transmute(protocol) }, status)
