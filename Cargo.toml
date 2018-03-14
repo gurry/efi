@@ -2,6 +2,13 @@
 name = "efi"
 version = "0.1.0"
 authors = ["Gurinder Singh <frederick.the.fool@gmail.com>"]
+description = "Ergonomic Rust bindings for writing UEFI applications"
+repository = "https://github.com/gurry/efi"
+readme = "https://github.com/gurry/efi/blob/master/README.md"
+keywords = ["bindings", "uefi", "efi", "boot-loader", "os-loader"]
+categories = ["api-bindings", "no-std", "os"]
+license = "MIT"
+
 
 [dependencies]
 bitflags = "1.0"
