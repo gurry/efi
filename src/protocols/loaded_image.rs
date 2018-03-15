@@ -15,13 +15,7 @@ use protocols::Protocol;
 
 pub struct LoadedImageProtocol(EFI_LOADED_IMAGE_PROTOCOL);
 impl_wrapper!(LoadedImageProtocol, EFI_LOADED_IMAGE_PROTOCOL);
-
-impl Protocol for LoadedImageProtocol {
-    type FfiType = EFI_LOADED_IMAGE_PROTOCOL;
-    fn guid() -> Guid {
-        EFI_LOADED_IMAGE_PROTOCOL_GUID
-    }
-}
+impl_protocol!(LoadedImageProtocol, EFI_LOADED_IMAGE_PROTOCOL, EFI_LOADED_IMAGE_PROTOCOL_GUID);
 
 impl LoadedImageProtocol {
     pub fn revision(&self) -> u32 {

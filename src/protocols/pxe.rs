@@ -26,13 +26,7 @@ use ::ffi::pxe::{
 #[repr(C)]
 pub struct PxeBaseCodeProtocol(EFI_PXE_BASE_CODE_PROTOCOL);
 impl_wrapper!(PxeBaseCodeProtocol, EFI_PXE_BASE_CODE_PROTOCOL);
-
-impl Protocol for PxeBaseCodeProtocol {
-    type FfiType = EFI_PXE_BASE_CODE_PROTOCOL;
-    fn guid() -> Guid {
-        EFI_PXE_BASE_CODE_PROTOCOL_GUID
-    }
-}
+impl_protocol!(PxeBaseCodeProtocol, EFI_PXE_BASE_CODE_PROTOCOL, EFI_PXE_BASE_CODE_PROTOCOL_GUID);
 
 impl From<EFI_PXE_BASE_CODE_PROTOCOL> for PxeBaseCodeProtocol {
     fn from(raw_protocol: EFI_PXE_BASE_CODE_PROTOCOL) -> Self {
