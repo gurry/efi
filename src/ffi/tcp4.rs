@@ -37,12 +37,12 @@ pub struct EFI_TCP4_PROTOCOL {
 
 pub type EFI_TCP4_GET_MODE_DATA = extern "win64" fn(
     This: *const EFI_TCP4_PROTOCOL,
-    Tcp4State: *const EFI_TCP4_CONNECTION_STATE,
-    Tcp4ConfigData: *const EFI_TCP4_CONFIG_DATA,
-    Ip4ModeData: *const EFI_IP4_MODE_DATA,
-    MnpConfigData: *const EFI_MANAGED_NETWORK_CONFIG_DATA,
-    SnpModeData: *const EFI_SIMPLE_NETWORK_MODE 
-);
+    Tcp4State: *mut EFI_TCP4_CONNECTION_STATE,
+    Tcp4ConfigData: *mut EFI_TCP4_CONFIG_DATA,
+    Ip4ModeData: *mut EFI_IP4_MODE_DATA,
+    MnpConfigData: *mut EFI_MANAGED_NETWORK_CONFIG_DATA,
+    SnpModeData: *mut EFI_SIMPLE_NETWORK_MODE 
+) -> EFI_STATUS;
 
 #[repr(C)]
 pub struct EFI_TCP4_ACCESS_POINT {
