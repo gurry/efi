@@ -3,17 +3,20 @@ use ::{
     Result,
     to_res,
 };
-use ffi::{
-    tcp4::{
-        EFI_TCP4_PROTOCOL,
-        EFI_TCP4_PROTOCOL_GUID,
-        EFI_TCP4_CONNECTION_STATE,
-        EFI_TCP4_CONFIG_DATA
-    },
-    ip4::EFI_IP4_MODE_DATA,
-    managed_network::EFI_MANAGED_NETWORK_CONFIG_DATA,
-    simple_network::EFI_SIMPLE_NETWORK_MODE
+
+use protocols::{
+    simple_network::SimpleNetworkMode,
+    managed_network::ManagedNetworkConfigData,
+    ip4::Ip4ModeData
 };
+
+use ffi::tcp4::{
+    EFI_TCP4_PROTOCOL,
+    EFI_TCP4_PROTOCOL_GUID,
+    EFI_TCP4_CONNECTION_STATE,
+    EFI_TCP4_CONFIG_DATA
+};
+
 use core::{mem, ptr};
 use protocols::Protocol;
 use utils::{to_ptr, to_ptr_mut};
@@ -82,15 +85,3 @@ impl_wrapper!(Tcp4ConnectionState, EFI_TCP4_CONNECTION_STATE);
 #[repr(C)]
 pub struct Tcp4ConfigData(EFI_TCP4_CONFIG_DATA); 
 impl_wrapper!(Tcp4ConfigData, EFI_TCP4_CONFIG_DATA); 
-
-#[repr(C)]
-pub struct Ip4ModeData(EFI_IP4_MODE_DATA); 
-impl_wrapper!(Ip4ModeData, EFI_IP4_MODE_DATA); 
-
-#[repr(C)]
-pub struct ManagedNetworkConfigData(EFI_MANAGED_NETWORK_CONFIG_DATA); 
-impl_wrapper!(ManagedNetworkConfigData, EFI_MANAGED_NETWORK_CONFIG_DATA); 
-
-#[repr(C)]
-pub struct SimpleNetworkMode(EFI_SIMPLE_NETWORK_MODE); 
-impl_wrapper!(SimpleNetworkMode, EFI_SIMPLE_NETWORK_MODE); 
