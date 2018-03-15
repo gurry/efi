@@ -38,18 +38,12 @@ impl Tcp4Protocol {
         ip4_mode_data: Option<&mut Ip4ModeData>,
         mnp_config_data: Option<&mut ManagedNetworkConfigData>,
         snp_mode_data: Option<&mut SimpleNetworkMode>) -> Result<()> {
-            let status = unsafe {
-                (self.0.GetModeData)(mem::transmute(self), to_ptr_mut(tcp4_state), to_ptr_mut(tcp4_config_data), to_ptr_mut(ip4_mode_data), to_ptr_mut(mnp_config_data), to_ptr_mut(snp_mode_data))
-            };
-
+            let status = (self.0.GetModeData)(&self.0, to_ptr_mut(tcp4_state), to_ptr_mut(tcp4_config_data), to_ptr_mut(ip4_mode_data), to_ptr_mut(mnp_config_data), to_ptr_mut(snp_mode_data));
             to_res((), status)
     }
 
     pub fn configure(&self, tcp_config_data: Option<&Tcp4ConfigData>) -> Result<()> {
-        let status = unsafe {
-            (self.0.Configure)(mem::transmute(self), to_ptr(tcp_config_data)) 
-        };
-
+        let status = (self.0.Configure)(&self.0, to_ptr(tcp_config_data)) ;
         to_res((), status)
     }
 
