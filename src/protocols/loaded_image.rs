@@ -14,6 +14,7 @@ use core::{mem, slice};
 use protocols::Protocol;
 
 pub struct LoadedImageProtocol(EFI_LOADED_IMAGE_PROTOCOL);
+impl_wrapper!(LoadedImageProtocol, EFI_LOADED_IMAGE_PROTOCOL);
 
 impl Protocol for LoadedImageProtocol {
     type FfiType = EFI_LOADED_IMAGE_PROTOCOL;

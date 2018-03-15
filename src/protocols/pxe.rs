@@ -1,4 +1,5 @@
 
+use utils::{to_ptr, Wrapper};
 use ::{Result, Guid, IpAddress, to_boolean, from_boolean, to_res};
 use protocols::Protocol;
 use ffi::{UINT16, BOOLEAN};
@@ -24,6 +25,7 @@ use ::ffi::pxe::{
 // TODO: This is a lot of boilerplate. Can we find a way to generate this code?
 #[repr(C)]
 pub struct PxeBaseCodeProtocol(EFI_PXE_BASE_CODE_PROTOCOL);
+impl_wrapper!(PxeBaseCodeProtocol, EFI_PXE_BASE_CODE_PROTOCOL);
 
 impl Protocol for PxeBaseCodeProtocol {
     type FfiType = EFI_PXE_BASE_CODE_PROTOCOL;
@@ -56,7 +58,7 @@ impl PxeBaseCodeProtocol {
 
     pub fn discover(&self, boot_type: BootType, layer: u16, use_bis: bool, info: Option<&DiscoverInfo>) -> Result<u16> {
         let layer_ptr = &layer as *const UINT16;
-        let info_ptr = if let Some(info) = info { unsafe { info.ffi_type() } } else { ptr::null() };
+        let info_ptr = if let Some(info) = info { info.inner_ptr() } else { ptr::null() };
 
         let status = (self.0.Discover)(&self.0, unsafe { mem::transmute(boot_type) }, layer_ptr, to_boolean(use_bis), info_ptr);
         to_res(layer, status)
@@ -82,7 +84,6 @@ impl PxeBaseCodeProtocol {
             let true_ptr: *const BOOLEAN = &1;
             let false_ptr: *const BOOLEAN = &0;
             let map_bool_opt = |b: Option<bool>| b.map_or(ptr::null(), |v| if v { true_ptr } else { false_ptr });
-            let map_packet_opt = |b: Option<&Packet>| b.map_or(ptr::null(), |v| unsafe { mem::transmute(v) });
 
             let status = (self.0.SetPackets)(&self.0,
                                 map_bool_opt(new_dhcp_discover_valid),
@@ -91,12 +92,12 @@ impl PxeBaseCodeProtocol {
                                 map_bool_opt(new_pxe_discover_valid),
                                 map_bool_opt(new_pxe_reply_received),
                                 map_bool_opt(new_pxe_bis_reply_received),
-                                map_packet_opt(new_dhcp_discover),
-                                map_packet_opt(new_dhcp_ack),
-                                map_packet_opt(new_proxy_offer),
-                                map_packet_opt(new_pxe_discover),
-                                map_packet_opt(new_pxe_reply),
-                                map_packet_opt(new_pxe_bis_reply));
+                                to_ptr(new_dhcp_discover),
+                                to_ptr(new_dhcp_ack),
+                                to_ptr(new_proxy_offer),
+                                to_ptr(new_pxe_discover),
+                                to_ptr(new_pxe_reply),
+                                to_ptr(new_pxe_bis_reply));
             to_res((), status)
         } 
 
@@ -141,6 +142,12 @@ pub struct DiscoverInfo<'a> {
     srvlist: Option<&'a[SrvListEntry]>
 }
 
+impl<'a> Wrapper for DiscoverInfo<'a> {
+    type Inner = EFI_PXE_BASE_CODE_DISCOVER_INFO;
+    fn inner_ptr(&self) -> *const Self::Inner {
+        &(self.inner) as *const EFI_PXE_BASE_CODE_DISCOVER_INFO
+    }
+}
 
 // TODO: it seems SrvList as per UEFI must contain at least one parameter. Not documented anywhere but the OVMF code seems to expect it.
 // So we may have to create a new type that enforces at least one element requirement instead of taking a ref to a plain array.
@@ -183,10 +190,6 @@ impl<'a> DiscoverInfo<'a> {
     pub fn srvlist(&self) -> Option<&'a[SrvListEntry]> {
         self.srvlist
     }
-
-    unsafe fn ffi_type(&self) -> *const EFI_PXE_BASE_CODE_DISCOVER_INFO {
-        &(self.inner) as *const EFI_PXE_BASE_CODE_DISCOVER_INFO 
-    }
 }
 
 impl<'a> Default for DiscoverInfo<'a> {
@@ -201,6 +204,7 @@ const DEFAULT_SRV_LIST_ENTRY: [SrvListEntry; 1] = [SrvListEntry(EFI_PXE_BASE_COD
 #[derive(Debug)]
 #[repr(C)]
 pub struct SrvListEntry(EFI_PXE_BASE_CODE_SRVLIST);
+impl_wrapper!(SrvListEntry, EFI_PXE_BASE_CODE_SRVLIST);
 
 impl SrvListEntry {
     pub fn new(type_: u16, accept_any_response: bool, reserved: u8, ip_addr: IpAddress) -> Self {
@@ -234,6 +238,7 @@ impl SrvListEntry {
 #[derive(Debug)]
 #[repr(C)]
 pub struct Mode(EFI_PXE_BASE_CODE_MODE);
+impl_wrapper!(Mode, EFI_PXE_BASE_CODE_MODE);
 
 impl Mode {
     pub fn started(&self) -> bool {
@@ -368,6 +373,7 @@ impl Mode {
 #[derive(Debug)]
 #[repr(C)]
 pub struct Packet(EFI_PXE_BASE_CODE_PACKET);
+impl_wrapper!(Packet, EFI_PXE_BASE_CODE_PACKET);
 
 impl Packet {
     pub fn raw(&self) -> &[u8; 1472] {
@@ -386,6 +392,7 @@ impl Packet {
 #[derive(Debug)]
 #[repr(C)]
 pub struct Dhcpv4Packet(EFI_PXE_BASE_CODE_DHCPV4_PACKET);
+impl_wrapper!(Dhcpv4Packet, EFI_PXE_BASE_CODE_DHCPV4_PACKET);
 
 impl Dhcpv4Packet {
     pub fn bootp_opcode(&self) -> u8 {
@@ -456,6 +463,7 @@ impl Dhcpv4Packet {
 #[derive(Debug)]
 #[repr(C)]
 pub struct Dhcpv6Packet(EFI_PXE_BASE_CODE_DHCPV6_PACKET);
+impl_wrapper!(Dhcpv6Packet, EFI_PXE_BASE_CODE_DHCPV6_PACKET);
 
 impl Dhcpv6Packet {
     pub fn bit_field(&self) -> u32 { // Contains both MessageType and TransactionId as bit fields
@@ -470,6 +478,7 @@ impl Dhcpv6Packet {
 #[derive(Debug)]
 #[repr(C)]
 pub struct IpFilter(EFI_PXE_BASE_CODE_IP_FILTER);
+impl_wrapper!(IpFilter, EFI_PXE_BASE_CODE_IP_FILTER);
 
 impl IpFilter {
     pub fn filters(&self) -> u8 {
@@ -488,14 +497,17 @@ impl IpFilter {
 #[derive(Debug)]
 #[repr(C)]
 pub struct ArpEntry(EFI_PXE_BASE_CODE_ARP_ENTRY);
+impl_wrapper!(ArpEntry, EFI_PXE_BASE_CODE_ARP_ENTRY);
 
 #[derive(Debug)]
 #[repr(C)]
 pub struct RouteEntry(EFI_PXE_BASE_CODE_ROUTE_ENTRY);
+impl_wrapper!(RouteEntry, EFI_PXE_BASE_CODE_ROUTE_ENTRY);
 
 #[derive(Debug)]
 #[repr(C)]
 pub struct IcpmError(EFI_PXE_BASE_CODE_ICMP_ERROR);
+impl_wrapper!(IcpmError, EFI_PXE_BASE_CODE_ICMP_ERROR);
 
 impl IcpmError {
     pub fn type_(&self) -> u8 {
@@ -523,6 +535,7 @@ impl IcpmError {
 #[derive(Debug)]
 #[repr(C)]
 pub struct TftpError(EFI_PXE_BASE_CODE_TFTP_ERROR);
+impl_wrapper!(TftpError, EFI_PXE_BASE_CODE_TFTP_ERROR);
 
 impl TftpError {
     pub fn error_code(&self) -> u8 {
