@@ -6,11 +6,11 @@
 #[macro_use] extern crate failure;
 #[macro_use] extern crate bitflags;
 
+
+#[macro_use] mod utils;
 pub mod ffi;
 pub mod boot_services;
 pub mod protocols;
-
-mod utils;
 
 // Hack: this std declartion is to work around a bug in failure crate
 // wherein it looks for std even in no_std crates. Will remove it when
