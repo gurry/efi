@@ -284,3 +284,5 @@ impl<'a> Into<&'a Opaque> for &'a OpaqueController {
         unsafe { transmute(self) }
     }
 }
+
+pub struct OpaqueEvent { _private: [u8; 0] }

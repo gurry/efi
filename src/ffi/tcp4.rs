@@ -8,6 +8,7 @@ use ffi::{
         UINT8,
         UINT16,
         UINT32,
+        UINTN,
         BOOLEAN,
         VOID
     },
@@ -15,6 +16,8 @@ use ffi::{
     simple_network::EFI_SIMPLE_NETWORK_MODE,
     ip4::EFI_IP4_MODE_DATA,
 };
+
+use core::mem;
 
 pub const EFI_TCP4_SERVICE_BINDING_PROTOCOL_GUID: EFI_GUID = EFI_GUID(0x00720665, 0x67EB, 0x4a99, [0xBA, 0xF7, 0xD3, 0xC3, 0x3A, 0x1C, 0x7C, 0xC9]);
 
@@ -113,7 +116,7 @@ pub type EFI_TCP4_ROUTES = extern "win64" fn(
 
 pub type EFI_TCP4_CONNECT = extern "win64" fn(
     This: *const EFI_TCP4_PROTOCOL,
-    ConnectionToken: *const EFI_TCP4_CONNECTION_TOKEN
+    ConnectionToken: *mut EFI_TCP4_CONNECTION_TOKEN
 ) -> EFI_STATUS;
 
 #[repr(C)]
@@ -166,9 +169,9 @@ pub struct EFI_TCP4_IO_TOKEN {
     pub Packet: PacketUnion
 }
 
-// #define EFI_CONNECTION_FIN EFIERR (104)
-// #define EFI_CONNECTION_RESET EFIERR (105)
-// #define EFI_CONNECTION_REFUSED EFIERR (106)
+pub const EFI_CONNECTION_FIN: UINTN = with_high_bit_set!(104);
+pub const EFI_CONNECTION_RESET: UINTN = with_high_bit_set!(105);
+pub const EFI_CONNECTION_REFUSED: UINTN =  with_high_bit_set!(106);
 
 #[repr(C)]
 pub struct EFI_TCP4_RECEIVE_DATA {
