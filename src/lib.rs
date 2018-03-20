@@ -234,10 +234,10 @@ fn to_res<T>(value: T, status: ffi::EFI_STATUS) -> Result<T> {
 pub struct SystemTable(pub *const EFI_SYSTEM_TABLE);
 
 impl SystemTable {
-    pub fn boot_services(&self) -> &boot_services::BootServices {
+    pub fn boot_services(&self) -> boot_services::BootServices {
         unsafe { 
             let &SystemTable(table) = self;
-            transmute((*table).BootServices) 
+            transmute((*table).BootServices.as_ref().unwrap()) // Unwrap safe 'cause ptr can't be null
         }
     }
 

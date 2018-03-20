@@ -16,12 +16,14 @@ bitflags! {
 }
 
 #[repr(C)]
-pub struct BootServices(EFI_BOOT_SERVICES);
+pub struct BootServices<'a>(&'a EFI_BOOT_SERVICES);
 
- impl<'a> BootServices {
-     // TODO: the lifetime annotations on this method may not be enough enforce the lifetime required on the  protocol argument (i.e. it should remain alive as long as it's installed)
-     // So take a look at them again
-    pub fn install_protocol_interface<T: Protocol + Wrapper>(&'a self, handle: Option<&'a OpaqueDevice>, protocol: &'a T, interface_type: InterfaceType) -> Result<&'a OpaqueDevice> {
+ impl<'a> BootServices<'a> {
+     // TODO: tying the proto's lifetime to the BootServices lifetime param 'a may be less optimal than tying it to some lifetime param on OpaqueDevice.
+     // After all it's the device that's going to carry the protocol pointer inside it.
+     // For that we may need to expose a lifetime param on OpaqeDevice
+     // This whole story about adding memory safety requires more thinking
+    pub fn install_protocol_interface<T: Protocol + Wrapper>(&mut self, handle: Option<&'a OpaqueDevice>, protocol: &'a T, interface_type: InterfaceType) -> Result<&'a OpaqueDevice> {
         let handle_ptr: EFI_HANDLE = handle.map_or(ptr::null(), |v| unsafe { mem::transmute(v) });
         let guid_ptr = &T::guid() as *const Guid;
 
@@ -72,7 +74,7 @@ pub struct BootServices(EFI_BOOT_SERVICES);
 
     // TODO: instead of exposing both image params and source buffer should we put these options inside an enum and take an enum?
     // That way there's no chance of the caller specifying both kinds of inputs
-    pub fn load_image(&'a self, boot_policy: bool, parent_image_handle: &'a OpaqueImage, device_path: &'a DevicePathProtocol, source_buffer: Option<&'a [u8]>) -> Result<&'a OpaqueImage> {
+    pub fn load_image(&mut self, boot_policy: bool, parent_image_handle: &'a OpaqueImage, device_path: &'a DevicePathProtocol, source_buffer: Option<&'a [u8]>) -> Result<&'a OpaqueImage> {
         let source_buf_ptr : *const VOID = source_buffer.map_or(ptr::null(), |v| unsafe { mem::transmute(v.as_ptr()) });
         let source_buf_len = source_buffer.map_or(0, |v| v.len());
         let image_handle: *mut *const VOID = ptr::null_mut();
@@ -84,7 +86,7 @@ pub struct BootServices(EFI_BOOT_SERVICES);
         to_res(unsafe { mem::transmute(image_handle) }, status)
     }
 
-    pub fn start_image(&'a self,  image_handle: &'a OpaqueImage) -> Result<&[u16]> {
+    pub fn start_image(&mut self,  image_handle: &'a OpaqueImage) -> Result<&[u16]> {
         let exit_data_size: UINTN = 0;
         let exit_data: *const CHAR16 = ptr::null();
 
