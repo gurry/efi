@@ -19,88 +19,109 @@ use ffi::{tcp4, udp4};
 use ffi::{
     EFI_SUCCESS,
     EFI_EVENT,
+    VOID,
     tcp4::{
         EFI_TCP4_PROTOCOL,
         EFI_TCP4_PROTOCOL_GUID,
         EFI_TCP4_CONNECTION_STATE,
         EFI_TCP4_CONNECTION_TOKEN, 
         EFI_TCP4_COMPLETION_TOKEN,
+        EFI_TCP4_CLOSE_TOKEN,
         EFI_TCP4_IO_TOKEN,
         EFI_TCP4_CONFIG_DATA,
         EFI_TCP4_TRANSMIT_DATA,
+        EFI_TCP4_RECEIVE_DATA,
+        EFI_TCP4_FRAGMENT_DATA,
         PacketUnion
     }
 };
 
 
-use core::{mem, ptr, slice};
+use core::{mem, ptr, slice, marker::PhantomData};
 use protocols::Protocol;
 use utils::{to_ptr, to_ptr_mut, Wrapper};
 
-pub struct Tcp4Protocol(EFI_TCP4_PROTOCOL);
-impl_wrapper!(Tcp4Protocol, EFI_TCP4_PROTOCOL);
+pub struct Tcp4Protocol<'a> {
+    inner: EFI_TCP4_PROTOCOL,
+    _p: PhantomData<&'a i32>
+}
 
-impl Protocol for Tcp4Protocol {
+impl<'a> Protocol for Tcp4Protocol<'a> {
     type FfiType = EFI_TCP4_PROTOCOL;
     fn guid() -> Guid {
         EFI_TCP4_PROTOCOL_GUID
     }
 }
 
-impl Tcp4Protocol {
-    pub fn get_mode_data( &self,
+impl<'a> Tcp4Protocol<'a> {
+    pub fn get_mode_data(&self,
         tcp4_state: Option<&mut Tcp4ConnectionState>,
         tcp4_config_data: Option<&mut Tcp4ConfigData>,
         ip4_mode_data: Option<&mut Ip4ModeData>,
         mnp_config_data: Option<&mut ManagedNetworkConfigData>,
         snp_mode_data: Option<&mut SimpleNetworkMode>) -> Result<()> {
-            let status = (self.0.GetModeData)(&self.0, to_ptr_mut(tcp4_state), to_ptr_mut(tcp4_config_data), to_ptr_mut(ip4_mode_data), to_ptr_mut(mnp_config_data), to_ptr_mut(snp_mode_data));
+            let status = (self.inner.GetModeData)(&self.inner, to_ptr_mut(tcp4_state), to_ptr_mut(tcp4_config_data), to_ptr_mut(ip4_mode_data), to_ptr_mut(mnp_config_data), to_ptr_mut(snp_mode_data));
             to_res((), status)
     }
 
-    pub fn configure(&self, tcp_config_data: Option<&Tcp4ConfigData>) -> Result<()> {
-        let status = (self.0.Configure)(&self.0, to_ptr(tcp_config_data)) ;
+    pub fn configure(&mut self, tcp_config_data: Option<&Tcp4ConfigData>) -> Result<()> {
+        let status = (self.inner.Configure)(&self.inner, to_ptr(tcp_config_data)) ;
         to_res((), status)
     }
 
     // pub fn routes(&self) -> EFI_TCP4_ROUTES {
     // }
 
-    // // TODO: Questions around ownership. What if the caller destroys the token as soon as calling this method?
-    // // Won't the EFI system try to write to the token after words?
-    // pub fn connect(&self, token: &mut Tcp4ConnectionToken) -> Result<()> {
-    //     let status = unsafe {
-    //         (self.0.Connect)(&self.0, mem::transmute(token)) 
-    //     };
+    // TODO: Double check ownership works right
+    pub fn connect(&mut self, token: &'a mut Tcp4ConnectionToken) -> Result<()> {
+        let status = unsafe {
+            (self.inner.Connect)(&self.inner, mem::transmute(token)) 
+        };
 
-    //     to_res((), status)
-    // }
+        to_res((), status)
+    }
 
     // pub fn accept(&self) -> EFI_TCP4_ACCEPT {
     // }
 
-    // // TODO: Major questions around ownership. What if the caller destroys the token as soon as calling this method?
-    // // Won't the EFI system try to write to the token after words? How do we prevent this?
-    // // There are also subfields hanging off the token (such as buffer pointers) which also raise the same questions, only more vehemently so.
-    // pub fn transmit(&self,  token: &mut Tcp4IoToken) -> Result<()> {
-    //     let status = unsafe {
-    //         (self.0.Transmit)(&self.0, mem::transmute(token)) 
-    //     };
+    // TODO: Double check ownership works right
+    pub fn transmit(&mut self, token: &'a mut Tcp4IoTokenTx<'a>) -> Result<()> {
+        let status = unsafe {
+            (self.inner.Transmit)(&self.inner, mem::transmute(token)) 
+        };
 
-    //     to_res((), status)
-    // }
+        to_res((), status)
+    }
 
-    // pub fn receive(&self) -> EFI_TCP4_RECEIVE {
-    // }
+    pub fn receive(&mut self, token: &'a mut Tcp4IoTokenTx<'a>) -> Result<()> {
+        let status = unsafe {
+            (self.inner.Receive)(&self.inner, mem::transmute(token)) 
+        };
 
-    // pub fn close(&self) -> EFI_TCP4_CLOSE {
-    // }
+        to_res((), status)
+    }
 
-    // pub fn cancel(&self) -> EFI_TCP4_CANCEL {
-    // }
+    pub fn close(&mut self, close_token: &'a mut Tcp4CloseToken) -> Result<()> {
+        let status = unsafe {
+            (self.inner.Close)(&self.inner, mem::transmute(close_token)) 
+        };
 
-    // pub fn poll(&self) -> EFI_TCP4_POLL {
-    // }
+        to_res((), status)
+    }
+
+    pub fn cancel(&mut self, token: &'a mut Tcp4CompletionToken) -> Result<()> {
+        let status = unsafe {
+            (self.inner.Cancel)(&self.inner, mem::transmute(token)) 
+        };
+
+        to_res((), status)
+    }
+
+    pub fn poll(&mut self) -> Result<()> {
+        let status =  (self.inner.Poll)(&self.inner);
+        
+        to_res((), status)
+    }
 }
 
 #[repr(C)]
@@ -115,34 +136,34 @@ impl_wrapper!(Tcp4ConfigData, EFI_TCP4_CONFIG_DATA);
 pub struct Tcp4ConnectionToken(EFI_TCP4_CONNECTION_TOKEN); 
 impl_wrapper!(Tcp4ConnectionToken, EFI_TCP4_CONNECTION_TOKEN); 
 
-// impl Tcp4ConnectionToken {
-//     pub fn new() -> Self {
-//         Tcp4ConnectionToken(EFI_TCP4_CONNECTION_TOKEN {
-//             CompletionToken: EFI_TCP4_COMPLETION_TOKEN {
-//                 Event: ptr::null() as EFI_EVENT,
-//                 Status: EFI_SUCCESS
-//             }
-//         })
-//     }
+impl Tcp4ConnectionToken {
+    pub fn new() -> Self {
+        Tcp4ConnectionToken(EFI_TCP4_CONNECTION_TOKEN {
+            CompletionToken: EFI_TCP4_COMPLETION_TOKEN {
+                Event: ptr::null() as EFI_EVENT,
+                Status: EFI_SUCCESS
+            }
+        })
+    }
 
-//     pub fn completion_token(&self) -> &Tcp4CompletionToken {
-//         unsafe { mem::transmute(&self.0.CompletionToken) }
-//     }
-// }
+    pub fn completion_token(&self) -> &Tcp4CompletionToken {
+        unsafe { mem::transmute(&self.0.CompletionToken) }
+    }
+}
 
-// #[repr(C)]
-// pub struct Tcp4CompletionToken(EFI_TCP4_COMPLETION_TOKEN); 
-// impl_wrapper!(Tcp4CompletionToken, EFI_TCP4_COMPLETION_TOKEN); 
+#[repr(C)]
+pub struct Tcp4CompletionToken(EFI_TCP4_COMPLETION_TOKEN); 
+impl_wrapper!(Tcp4CompletionToken, EFI_TCP4_COMPLETION_TOKEN); 
 
-// impl Tcp4CompletionToken {
-//     pub fn event(&self) -> &OpaqueEvent {
-//         unsafe { mem::transmute(self.0.Event) }
-//     }
+impl Tcp4CompletionToken {
+    pub fn event(&self) -> &OpaqueEvent {
+        unsafe { mem::transmute(self.0.Event) }
+    }
 
-//     pub fn status(&self) -> Tcp4CompletionTokenStatus {
-//         unsafe { mem::transmute(self.0.Status) }
-//     }
-// }
+    pub fn status(&self) -> Tcp4CompletionTokenStatus {
+        unsafe { mem::transmute(self.0.Status) }
+    }
+}
 
 #[derive(Debug, Fail, Copy, Clone)]
 #[repr(usize)]
@@ -171,95 +192,186 @@ pub enum Tcp4CompletionTokenStatus {
     DeviceError = ffi::EFI_DEVICE_ERROR
 }
 
-// #[repr(C)]
-// pub struct Tcp4IoToken<'a>
-// {
-//     inner: EFI_TCP4_IO_TOKEN,
-//     tx_data: Tcp4TransmitData<'a>
-// }
+#[repr(C)]
+pub struct Tcp4CloseToken(EFI_TCP4_CLOSE_TOKEN);
 
-// impl<'a> Wrapper for Tcp4IoToken<'a> {
-//     type Inner = EFI_TCP4_IO_TOKEN;
-//     fn inner_ptr(&self) -> *const Self::Inner {
-//         &(self.inner) as *const EFI_TCP4_IO_TOKEN
-//     }
-// }
+impl Tcp4CloseToken {
+    pub fn new(completion_token: Tcp4CompletionToken, abort_on_close: bool) -> Self {
+        Tcp4CloseToken(
+            EFI_TCP4_CLOSE_TOKEN {
+                CompletionToken:  unsafe { mem::transmute(completion_token) },
+                AbortOnClose: if abort_on_close { 1 } else { 0 }
+            })
+    }
+    pub fn completion_token(&self) -> &Tcp4CompletionToken {
+        unsafe { mem::transmute(&self.0.CompletionToken) }
+    }
 
-// impl<'a> Tcp4IoToken<'a> {
-//     pub fn new(completion_token: Tcp4CompletionToken, tx_data: Tcp4TransmitData<'a>) -> Self {
-//         Tcp4IoToken {
-//             inner: EFI_TCP4_IO_TOKEN {
-//                 CompletionToken: EFI_TCP4_COMPLETION_TOKEN {
-//                     Event: ptr::null() as EFI_EVENT,
-//                     Status: EFI_SUCCESS
-//                 },
-//                 Packet: PacketUnion { TxData: tx_data.inner_ptr() }
-//             },
-//             tx_data
-//         }
-//     }
-// }
+    pub fn abort_on_close(&self) -> bool {
+        self.0.AbortOnClose == 1
+    }
+}
 
-// #[repr(C)]
-// pub struct Tcp4TransmitData<'a>
-// {
-//     inner: EFI_TCP4_TRANSMIT_DATA,
-//     frag_table: &'a[&'a[u8]] 
-// }
+#[repr(C)]
+pub struct Tcp4IoTokenTx<'a>
+{
+    inner: EFI_TCP4_IO_TOKEN,
+    tx_data: Tcp4TransmitData<'a>
+}
 
-// impl<'a> Wrapper for Tcp4TransmitData<'a> {
-//     type Inner = EFI_TCP4_TRANSMIT_DATA;
-//     fn inner_ptr(&self) -> *const Self::Inner {
-//         &(self.inner) as *const EFI_TCP4_TRANSMIT_DATA
-//     }
-// }
+impl<'a> Wrapper for Tcp4IoTokenTx<'a> {
+    type Inner = EFI_TCP4_IO_TOKEN;
+    fn inner_ptr(&self) -> *const Self::Inner {
+        &(self.inner) as *const EFI_TCP4_IO_TOKEN
+    }
+}
 
-// impl<'a> Tcp4TransmitData<'a> {
-//     pub fn new(push: bool, urgent: bool, frag_table: &'a[&[u8]]) -> Self {
-//         Self {
-//             inner: EFI_TCP4_TRANSMIT_DATA {
-//                     Push: to_boolean(push),
-//                     Urgent: to_boolean(urgent),
-//                     DataLength: frag_table.iter().map(|f| f.len()).sum(),
-//                     FragmentCount: frag_table.len() as u32, // TODO: is this cast safe?
-//                     FragmentTable: frag_table.
-//             },
-//             frag_table
-//         }
-//     }
+impl<'a> Tcp4IoTokenTx<'a> {
+    pub fn new(completion_token: Tcp4CompletionToken, tx_data: Tcp4TransmitData<'a>) -> Self {
+        Tcp4IoTokenTx {
+            inner: EFI_TCP4_IO_TOKEN {
+                CompletionToken: unsafe { mem::transmute(completion_token) },
+                Packet: PacketUnion { TxData: tx_data.inner_ptr() }
+            },
+            tx_data
+        }
+    }
+}
 
-//     pub fn push(&self) -> bool {
-//         self.0.Push == 1
-//     }
+#[repr(C)]
+pub struct Tcp4TransmitData<'a>
+{
+    inner: EFI_TCP4_TRANSMIT_DATA,
+    frag_table: &'a [Tcp4FragmentData<'a>] 
+}
+
+impl<'a> Wrapper for Tcp4TransmitData<'a> {
+    type Inner = EFI_TCP4_TRANSMIT_DATA;
+    fn inner_ptr(&self) -> *const Self::Inner {
+        &(self.inner) as *const EFI_TCP4_TRANSMIT_DATA
+    }
+}
+
+impl<'a> Tcp4TransmitData<'a> {
+    pub fn new(push: bool, urgent: bool, frag_table: &'a[Tcp4FragmentData]) -> Self {
+        Self {
+            inner: EFI_TCP4_TRANSMIT_DATA {
+                    Push: to_boolean(push),
+                    Urgent: to_boolean(urgent),
+                    DataLength: frag_table.iter().map(|f| f.fragment_buffer().len() as u32).sum(),
+                    FragmentCount: frag_table.len() as u32, // TODO: is this cast safe?
+                    FragmentTable: unsafe { mem::transmute(frag_table.as_ptr()) }
+            },
+            frag_table
+        }
+    }
+
+    pub fn push(&self) -> bool {
+        self.inner.Push == 1
+    }
     
-//     pub fn urgent(&self) -> bool {
-//         self.0.Urgent == 1
-//     }
+    pub fn urgent(&self) -> bool {
+        self.inner.Urgent == 1
+    }
 
-//     pub fn data_length(&self) -> u32 {
-//         self.0.DataLength
-//     }
+    pub fn data_length(&self) -> u32 {
+        self.inner.DataLength
+    }
 
-//     pub fn fragment_table(&self) -> &[&[u8]] {
-//         self.frag_table
-//     }
-// }
+    pub fn fragment_table(&self) -> &[Tcp4FragmentData] {
+        self.frag_table
+    }
+}
 
-// pub struct Tcp4FragmentData(EFI_TCP4_FRAGMENT_DATA); 
+#[repr(C)]
+pub struct Tcp4IoTokenRx<'a>
+{
+    inner: EFI_TCP4_IO_TOKEN,
+    rx_data: Tcp4ReceiveData<'a>
+}
 
-// impl<'a> Wrapper for Tcp4FragmentData<'a> {
-//     type Inner = EFI_TCP4_FRAGMENT_DATA;
-//     fn inner_ptr(&self) -> *const Self::Inner {
-//         &(self.inner) as *const EFI_TCP4_FRAGMENT_DATA
-//     }
-// }
+impl<'a> Wrapper for Tcp4IoTokenRx<'a> {
+    type Inner = EFI_TCP4_IO_TOKEN;
+    fn inner_ptr(&self) -> *const Self::Inner {
+        &(self.inner) as *const EFI_TCP4_IO_TOKEN
+    }
+}
+
+impl<'a> Tcp4IoTokenRx<'a> {
+    pub fn new(completion_token: Tcp4CompletionToken, rx_data: Tcp4ReceiveData<'a>) -> Self {
+        Tcp4IoTokenRx {
+            inner: EFI_TCP4_IO_TOKEN {
+                CompletionToken: unsafe { mem::transmute(completion_token) },
+                Packet: PacketUnion { RxData: rx_data.inner_ptr() }
+            },
+            rx_data
+        }
+    }
+}
+
+#[repr(C)]
+pub struct Tcp4ReceiveData<'a>
+{
+    inner: EFI_TCP4_RECEIVE_DATA,
+    frag_table: &'a [Tcp4FragmentData<'a>] 
+}
+
+impl<'a> Wrapper for Tcp4ReceiveData<'a> {
+    type Inner = EFI_TCP4_RECEIVE_DATA;
+    fn inner_ptr(&self) -> *const Self::Inner {
+        &(self.inner) as *const EFI_TCP4_RECEIVE_DATA
+    }
+}
+
+impl<'a> Tcp4ReceiveData<'a> {
+    pub fn new(urgent: bool, frag_table: &'a[Tcp4FragmentData]) -> Self {
+        Self {
+            inner: EFI_TCP4_RECEIVE_DATA {
+                    UrgentFlag: to_boolean(urgent),
+                    DataLength: frag_table.iter().map(|f| f.fragment_buffer().len() as u32).sum(),
+                    FragmentCount: frag_table.len() as u32, // TODO: is this cast safe?
+                    FragmentTable: unsafe { mem::transmute(frag_table.as_ptr()) }
+            },
+            frag_table
+        }
+    }
+    
+    pub fn urgent(&self) -> bool {
+        self.inner.UrgentFlag == 1
+    }
+
+    pub fn data_length(&self) -> u32 {
+        self.inner.DataLength
+    }
+
+    pub fn fragment_table(&self) -> &[Tcp4FragmentData] {
+        self.frag_table
+    }
+}
+
+#[repr(C)]
+pub struct Tcp4FragmentData<'a> {
+    inner: EFI_TCP4_FRAGMENT_DATA,
+    _p: PhantomData<&'a i32>
+}
+
+impl<'a> Wrapper for Tcp4FragmentData<'a> {
+    type Inner = EFI_TCP4_FRAGMENT_DATA;
+    fn inner_ptr(&self) -> *const Self::Inner {
+        &(self.inner) as *const EFI_TCP4_FRAGMENT_DATA
+    }
+}
 
 
-// impl Tcp4FragmentData {
-//     pub fn new(fragment_buffer: &[u8]) -> Self {
-//         Self(EFI_TCP4_FRAGMENT_DATA { FragmentLength: fragment_buffer.len(), Frag})
-//     }
-//     pub fn fragment_buffer(&self) -> &[u8] {
-//         unsafe { slice::from_raw_parts(self.0.FragmentBuffer, self.0.FragmentLength as usize) }
-//     }
-// }
+impl<'a> Tcp4FragmentData<'a> {
+    pub fn new(fragment_buffer: &'a [u8]) -> Self {
+        Self { 
+            inner: EFI_TCP4_FRAGMENT_DATA { FragmentLength: fragment_buffer.len() as u32, FragmentBuffer: fragment_buffer.as_ptr() as *const VOID },
+            _p: PhantomData
+        }
+    }
+
+    pub fn fragment_buffer(&self) -> &[u8] {
+        unsafe { slice::from_raw_parts(self.inner.FragmentBuffer as *const u8, self.inner.FragmentLength as usize) }
+    }
+}
