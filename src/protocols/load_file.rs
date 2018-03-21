@@ -15,34 +15,32 @@ use protocols::Protocol;
 use super::device_path::DevicePathProtocol;
 use ::utils::Wrapper;
 
-pub struct LoadFileProtocol<'a> {
+pub struct LoadFileProtocol<'a, C: 'a + FnMut(&DevicePathProtocol, &mut [u8]) -> Result<usize>> {
     inner: EFI_LOAD_FILE_PROTOCOL,
-    load_file: &'a mut FnMut(&DevicePathProtocol, &mut [u8]) -> Result<usize> // TODO: going with dyn dispatch for now. Will come back to it later.
+    load_file: &'a mut C
 }
 
-impl<'a> LoadFileProtocol<'a> {
-    pub fn new(load_file: &'a mut FnMut(&DevicePathProtocol, &mut [u8]) -> Result<usize>) -> Self {
-        Self { inner: EFI_LOAD_FILE_PROTOCOL { LoadFile: load_file_callback }, load_file }
+impl<'a, C: 'a + FnMut(&DevicePathProtocol, &mut [u8]) -> Result<usize>> LoadFileProtocol<'a, C> {
+    pub fn new(load_file: &'a mut C) -> Self {
+        Self { inner: EFI_LOAD_FILE_PROTOCOL { LoadFile: load_file_callback::<'a, C> }, load_file }
     }
 }
 
-impl<'a> Protocol for LoadFileProtocol<'a> {
+impl<'a, C: 'a + FnMut(&DevicePathProtocol, &mut [u8]) -> Result<usize>> Protocol for LoadFileProtocol<'a, C> {
     type FfiType = EFI_LOAD_FILE_PROTOCOL;
     fn guid() -> Guid {
         EFI_LOAD_FILE_PROTOCOL_GUID
     }
 }
 
-impl<'a> Wrapper for LoadFileProtocol<'a> {
+impl<'a, C: 'a + FnMut(&DevicePathProtocol, &mut [u8]) -> Result<usize>> Wrapper for LoadFileProtocol<'a, C> {
      type Inner = EFI_LOAD_FILE_PROTOCOL;
     fn inner_ptr(&self) -> *const Self::Inner {
         &self.inner
     }
 }
 
-// TODO: do we need 'pub' on this to be callable from UEFI?
-#[no_mangle]
-pub extern "win64" fn load_file_callback(
+pub extern "win64" fn load_file_callback<'a, C: 'a + FnMut(&DevicePathProtocol, &mut [u8]) -> Result<usize>>(
     this: *const EFI_LOAD_FILE_PROTOCOL, 
     file_path: *const EFI_DEVICE_PATH_PROTOCOL,
     boot_policy: BOOLEAN,
@@ -51,7 +49,7 @@ pub extern "win64" fn load_file_callback(
 ) -> EFI_STATUS {
 
     // TODO: Properly handle boot_policy also
-    let load_file_protocol: &mut LoadFileProtocol = unsafe { mem::transmute(this) };
+    let load_file_protocol: &mut LoadFileProtocol<'a, C> = unsafe { mem::transmute(this) };
 
     let file_path: &DevicePathProtocol = unsafe { mem::transmute(file_path) };
 
