@@ -1,5 +1,30 @@
-use ffi::{boot_services::{EFI_BOOT_SERVICES, EFI_INTERFACE_TYPE, EFI_ALLOCATE_TYPE, EFI_MEMORY_TYPE}, EFI_HANDLE, UINTN, CHAR16, VOID};
-use ::{Result, Guid, Void, to_res, utils::Wrapper, Opaque, OpaqueDevice, OpaqueAgent, OpaqueImage, OpaqueController, to_boolean};
+use ffi::{boot_services::{
+        EFI_BOOT_SERVICES, 
+        EFI_INTERFACE_TYPE, 
+        EFI_ALLOCATE_TYPE, 
+        EFI_MEMORY_TYPE,
+        TPL_APPLICATION,
+        TPL_CALLBACK,
+        TPL_NOTIFY,
+        TPL_HIGH_LEVEL,
+        EVT_TIMER,
+        EVT_RUNTIME,
+        EVT_NOTIFY_WAIT,
+        EVT_NOTIFY_SIGNAL,
+        EVT_SIGNAL_EXIT_BOOT_SERVICES,
+        EVT_SIGNAL_VIRTUAL_ADDRESS_CHANGE,
+        EFI_EVENT_NOTIFY 
+    }, 
+    EFI_HANDLE,
+    EFI_STATUS,
+    EFI_EVENT,
+    EFI_SUCCESS,
+    UINTN, 
+    CHAR16, 
+    VOID,
+};
+
+use ::{Result, Guid, Void, to_res, utils::Wrapper, Opaque, OpaqueDevice, OpaqueAgent, OpaqueImage, OpaqueController, OpaqueEvent, to_boolean};
 use protocols::{Protocol, DevicePathProtocol};
 use core::{ptr, mem, slice};
 
@@ -15,10 +40,51 @@ bitflags! {
     }
 }
 
+#[repr(u32)]
+#[derive(Debug)]
+pub enum EventType {
+    Timer = EVT_TIMER,
+    Runtime = EVT_RUNTIME,
+    NotifyWait = EVT_NOTIFY_WAIT,
+    NotifySignal = EVT_NOTIFY_SIGNAL,
+    ExitBootServices = EVT_SIGNAL_EXIT_BOOT_SERVICES,
+    SignalVirtualAddressChange = EVT_SIGNAL_VIRTUAL_ADDRESS_CHANGE
+}
+
+#[repr(usize)]
+#[derive(Debug)]
+pub enum Tpl {
+    Appliction = TPL_APPLICATION,
+    Callback = TPL_CALLBACK,
+    Notify = TPL_NOTIFY,
+    HighLevel = TPL_HIGH_LEVEL
+}
+
 #[repr(C)]
 pub struct BootServices<'a>(&'a EFI_BOOT_SERVICES);
 
- impl<'a> BootServices<'a> {
+extern "win64" fn global_notify_func<F: Fn()>(_event: EFI_EVENT, context: *const VOID) -> EFI_STATUS {
+    if !context.is_null() {
+        let closure: &F = unsafe { mem::transmute(context) };
+        closure();
+    }
+
+    EFI_SUCCESS
+}
+
+impl<'a> BootServices<'a> {
+    pub fn create_event<F: Fn()>(&mut self, type_: EventType, notify_tpl: Tpl, notify_function: Option<&'a F>) -> Result<&'a OpaqueEvent> {
+        let context: *const VOID = notify_function.map_or(ptr::null(), |v| unsafe { mem::transmute(v) } );
+        let notify_function: EFI_EVENT_NOTIFY = unsafe { notify_function.map_or(mem::transmute::<*const VOID, EFI_EVENT_NOTIFY>(ptr::null()), |_| global_notify_func::<F>) } ;
+        let mut event: EFI_EVENT = ptr::null();
+
+        let status = unsafe {
+            (self.0.CreateEvent)(mem::transmute(type_), mem::transmute(notify_tpl), notify_function, context, &mut event)
+        };
+
+        to_res(unsafe { mem::transmute(event) }, status)
+    }
+
      // TODO: tying the proto's lifetime to the BootServices lifetime param 'a may be less optimal than tying it to some lifetime param on OpaqueDevice.
      // After all it's the device that's going to carry the protocol pointer inside it.
      // For that we may need to expose a lifetime param on OpaqeDevice

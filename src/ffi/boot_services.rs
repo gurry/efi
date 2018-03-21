@@ -1,5 +1,5 @@
 use ffi::{
-    base::{EFI_GUID, EFI_HANDLE, EFI_STATUS, EFI_TABLE_HEADER, UINT32, UINT64, UINTN, CHAR16, BOOLEAN, VOID, NOT_DEFINED},
+    base::{EFI_GUID, EFI_HANDLE, EFI_STATUS, EFI_EVENT, EFI_TABLE_HEADER, UINT32, UINT64, UINTN, CHAR16, BOOLEAN, VOID, NOT_DEFINED},
     device_path::EFI_DEVICE_PATH_PROTOCOL
 };
 // use base::{Event, Handle, Handles, MemoryType, Status};
@@ -75,9 +75,7 @@ pub type EFI_FREE_PAGES = *const NOT_DEFINED;
 pub type EFI_GET_MEMORY_MAP = *const NOT_DEFINED;
 pub type EFI_ALLOCATE_POOL = *const NOT_DEFINED;
 pub type EFI_FREE_POOL = *const NOT_DEFINED;
-pub type EFI_CREATE_EVENT = *const NOT_DEFINED;
 pub type EFI_SET_TIMER = *const NOT_DEFINED;
-pub type EFI_WAIT_FOR_EVENT = *const NOT_DEFINED;
 pub type EFI_SIGNAL_EVENT = *const NOT_DEFINED;
 pub type EFI_CLOSE_EVENT = *const NOT_DEFINED;
 pub type EFI_CHECK_EVENT = *const NOT_DEFINED;
@@ -107,6 +105,33 @@ pub type EFI_SET_MEM = *const NOT_DEFINED;
 pub type EFI_CREATE_EVENT_EX = *const NOT_DEFINED;
 
 
+pub type EFI_TPL = UINTN;
+
+pub const TPL_APPLICATION: UINTN = 4;
+pub const TPL_CALLBACK: UINTN = 8;
+pub const TPL_NOTIFY: UINTN = 16;
+pub const TPL_HIGH_LEVEL: UINTN = 31;
+
+pub const EVT_TIMER: UINT32 = 0x80000000;
+pub const EVT_RUNTIME: UINT32 = 0x40000000;
+pub const EVT_NOTIFY_WAIT: UINT32 = 0x00000100;
+pub const EVT_NOTIFY_SIGNAL: UINT32 = 0x00000200;
+pub const EVT_SIGNAL_EXIT_BOOT_SERVICES: UINT32 = 0x00000201;
+pub const EVT_SIGNAL_VIRTUAL_ADDRESS_CHANGE: UINT32 = 0x60000202;
+
+pub type EFI_CREATE_EVENT = extern "win64" fn(
+    Type: UINT32,
+    NotifyTpl: EFI_TPL,
+    NotifyFunction: EFI_EVENT_NOTIFY,
+    NotifyContext: *const VOID,
+    Event: *mut EFI_EVENT 
+) -> EFI_STATUS;
+
+pub type EFI_WAIT_FOR_EVENT = extern "win64" fn(
+    NumberOfEvents: UINTN,
+    Event: *const EFI_EVENT,
+    Index: *mut UINTN
+) -> EFI_STATUS;
 
 #[derive(Debug)]
 pub enum EFI_INTERFACE_TYPE {
@@ -118,6 +143,11 @@ pub type EFI_INSTALL_PROTOCOL_INTERFACE = extern "win64" fn(
     Protocol: *const EFI_GUID,
     InterfaceType: EFI_INTERFACE_TYPE,
     Interface: *const VOID
+) -> EFI_STATUS;
+
+pub type EFI_EVENT_NOTIFY = extern "win64" fn(
+    Event: EFI_EVENT,
+    Context: *const VOID
 ) -> EFI_STATUS;
 
 pub const EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL: UINT32 = 0x00000001;
