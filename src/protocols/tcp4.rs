@@ -130,37 +130,6 @@ impl<'a> Tcp4Protocol<'a> {
 pub struct Tcp4ConnectionState(EFI_TCP4_CONNECTION_STATE); 
 impl_wrapper!(Tcp4ConnectionState, EFI_TCP4_CONNECTION_STATE);
 
-// [repr(C)]
-// pub struct EFI_TCP4_ACCESS_POINT {
-//     pub UseDefaultAddress: BOOLEAN,
-//     pub StationAddress: EFI_IPv4_ADDRESS,
-//     pub SubnetMask: EFI_IPv4_ADDRESS,
-//     pub StationPort: UINT16,
-//     pub RemoteAddress: EFI_IPv4_ADDRESS,
-//     pub RemotePort: UINT16,
-//     pub ActiveFlag: BOOLEAN,
-// }
-
-// #[repr(C)]
-// pub struct EFI_TCP4_OPTION {
-//     pub ReceiveBufferSize: UINT32,
-//     pub SendBufferSize: UINT32,
-//     pub MaxSynBackLog: UINT32,
-//     pub ConnectionTimeout: UINT32,
-//     pub DataRetries: UINT32,
-//     pub FinTimeout: UINT32,
-//     pub TimeWaitTimeout: UINT32,
-//     pub KeepAliveProbes: UINT32,
-//     pub KeepAliveTime: UINT32,
-//     pub KeepAliveInterval: UINT32,
-//     pub EnableNagle: BOOLEAN,
-//     pub EnableTimeStamp: BOOLEAN,
-//     pub EnableWindowScaling: BOOLEAN,
-//     pub EnableSelectiveAck: BOOLEAN,
-//     pub EnablePathMtuDiscovery: BOOLEAN,
-// }
-
-
 // TODO: This is a temp situation. Figure out the right way to code the below two structs
 // keeping in mind that the user may have to selectively set the fields of these struct.
 pub type Tcp4AccessPoint = EFI_TCP4_ACCESS_POINT;
