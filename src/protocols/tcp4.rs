@@ -29,6 +29,8 @@ use ffi::{
         EFI_TCP4_CLOSE_TOKEN,
         EFI_TCP4_IO_TOKEN,
         EFI_TCP4_CONFIG_DATA,
+        EFI_TCP4_ACCESS_POINT,
+        EFI_TCP4_OPTION,
         EFI_TCP4_TRANSMIT_DATA,
         EFI_TCP4_RECEIVE_DATA,
         EFI_TCP4_FRAGMENT_DATA,
@@ -128,9 +130,84 @@ impl<'a> Tcp4Protocol<'a> {
 pub struct Tcp4ConnectionState(EFI_TCP4_CONNECTION_STATE); 
 impl_wrapper!(Tcp4ConnectionState, EFI_TCP4_CONNECTION_STATE);
 
+// [repr(C)]
+// pub struct EFI_TCP4_ACCESS_POINT {
+//     pub UseDefaultAddress: BOOLEAN,
+//     pub StationAddress: EFI_IPv4_ADDRESS,
+//     pub SubnetMask: EFI_IPv4_ADDRESS,
+//     pub StationPort: UINT16,
+//     pub RemoteAddress: EFI_IPv4_ADDRESS,
+//     pub RemotePort: UINT16,
+//     pub ActiveFlag: BOOLEAN,
+// }
+
+// #[repr(C)]
+// pub struct EFI_TCP4_OPTION {
+//     pub ReceiveBufferSize: UINT32,
+//     pub SendBufferSize: UINT32,
+//     pub MaxSynBackLog: UINT32,
+//     pub ConnectionTimeout: UINT32,
+//     pub DataRetries: UINT32,
+//     pub FinTimeout: UINT32,
+//     pub TimeWaitTimeout: UINT32,
+//     pub KeepAliveProbes: UINT32,
+//     pub KeepAliveTime: UINT32,
+//     pub KeepAliveInterval: UINT32,
+//     pub EnableNagle: BOOLEAN,
+//     pub EnableTimeStamp: BOOLEAN,
+//     pub EnableWindowScaling: BOOLEAN,
+//     pub EnableSelectiveAck: BOOLEAN,
+//     pub EnablePathMtuDiscovery: BOOLEAN,
+// }
+
+
+// TODO: This is a temp situation. Figure out the right way to code the below two structs
+// keeping in mind that the user may have to selectively set the fields of these struct.
+pub type Tcp4AccessPoint = EFI_TCP4_ACCESS_POINT;
+pub type Tcp4Option = EFI_TCP4_OPTION;
+
 #[repr(C)]
-pub struct Tcp4ConfigData(EFI_TCP4_CONFIG_DATA); 
-impl_wrapper!(Tcp4ConfigData, EFI_TCP4_CONFIG_DATA); 
+pub struct Tcp4ConfigData<'a> {
+    inner: EFI_TCP4_CONFIG_DATA,
+    control_option: &'a Tcp4Option
+}
+
+impl<'a> Wrapper for Tcp4ConfigData<'a> {
+    type Inner = EFI_TCP4_CONFIG_DATA;
+    fn inner_ptr(&self) -> *const Self::Inner {
+        &(self.inner) as *const EFI_TCP4_CONFIG_DATA
+    }
+}
+
+impl<'a> Tcp4ConfigData<'a> {
+    pub fn new(type_of_service: u8, time_to_live: u8, access_point: Tcp4AccessPoint, control_option: &'a Tcp4Option) -> Self { // TODO: Tcp4AccessPoint is being copied. Find a way to avoid this copy
+        Self {
+            inner: EFI_TCP4_CONFIG_DATA {
+                TypeOfService: type_of_service,
+                TimeToLive: time_to_live,
+                AccessPoint: access_point,
+                ControlOption: control_option as *const EFI_TCP4_OPTION
+            },
+            control_option
+        }
+    }
+
+    pub fn type_of_service(&self) -> u8 {
+        self.inner.TypeOfService
+    }
+
+    pub fn time_to_live(&self) -> u8 {
+        self.inner.TimeToLive
+    }
+
+    pub fn access_point(&self) -> &Tcp4AccessPoint {
+        unsafe { mem::transmute(&self.inner.AccessPoint) }
+    }
+
+    pub fn control_option(&self) -> &Tcp4Option {
+        self.control_option
+    }
+}
 
 #[repr(C)]
 pub struct Tcp4ConnectionToken(EFI_TCP4_CONNECTION_TOKEN); 
