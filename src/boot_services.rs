@@ -109,7 +109,7 @@ impl<'a> BootServices<'a> {
         to_res(unsafe { mem::transmute(handle_ptr) }, status)
     }
 
-    pub fn open_protocol<T: Protocol>(&self, handle: &Opaque, agent_handle: &OpaqueAgent, controller_handle: Option<&OpaqueController>, attributes: OpenProtocolAttributes) -> Result<&T> {
+    pub fn open_protocol<T: Protocol>(&self, handle: &Opaque, agent_handle: &OpaqueAgent, controller_handle: Option<&OpaqueController>, attributes: OpenProtocolAttributes) -> Result<&mut T> {
         let guid_ptr = &T::guid() as *const Guid;
         let controller_handle_ptr: EFI_HANDLE = controller_handle.map_or(ptr::null(), |v| unsafe { mem::transmute(v) });
         let mut protocol: *mut T::FfiType = ptr::null_mut();
@@ -134,7 +134,7 @@ impl<'a> BootServices<'a> {
 
     }
 
-    pub fn locate_protocol<T: Protocol>(&self) -> Result<&T> {
+    pub fn locate_protocol<T: Protocol>(&self) -> Result<&mut T> {
         // TODO: add the 'registration' argument also to this method
         let guid_ptr = &T::guid() as *const Guid;
         let registration: *mut Void = ptr::null_mut();
