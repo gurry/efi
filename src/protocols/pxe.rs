@@ -1,6 +1,6 @@
 
 use utils::{to_ptr, Wrapper};
-use ::{Result, Guid, IpAddress, to_boolean, from_boolean, to_res};
+use ::{Result, Guid, IpAddr, to_boolean, from_boolean, to_res};
 use protocols::Protocol;
 use ffi::{UINT16, BOOLEAN};
 use core::{mem, ptr, default::Default};
@@ -146,7 +146,7 @@ impl<'a> Wrapper for DiscoverInfo<'a> {
 // TODO: it seems SrvList as per UEFI must contain at least one parameter. Not documented anywhere but the OVMF code seems to expect it.
 // So we may have to create a new type that enforces at least one element requirement instead of taking a ref to a plain array.
 impl<'a> DiscoverInfo<'a> {
-    pub fn new(use_mcast: bool, use_bcast: bool, use_ucast: bool, must_use_list: bool, server_mcast_ip: IpAddress, srvlist: Option<&'a[SrvListEntry]>) -> Self {
+    pub fn new(use_mcast: bool, use_bcast: bool, use_ucast: bool, must_use_list: bool, server_mcast_ip: IpAddr, srvlist: Option<&'a[SrvListEntry]>) -> Self {
         Self { 
             inner: EFI_PXE_BASE_CODE_DISCOVER_INFO {
                 UseMCast: to_boolean(use_mcast), 
@@ -177,7 +177,7 @@ impl<'a> DiscoverInfo<'a> {
         from_boolean(self.inner.MustUseList)
     }
 
-    pub fn server_mcast_ip(&self) -> IpAddress {
+    pub fn server_mcast_ip(&self) -> IpAddr {
         self.inner.ServerMCastIp
     }
 
@@ -188,12 +188,12 @@ impl<'a> DiscoverInfo<'a> {
 
 impl<'a> Default for DiscoverInfo<'a> {
     fn default() -> Self {
-        DiscoverInfo::new(false, true, false, false, IpAddress::zero(), Some(&DEFAULT_SRV_LIST_ENTRY)) // By default UEFI expects at least one srvlistentry. That's why we couldn't have used None for last parameter
+        DiscoverInfo::new(false, true, false, false, IpAddr::zero(), Some(&DEFAULT_SRV_LIST_ENTRY)) // By default UEFI expects at least one srvlistentry. That's why we couldn't have used None for last parameter
     }
 }
 
 // Should've implemented Default trait for SrvListEntry and used that here intead of explicitly constructing SrvListEntry but function calls are not allowed on const expressions unfortunately :(. Not yet anyway.
-const DEFAULT_SRV_LIST_ENTRY: [SrvListEntry; 1] = [SrvListEntry(EFI_PXE_BASE_CODE_SRVLIST { Type: 0, AcceptAnyResponse: 1, reserved: 0, IpAddr: IpAddress{ Addr: [0, 0, 0, 0]}})];
+const DEFAULT_SRV_LIST_ENTRY: [SrvListEntry; 1] = [SrvListEntry(EFI_PXE_BASE_CODE_SRVLIST { Type: 0, AcceptAnyResponse: 1, reserved: 0, IpAddr: IpAddr{ Addr: [0, 0, 0, 0]}})];
 
 #[derive(Debug)]
 #[repr(C)]
@@ -201,7 +201,7 @@ pub struct SrvListEntry(EFI_PXE_BASE_CODE_SRVLIST);
 impl_wrapper!(SrvListEntry, EFI_PXE_BASE_CODE_SRVLIST);
 
 impl SrvListEntry {
-    pub fn new(type_: u16, accept_any_response: bool, reserved: u8, ip_addr: IpAddress) -> Self {
+    pub fn new(type_: u16, accept_any_response: bool, reserved: u8, ip_addr: IpAddr) -> Self {
         SrvListEntry ( 
             EFI_PXE_BASE_CODE_SRVLIST { 
                 Type: type_,
@@ -224,7 +224,7 @@ impl SrvListEntry {
         self.0.reserved
     }
 
-    pub fn ip_addr(&self) -> IpAddress {
+    pub fn ip_addr(&self) -> IpAddr {
         self.0.IpAddr
     }
 }
@@ -311,11 +311,11 @@ impl Mode {
         self.0.ToS
     }
 
-    pub fn station_ip(&self) -> IpAddress {
+    pub fn station_ip(&self) -> IpAddr {
         self.0.StationIp
     }
 
-    pub fn subnet_mask(&self) -> IpAddress {
+    pub fn subnet_mask(&self) -> IpAddr {
         self.0.SubnetMask
     }
     
@@ -483,7 +483,7 @@ impl IpFilter {
         self.0.reserved
     }
 
-    pub fn ip_list(&self) -> &[IpAddress] {
+    pub fn ip_list(&self) -> &[IpAddr] {
         &self.0.IpList[..self.0.IpCnt as usize]
     }
 }

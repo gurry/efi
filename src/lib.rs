@@ -198,9 +198,9 @@ pub type Result<T> = core::result::Result<T, EfiError>;
 pub type Ipv4Addr = ffi::EFI_IPv4_ADDRESS;
 pub type Ipv6Addr = ffi::EFI_IPv6_ADDRESS;
 
-pub type IpAddress = ffi::EFI_IP_ADDRESS;
+pub type IpAddr = ffi::EFI_IP_ADDRESS;
 
-impl IpAddress {
+impl IpAddr {
     pub fn zero() -> Self {
         Self { Addr: [0, 0, 0, 0] }
     }
