@@ -70,26 +70,13 @@ impl<'a> Tcp4Protocol<'a> {
 
 
     fn get_config_data(&self) ->  Result<EFI_TCP4_CONFIG_DATA> {
-        let mut data = EFI_TCP4_CONFIG_DATA {
-            TypeOfService: 0,
-            TimeToLive: 0,
-            AccessPoint: EFI_TCP4_ACCESS_POINT {
-                UseDefaultAddress: 1,
-                StationAddress: EFI_IPv4_ADDRESS { Addr: [0, 0, 0, 0] },
-                SubnetMask: EFI_IPv4_ADDRESS { Addr: [0, 0, 0, 0] },
-                StationPort: 0,
-                RemoteAddress: EFI_IPv4_ADDRESS { Addr: [0, 0, 0, 0] },
-                RemotePort: 0,
-                ActiveFlag: 1,
-            },
-            ControlOption: ptr::null()
-        };
+        let mut data = EFI_TCP4_CONFIG_DATA::default();
 
         let status = (self.inner.GetModeData)(&self.inner, ptr::null_mut(), &mut data, ptr::null_mut(), ptr::null_mut(), ptr::null_mut());
         to_res(data, status)
     }
 
-    pub fn configure(&mut self) -> Result<Tcp4ConfigBuilder> { // Todo: Returning a result causes awkwardness to user. Fix this
+    pub fn configure(&mut self) -> Tcp4ConfigBuilder {
         Tcp4ConfigBuilder::init(self)
     }
 
@@ -148,6 +135,25 @@ impl<'a> Tcp4Protocol<'a> {
     }
 }
 
+impl Default for EFI_TCP4_CONFIG_DATA {
+    fn default() -> Self {
+        Self {
+            TypeOfService: 0,
+            TimeToLive: 0,
+            AccessPoint: EFI_TCP4_ACCESS_POINT {
+                UseDefaultAddress: 1,
+                StationAddress: EFI_IPv4_ADDRESS { Addr: [0, 0, 0, 0] },
+                SubnetMask: EFI_IPv4_ADDRESS { Addr: [0, 0, 0, 0] },
+                StationPort: 0,
+                RemoteAddress: EFI_IPv4_ADDRESS { Addr: [0, 0, 0, 0] },
+                RemotePort: 0,
+                ActiveFlag: 1,
+            },
+            ControlOption: ptr::null()
+        }
+    }
+}
+
 pub struct Tcp4ConfigBuilder<'a> {
     config: EFI_TCP4_CONFIG_DATA,
     proto: &'a EFI_TCP4_PROTOCOL
@@ -157,9 +163,8 @@ impl<'a> Tcp4ConfigBuilder<'a> {
     // TODO: There's a flaw in init. What happens if the user inits the builder from teh current config
     // and then changes the current config somehow (maybe via another builder) and then tries to use this builder
     // It will probably cause problems because this builder has the old config data. Fix this.
-    fn init(proto: &'a Tcp4Protocol) -> Result<Self> {
-        let config = proto.get_config_data()?;
-        Ok(Self { config, proto: &proto.inner })
+    fn init(proto: &'a Tcp4Protocol) -> Self {
+        Self { config: EFI_TCP4_CONFIG_DATA::default(), proto: &proto.inner }
     }
    
     pub fn type_of_service(&mut self, val: u8) -> &mut Self {
