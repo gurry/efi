@@ -5,7 +5,7 @@ use ::{
     Result,
     to_res,
     to_boolean,
-    IpAddress,
+    Ipv4Addr,
     OpaqueEvent
 };
 
@@ -183,13 +183,13 @@ impl<'a> Tcp4ConfigBuilder<'a> {
     }
 
     // TODO: we must have have different types for IP4 and IP6 addresses and use IP4 address type here
-    pub fn station_address(&mut self, val: IpAddress) -> &mut Self {
-        self.config.AccessPoint.StationAddress = unsafe { val.v4 };
+    pub fn station_address(&mut self, val: Ipv4Addr) -> &mut Self {
+        self.config.AccessPoint.StationAddress = val;
         self
     }
 
-    pub fn subnet_mask(&mut self, val: IpAddress) -> &mut Self { // TODO: Don't use IpAddress here. Use a dedicated type to denote a subnet mask
-        self.config.AccessPoint.SubnetMask = unsafe { val.v4 };
+    pub fn subnet_mask(&mut self, val: Ipv4Addr) -> &mut Self { // TODO: Don't use IpAddress here. Use a dedicated type to denote a subnet mask
+        self.config.AccessPoint.SubnetMask = val;
         self
     }
 
@@ -198,8 +198,8 @@ impl<'a> Tcp4ConfigBuilder<'a> {
         self
     }
 
-    pub fn remote_address(&mut self, val: IpAddress) -> &mut Self {
-        self.config.AccessPoint.RemoteAddress = unsafe { val.v4 };
+    pub fn remote_address(&mut self, val: Ipv4Addr) -> &mut Self {
+        self.config.AccessPoint.RemoteAddress = val;
         self
     }
 
