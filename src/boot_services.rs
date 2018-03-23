@@ -72,6 +72,15 @@ extern "win64" fn global_notify_func<F: Fn()>(_event: EFI_EVENT, context: *const
     EFI_SUCCESS
 }
 
+
+// TODO: Regarding lifetimes of protocols and handles this is what the UEFI documentation has to say:
+
+// The caller is responsible for ensuring that there are no references to a protocol interface that 
+// has been removed. In some cases, outstanding reference information is not available in the 
+// protocol, so the protocol, once added, cannot be removed. Examples include Console I/O, Block I/O, 
+// Disk I/O, and (in general) handles to device protocols.
+// If the last protocol interface is removed from a handle, the handle is freed and is no longer valid
+
 impl<'a> BootServices<'a> {
     pub fn create_event<F: Fn()>(&mut self, type_: EventType, notify_tpl: Tpl, notify_function: Option<&'a F>) -> Result<&'a OpaqueEvent> {
         let context: *const VOID = notify_function.map_or(ptr::null(), |v| unsafe { mem::transmute(v) } );
