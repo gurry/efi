@@ -5,6 +5,7 @@ use ::{
     Result,
     to_res,
     to_boolean,
+    IpAddress,
     OpaqueEvent
 };
 
@@ -19,6 +20,7 @@ use ffi::{tcp4, udp4};
 use ffi::{
     EFI_SUCCESS,
     EFI_EVENT,
+    EFI_IPv4_ADDRESS,
     VOID,
     tcp4::{
         EFI_TCP4_PROTOCOL,
@@ -56,19 +58,39 @@ impl<'a> Protocol for Tcp4Protocol<'a> {
 }
 
 impl<'a> Tcp4Protocol<'a> {
-    pub fn get_mode_data(&self,
-        tcp4_state: Option<&mut Tcp4ConnectionState>,
-        tcp4_config_data: Option<&mut Tcp4ConfigData>,
-        ip4_mode_data: Option<&mut Ip4ModeData>,
-        mnp_config_data: Option<&mut ManagedNetworkConfigData>,
-        snp_mode_data: Option<&mut SimpleNetworkMode>) -> Result<()> {
-            let status = (self.inner.GetModeData)(&self.inner, to_ptr_mut(tcp4_state), to_ptr_mut(tcp4_config_data), to_ptr_mut(ip4_mode_data), to_ptr_mut(mnp_config_data), to_ptr_mut(snp_mode_data));
-            to_res((), status)
+    // pub fn get_mode_data(&self,
+    //     tcp4_state: Option<&mut Tcp4ConnectionState>,
+    //     tcp4_config_data: Option<&mut Tcp4ConfigData>,
+    //     ip4_mode_data: Option<&mut Ip4ModeData>,
+    //     mnp_config_data: Option<&mut ManagedNetworkConfigData>,
+    //     snp_mode_data: Option<&mut SimpleNetworkMode>) -> Result<()> {
+    //         let status = (self.inner.GetModeData)(&self.inner, to_ptr_mut(tcp4_state), to_ptr_mut(tcp4_config_data), to_ptr_mut(ip4_mode_data), to_ptr_mut(mnp_config_data), to_ptr_mut(snp_mode_data));
+    //         to_res((), status)
+    // }
+
+
+    fn get_config_data(&self) ->  Result<EFI_TCP4_CONFIG_DATA> {
+        let mut data = EFI_TCP4_CONFIG_DATA {
+            TypeOfService: 0,
+            TimeToLive: 0,
+            AccessPoint: EFI_TCP4_ACCESS_POINT {
+                UseDefaultAddress: 1,
+                StationAddress: EFI_IPv4_ADDRESS { Addr: [0, 0, 0, 0] },
+                SubnetMask: EFI_IPv4_ADDRESS { Addr: [0, 0, 0, 0] },
+                StationPort: 0,
+                RemoteAddress: EFI_IPv4_ADDRESS { Addr: [0, 0, 0, 0] },
+                RemotePort: 0,
+                ActiveFlag: 1,
+            },
+            ControlOption: ptr::null()
+        };
+
+        let status = (self.inner.GetModeData)(&self.inner, ptr::null_mut(), &mut data, ptr::null_mut(), ptr::null_mut(), ptr::null_mut());
+        to_res(data, status)
     }
 
-    pub fn configure(&mut self, tcp_config_data: Option<&Tcp4ConfigData>) -> Result<()> {
-        let status = (self.inner.Configure)(&self.inner, to_ptr(tcp_config_data)) ;
-        to_res((), status)
+    pub fn configure(&mut self) -> Result<Tcp4ConfigBuilder> { // Todo: Returning a result causes awkwardness to user. Fix this
+        Tcp4ConfigBuilder::init(self)
     }
 
     // pub fn routes(&self) -> EFI_TCP4_ROUTES {
@@ -126,9 +148,92 @@ impl<'a> Tcp4Protocol<'a> {
     }
 }
 
-#[repr(C)]
-pub struct Tcp4ConnectionState(EFI_TCP4_CONNECTION_STATE); 
-impl_wrapper!(Tcp4ConnectionState, EFI_TCP4_CONNECTION_STATE);
+pub struct Tcp4ConfigBuilder<'a> {
+    config: EFI_TCP4_CONFIG_DATA,
+    proto: &'a EFI_TCP4_PROTOCOL
+}
+
+impl<'a> Tcp4ConfigBuilder<'a> {
+    // TODO: There's a flaw in init. What happens if the user inits the builder from teh current config
+    // and then changes the current config somehow (maybe via another builder) and then tries to use this builder
+    // It will probably cause problems because this builder has the old config data. Fix this.
+    fn init(proto: &'a Tcp4Protocol) -> Result<Self> {
+        let config = proto.get_config_data()?;
+        Ok(Self { config, proto: &proto.inner })
+    }
+   
+    pub fn type_of_service(&mut self, val: u8) -> &mut Self {
+        self.config.TypeOfService = val;
+        self
+    }
+
+    pub fn ttl(&mut self, val: u8) -> &mut Self {
+        self.config.TimeToLive = val;
+        self
+    }
+
+    pub fn use_default_address(&mut self, val: bool) -> &mut Self {
+        self.config.AccessPoint.UseDefaultAddress = if val { 1 } else { 0 };
+        self
+    }
+
+    // TODO: we must have have different types for IP4 and IP6 addresses and use IP4 address type here
+    pub fn station_address(&mut self, val: IpAddress) -> &mut Self {
+        self.config.AccessPoint.StationAddress = unsafe { val.v4 };
+        self
+    }
+
+    pub fn subnet_mask(&mut self, val: IpAddress) -> &mut Self { // TODO: Don't use IpAddress here. Use a dedicated type to denote a subnet mask
+        self.config.AccessPoint.SubnetMask = unsafe { val.v4 };
+        self
+    }
+
+    pub fn station_port(&mut self, val: u16) -> &mut Self {
+        self.config.AccessPoint.StationPort = val;
+        self
+    }
+
+    pub fn remote_address(&mut self, val: IpAddress) -> &mut Self {
+        self.config.AccessPoint.RemoteAddress = unsafe { val.v4 };
+        self
+    }
+
+    pub fn remote_port(&mut self, val: u16) -> &mut Self {
+        self.config.AccessPoint.RemotePort = val;
+        self
+    }
+
+    pub fn active_flag(&mut self, val: bool) -> &mut Self {
+        self.config.AccessPoint.ActiveFlag = if val { 1 } else { 0 };
+        self
+    }
+
+    pub fn control_option(&mut self, val: &'a Tcp4Option) -> &mut Self {
+        self.config.ControlOption = val as *const EFI_TCP4_OPTION;
+        self
+    }
+
+    pub fn apply(&mut self) -> Result<()> {
+        let status = (self.proto.Configure)(self.proto, &self.config);
+        to_res((), status)
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+#[repr(usize)]
+pub enum Tcp4ConnectionState {
+    Closed = EFI_TCP4_CONNECTION_STATE::Tcp4StateClosed as usize,
+    Listen = EFI_TCP4_CONNECTION_STATE::Tcp4StateListen as usize,
+    SynSent = EFI_TCP4_CONNECTION_STATE::Tcp4StateSynSent as usize,
+    SynReceived = EFI_TCP4_CONNECTION_STATE::Tcp4StateSynReceived as usize,
+    Established = EFI_TCP4_CONNECTION_STATE::Tcp4StateEstablished as usize,
+    FinWait1 = EFI_TCP4_CONNECTION_STATE::Tcp4StateFinWait1 as usize,
+    FinWait2 = EFI_TCP4_CONNECTION_STATE::Tcp4StateFinWait2 as usize,
+    Closing = EFI_TCP4_CONNECTION_STATE::Tcp4StateClosing as usize,
+    TimeWait = EFI_TCP4_CONNECTION_STATE::Tcp4StateTimeWait as usize,
+    CloseWait = EFI_TCP4_CONNECTION_STATE::Tcp4StateCloseWait as usize,
+    LastAck = EFI_TCP4_CONNECTION_STATE::Tcp4StateLastAck as usize
+}
 
 // TODO: This is a temp situation. Figure out the right way to code the below two structs
 // keeping in mind that the user may have to selectively set the fields of these struct.
