@@ -32,7 +32,7 @@ pub struct EFI_SYSTEM_TABLE {
     pub ConsoleErrorHandle : EFI_HANDLE,
     pub StdErr : *const EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL,
     pub RuntimeServices : *const EFI_RUNTIME_SERVICES,
-    pub BootServices : *const EFI_BOOT_SERVICES,
+    pub BootServices : *mut EFI_BOOT_SERVICES,
     pub NumberOfTableEntries : usize,
     pub ConfigurationTable : *const EFI_CONFIGURATION_TABLE
 }

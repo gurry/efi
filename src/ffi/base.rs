@@ -34,12 +34,23 @@ pub struct EFI_IPv4_ADDRESS {
   pub Addr: [UINT8; 4],
 }
 
+impl EFI_IPv4_ADDRESS {
+    pub fn zero() -> Self {
+        Self { Addr: [0, 0, 0, 0] }
+    }
+}
 
 /// 16-byte buffer. An IPv6 internet protocol address.
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
 pub struct EFI_IPv6_ADDRESS {
   pub Addr: [UINT8; 16],
+}
+
+impl EFI_IPv6_ADDRESS {
+    pub fn zero() -> Self {
+        Self { Addr: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }
+    }
 }
 
 /// 32-byte buffer containing a network Media Access Control address.
@@ -167,6 +178,9 @@ pub type UINT8 = u8;
 pub type CHAR8 = i8;
 pub type INT8 = i8;
 pub type UINTN = usize;
+
+pub const TRUE: BOOLEAN = 1;
+pub const FALSE: BOOLEAN = 0;
 
 pub type VOID = ();
 pub type EFI_HANDLE = *const VOID;

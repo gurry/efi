@@ -5,19 +5,21 @@ use ffi::{
         EFI_HANDLE, 
         EFI_EVENT,
         EFI_GUID,
+        EFI_SUCCESS,
         UINT8,
         UINT16,
         UINT32,
         UINTN,
         BOOLEAN,
-        VOID
+        VOID,
+        FALSE,
     },
     managed_network::EFI_MANAGED_NETWORK_CONFIG_DATA,
     simple_network::EFI_SIMPLE_NETWORK_MODE,
     ip4::EFI_IP4_MODE_DATA,
 };
 
-use core::mem;
+use core::{mem, ptr};
 
 pub const EFI_TCP4_SERVICE_BINDING_PROTOCOL_GUID: EFI_GUID = EFI_GUID(0x00720665, 0x67EB, 0x4a99, [0xBA, 0xF7, 0xD3, 0xC3, 0x3A, 0x1C, 0x7C, 0xC9]);
 
@@ -125,9 +127,25 @@ pub struct EFI_TCP4_COMPLETION_TOKEN {
     pub Status: EFI_STATUS,
 }
 
+impl Default for EFI_TCP4_COMPLETION_TOKEN {
+    fn default() -> Self {
+        Self {
+            Event: ptr::null() as EFI_EVENT,
+            Status: EFI_SUCCESS
+        }
+    }
+}
+
 #[repr(C)]
 pub struct EFI_TCP4_CONNECTION_TOKEN {
     pub CompletionToken: EFI_TCP4_COMPLETION_TOKEN,
+}
+
+
+impl Default for EFI_TCP4_CONNECTION_TOKEN {
+    fn default() -> Self {
+        Self { CompletionToken: EFI_TCP4_COMPLETION_TOKEN::default() }
+    }
 }
 
 pub type EFI_TCP4_ACCEPT = extern "win64" fn(
@@ -139,6 +157,15 @@ pub type EFI_TCP4_ACCEPT = extern "win64" fn(
 pub struct EFI_TCP4_LISTEN_TOKEN {
     pub CompletionToken: EFI_TCP4_COMPLETION_TOKEN,
     pub NewChildHandle: EFI_HANDLE,
+}
+
+impl Default for EFI_TCP4_LISTEN_TOKEN {
+    fn default() -> Self {
+        Self { 
+            CompletionToken: EFI_TCP4_COMPLETION_TOKEN::default(),
+            NewChildHandle: ptr::null() as EFI_HANDLE
+         }
+    }
 }
 
 #[repr(C)]
@@ -167,6 +194,15 @@ pub union PacketUnion {
 pub struct EFI_TCP4_IO_TOKEN {
     pub CompletionToken: EFI_TCP4_COMPLETION_TOKEN,
     pub Packet: PacketUnion
+}
+
+impl Default for EFI_TCP4_IO_TOKEN  {
+    fn default() -> Self {
+        Self { 
+            CompletionToken: EFI_TCP4_COMPLETION_TOKEN::default(),
+            Packet: PacketUnion { TxData: ptr::null() as *const EFI_TCP4_TRANSMIT_DATA }
+         }
+    }
 }
 
 pub const EFI_CONNECTION_FIN: UINTN = with_high_bit_set!(104);
@@ -203,6 +239,15 @@ pub type EFI_TCP4_CLOSE = extern "win64" fn(
 pub struct EFI_TCP4_CLOSE_TOKEN {
     pub CompletionToken: EFI_TCP4_COMPLETION_TOKEN,
     pub AbortOnClose: BOOLEAN,
+}
+
+impl Default for EFI_TCP4_CLOSE_TOKEN {
+    fn default() -> Self {
+        Self { 
+            CompletionToken: EFI_TCP4_COMPLETION_TOKEN::default(),
+            AbortOnClose: FALSE,
+        }
+    }
 }
 
 pub type EFI_TCP4_CANCEL = extern "win64" fn(

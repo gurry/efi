@@ -2,6 +2,7 @@
 #![no_std]
 #![feature(intrinsics)]
 #![feature(conservative_impl_trait)]
+#![feature(try_trait)]
 
 #[macro_use] extern crate failure;
 #[macro_use] extern crate bitflags;
@@ -11,6 +12,7 @@
 pub mod ffi;
 pub mod boot_services;
 pub mod protocols;
+pub mod net;
 
 // Hack: this std declartion is to work around a bug in failure crate
 // wherein it looks for std even in no_std crates. Will remove it when
@@ -26,6 +28,19 @@ use core::mem::transmute;
 use protocols::console::Console;
 use failure::{Context, Fail, Backtrace};
 
+static mut SYSTEM_TABLE: Option<&'static EFI_SYSTEM_TABLE> = None;
+
+pub fn init_env(system_table: &'static EFI_SYSTEM_TABLE) {
+    unsafe {
+        SYSTEM_TABLE = Some(system_table);
+    }
+}
+
+pub fn system_table() -> &'static EFI_SYSTEM_TABLE {
+    unsafe {
+        SYSTEM_TABLE.expect("lib uninitalized")
+    }
+}
 
 pub struct EfiError {
     inner: Context<EfiErrorKind>
