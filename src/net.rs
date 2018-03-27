@@ -158,14 +158,14 @@ impl Tcp4Stream {
             ControlOption: ptr::null() as *const EFI_TCP4_OPTION 
         };
 
-        let stream = Self::new();
+        let mut stream = Self::new();
         unsafe {
             let null_callback = mem::transmute::<*const VOID, EFI_EVENT_NOTIFY>(ptr::null());
             // TODO: is there a better way than using a macro to return early? How about newtyping the usize return type of FFI calls and then working off that?
-            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_SIGNAL, TPL_CALLBACK, null_callback, ptr::null(), mem::transmute(stream.connect_token.CompletionToken.Event)));
-            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_SIGNAL, TPL_CALLBACK, null_callback, ptr::null(), mem::transmute(stream.send_token.CompletionToken.Event)));
-            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_SIGNAL, TPL_CALLBACK, null_callback, ptr::null(), mem::transmute(stream.recv_token.CompletionToken.Event)));
-            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_SIGNAL, TPL_CALLBACK, null_callback, ptr::null(), mem::transmute(stream.close_token.CompletionToken.Event)));
+            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_SIGNAL, TPL_CALLBACK, null_callback, ptr::null(), &mut stream.connect_token.CompletionToken.Event));
+            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_SIGNAL, TPL_CALLBACK, null_callback, ptr::null(), &mut stream.send_token.CompletionToken.Event));
+            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_SIGNAL, TPL_CALLBACK, null_callback, ptr::null(), &mut stream.recv_token.CompletionToken.Event));
+            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_SIGNAL, TPL_CALLBACK, null_callback, ptr::null(), &mut stream.close_token.CompletionToken.Event));
 
             let service_binding_protocol: *const EFI_SERVICE_BINDING_PROTOCOL = ptr::null();
             ret_on_err!(((*stream.bs).LocateProtocol)(&EFI_TCP4_SERVICE_BINDING_PROTOCOL_GUID, ptr::null() as *const VOID, mem::transmute(&service_binding_protocol)));
