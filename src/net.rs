@@ -196,7 +196,7 @@ impl Tcp4Stream {
             let service_binding_protocol: *const EFI_SERVICE_BINDING_PROTOCOL = ptr::null();
             ret_on_err!(((*stream.bs).LocateProtocol)(&EFI_TCP4_SERVICE_BINDING_PROTOCOL_GUID, ptr::null() as *const VOID, mem::transmute(&service_binding_protocol)));
 
-            ret_on_err!(((*service_binding_protocol).CreateChild)( service_binding_protocol, mem::transmute(&stream.device_handle)));
+            ret_on_err!(((*service_binding_protocol).CreateChild)( service_binding_protocol, &mut stream.device_handle));
 
             ret_on_err!(((*stream.bs).OpenProtocol)(stream.device_handle,
                 &EFI_TCP4_PROTOCOL_GUID,
