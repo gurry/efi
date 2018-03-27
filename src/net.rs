@@ -170,6 +170,7 @@ impl Tcp4Stream {
     // TODO: Ideally this interface should be identical to the one in stdlib which is:
     // pub fn connect<A: ToSocketAddrs>(addr: A) -> io::Result<TcpStream> {
     pub fn connect(addr: SocketAddrV4) -> Result<Self> {
+        let ip: EFI_IPv4_ADDRESS = (*addr.ip()).into();
         let config_data = EFI_TCP4_CONFIG_DATA {
             TypeOfService: 0,
             TimeToLive: 255,
@@ -178,7 +179,7 @@ impl Tcp4Stream {
                 StationAddress: EFI_IPv4_ADDRESS::zero(),
                 SubnetMask: EFI_IPv4_ADDRESS::zero(),
                 StationPort: 0,
-                RemoteAddress: (*addr.ip()).into(), // TODO: this deref is awkward. Can we do better?
+                RemoteAddress: ip,
                 RemotePort: addr.port(),
                 ActiveFlag: TRUE,
             },
