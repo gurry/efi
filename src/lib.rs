@@ -29,10 +29,10 @@ use core::mem::transmute;
 use protocols::console::Console;
 use failure::{Context, Fail, Backtrace};
 
-static mut SYSTEM_TABLE: Option<&'static EFI_SYSTEM_TABLE> = None;
+static mut SYSTEM_TABLE: Option<*const EFI_SYSTEM_TABLE> = None;
 static mut IMAGE_HANDLE: Option<EFI_HANDLE> = None;
 
-pub fn init_env(image_handle: EFI_HANDLE, system_table: &'static EFI_SYSTEM_TABLE) {
+pub fn init_env(image_handle: EFI_HANDLE, system_table: *const EFI_SYSTEM_TABLE) {
     unsafe {
         SYSTEM_TABLE = Some(system_table);
         IMAGE_HANDLE = Some(image_handle);
@@ -41,7 +41,7 @@ pub fn init_env(image_handle: EFI_HANDLE, system_table: &'static EFI_SYSTEM_TABL
 
 pub fn system_table() -> &'static EFI_SYSTEM_TABLE {
     unsafe {
-        SYSTEM_TABLE.expect("lib uninitalized")
+        transmute(SYSTEM_TABLE.expect("lib uninitalized"))
     }
 }
 
