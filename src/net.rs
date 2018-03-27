@@ -3,14 +3,19 @@ use ::{
     system_table,
     image_handle,
     EfiError,
+    to_res,
+    io::{Read, Write}
 };
 
 use ffi::{
     TRUE,
+    FALSE,
     EFI_EVENT,
     EFI_HANDLE,
     EFI_IPv4_ADDRESS,
     EFI_IPv6_ADDRESS,
+    UINTN,
+    UINT32,
     VOID,
     IsSuccess,
     EFI_SERVICE_BINDING_PROTOCOL,
@@ -34,7 +39,8 @@ use ffi::{
         EFI_TCP4_CONFIG_DATA,
         EFI_TCP4_ACCESS_POINT,
         EFI_TCP4_OPTION,
-    },
+        EFI_TCP4_FRAGMENT_DATA 
+        },
 };
 
 use core::{ptr, mem};
@@ -178,8 +184,65 @@ impl Tcp4Stream {
                 image_handle(),
                 ptr::null() as EFI_HANDLE,
                 EFI_OPEN_PROTOCOL_GET_PROTOCOL));
+        
+            ret_on_err!(((*stream.protocol).Configure)(stream.protocol, &config_data));
+
+            ret_on_err!(((*stream.protocol).Connect)(stream.protocol, &mut stream.connect_token));
+            stream.wait_for_evt(&stream.connect_token.CompletionToken.Event)?;
         }
 
         Ok(stream)
+    }
+
+    unsafe fn wait_for_evt(&self, event: *const EFI_EVENT) -> Result<()> {
+        let mut _index: UINTN = 0;;
+        let status = ((*self.bs).WaitForEvent)(1, event, &mut _index);
+        to_res((), status)
+    }
+}
+
+impl Read for Tcp4Stream {
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
+        let fragment_data = EFI_TCP4_FRAGMENT_DATA {
+            FragmentLength: buf.len() as UINT32,
+            FragmentBuffer: buf.as_ptr() as *const VOID
+        };
+
+        let recv_data = EFI_TCP4_RECEIVE_DATA {
+            UrgentFlag: FALSE,
+            DataLength: buf.len() as UINT32,
+            FragmentCount: 1,
+            FragmentTable: &fragment_data
+        };
+
+
+        self.recv_token.Packet.RxData =  &recv_data;
+        ret_on_err!(unsafe { ((*self.protocol).Receive)(self.protocol, &self.recv_token) });
+
+        unsafe { self.wait_for_evt(&self.recv_token.CompletionToken.Event)? };
+        to_res(buf.len(), self.recv_token.CompletionToken.Status)
+    }
+}
+
+impl Write for Tcp4Stream {
+    fn write(&mut self, buf: &[u8]) -> Result<usize> {
+        let fragment_data = EFI_TCP4_FRAGMENT_DATA {
+            FragmentLength: buf.len() as UINT32,
+            FragmentBuffer: buf.as_ptr() as *const VOID
+        };
+
+        let send_data = EFI_TCP4_TRANSMIT_DATA {
+            Push: FALSE,
+            Urgent: FALSE,
+            DataLength: buf.len() as UINT32,
+            FragmentCount: 1,
+            FragmentTable: &fragment_data
+        };
+
+        self.send_token.Packet.TxData =  &send_data;
+        ret_on_err!(unsafe { ((*self.protocol).Transmit)(self.protocol, &self.send_token) });
+
+        unsafe { self.wait_for_evt(&self.send_token.CompletionToken.Event)? };
+        to_res(buf.len(), self.send_token.CompletionToken.Status)
     }
 }
