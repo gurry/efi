@@ -32,7 +32,7 @@ use failure::{Context, Fail, Backtrace};
 static mut SYSTEM_TABLE: Option<&'static EFI_SYSTEM_TABLE> = None;
 static mut IMAGE_HANDLE: Option<EFI_HANDLE> = None;
 
-pub fn init_env(system_table: &'static EFI_SYSTEM_TABLE, image_handle: EFI_HANDLE) {
+pub fn init_env(image_handle: EFI_HANDLE, system_table: &'static EFI_SYSTEM_TABLE) {
     unsafe {
         SYSTEM_TABLE = Some(system_table);
         IMAGE_HANDLE = Some(image_handle);
