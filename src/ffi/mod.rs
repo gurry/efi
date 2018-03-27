@@ -45,3 +45,19 @@ pub struct EFI_CONFIGURATION_TABLE {
     pub VendorGuid : base::EFI_GUID,
     pub VendorTable : *const ()
 }
+
+#[repr(C)]
+pub struct EFI_SERVICE_BINDING_PROTOCOL {
+    pub CreateChild: EFI_SERVICE_BINDING_CREATE_CHILD,
+    pub DestroyChild: EFI_SERVICE_BINDING_DESTROY_CHILD,
+}
+
+pub type EFI_SERVICE_BINDING_CREATE_CHILD = extern "win64" fn(
+    This: *const EFI_SERVICE_BINDING_PROTOCOL,
+    ChildHandle: *mut EFI_HANDLE
+) -> EFI_STATUS;
+
+pub type EFI_SERVICE_BINDING_DESTROY_CHILD = extern "win64" fn(
+    This: *const EFI_SERVICE_BINDING_PROTOCOL,
+    ChildHandle: *mut EFI_HANDLE
+) -> EFI_STATUS;

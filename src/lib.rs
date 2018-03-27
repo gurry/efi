@@ -23,22 +23,30 @@ mod std {
 }
 
 use core::fmt::{Debug, Display, Formatter};
-use ffi::{EFI_STATUS, EFI_SYSTEM_TABLE};
+use ffi::{EFI_STATUS, EFI_SYSTEM_TABLE, EFI_HANDLE};
 use core::mem::transmute;
 use protocols::console::Console;
 use failure::{Context, Fail, Backtrace};
 
 static mut SYSTEM_TABLE: Option<&'static EFI_SYSTEM_TABLE> = None;
+static mut IMAGE_HANDLE: Option<EFI_HANDLE> = None;
 
-pub fn init_env(system_table: &'static EFI_SYSTEM_TABLE) {
+pub fn init_env(system_table: &'static EFI_SYSTEM_TABLE, image_handle: EFI_HANDLE) {
     unsafe {
         SYSTEM_TABLE = Some(system_table);
+        IMAGE_HANDLE = Some(image_handle);
     }
 }
 
 pub fn system_table() -> &'static EFI_SYSTEM_TABLE {
     unsafe {
         SYSTEM_TABLE.expect("lib uninitalized")
+    }
+}
+
+pub fn image_handle() -> EFI_HANDLE {
+    unsafe {
+        IMAGE_HANDLE.expect("lib uninitalized")
     }
 }
 

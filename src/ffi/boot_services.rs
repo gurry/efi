@@ -175,8 +175,8 @@ pub type EFI_CLOSE_PROTOCOL = extern "win64" fn(
 
 pub type EFI_LOCATE_PROTOCOL = extern "win64" fn(
     Protocol: *const EFI_GUID,
-    Registration: *mut VOID,
-    Interface: *mut *mut VOID
+    Registration: *const VOID,
+    Interface: *mut *const VOID
 ) -> EFI_STATUS;
 
 pub type EFI_IMAGE_LOAD = extern "win64" fn(

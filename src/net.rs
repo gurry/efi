@@ -1,23 +1,30 @@
 use ::{
     Result,
     system_table,
+    image_handle,
     EfiError,
 };
 
 use ffi::{
     TRUE,
     EFI_EVENT,
+    EFI_HANDLE,
     EFI_IPv4_ADDRESS,
     EFI_IPv6_ADDRESS,
     VOID,
     IsSuccess,
+    EFI_SERVICE_BINDING_PROTOCOL,
     boot_services::{
         EFI_BOOT_SERVICES,
         EVT_NOTIFY_SIGNAL,
         EFI_EVENT_NOTIFY,
-        TPL_CALLBACK
+        TPL_CALLBACK,
+        EFI_OPEN_PROTOCOL_GET_PROTOCOL,
     },
     tcp4::{
+        EFI_TCP4_PROTOCOL_GUID,
+        EFI_TCP4_SERVICE_BINDING_PROTOCOL_GUID,
+        EFI_TCP4_PROTOCOL,
         EFI_TCP4_COMPLETION_TOKEN,
         EFI_TCP4_CONNECTION_TOKEN,
         EFI_TCP4_IO_TOKEN,
@@ -112,6 +119,8 @@ pub enum SocketAddr {
 
 pub struct Tcp4Stream {
     bs: *mut EFI_BOOT_SERVICES,
+    device_handle: EFI_HANDLE,
+    protocol: *mut EFI_TCP4_PROTOCOL,
     connect_token: EFI_TCP4_CONNECTION_TOKEN,
     recv_token: EFI_TCP4_IO_TOKEN,
     send_token: EFI_TCP4_IO_TOKEN,
@@ -119,9 +128,11 @@ pub struct Tcp4Stream {
 }
 
 impl Tcp4Stream {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self { 
             bs: system_table().BootServices,
+            device_handle: ptr::null() as EFI_HANDLE,
+            protocol: ptr::null::<EFI_TCP4_PROTOCOL>() as *mut EFI_TCP4_PROTOCOL,
             connect_token: EFI_TCP4_CONNECTION_TOKEN::default(),
             recv_token: EFI_TCP4_IO_TOKEN::default(),
             send_token: EFI_TCP4_IO_TOKEN::default(),
@@ -155,8 +166,20 @@ impl Tcp4Stream {
             ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_SIGNAL, TPL_CALLBACK, null_callback, ptr::null(), mem::transmute(stream.send_token.CompletionToken.Event)));
             ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_SIGNAL, TPL_CALLBACK, null_callback, ptr::null(), mem::transmute(stream.recv_token.CompletionToken.Event)));
             ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_SIGNAL, TPL_CALLBACK, null_callback, ptr::null(), mem::transmute(stream.close_token.CompletionToken.Event)));
+
+            let service_binding_protocol: *const EFI_SERVICE_BINDING_PROTOCOL = ptr::null();
+            ret_on_err!(((*stream.bs).LocateProtocol)(&EFI_TCP4_SERVICE_BINDING_PROTOCOL_GUID, ptr::null() as *const VOID, mem::transmute(&service_binding_protocol)));
+
+            ret_on_err!(((*service_binding_protocol).CreateChild)( service_binding_protocol, mem::transmute(&stream.device_handle)));
+
+            ret_on_err!(((*stream.bs).OpenProtocol)(stream.device_handle,
+                &EFI_TCP4_PROTOCOL_GUID,
+                mem::transmute(&stream.protocol),
+                image_handle(),
+                ptr::null() as EFI_HANDLE,
+                EFI_OPEN_PROTOCOL_GET_PROTOCOL));
         }
-        
+
         Ok(stream)
     }
 }
