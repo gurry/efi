@@ -49,7 +49,7 @@ use core::{ptr, mem};
 pub struct Ipv4Addr(EFI_IPv4_ADDRESS);
 
 impl Ipv4Addr {
-    fn new(a: u8, b: u8, c: u8, d: u8) -> Self {
+    pub fn new(a: u8, b: u8, c: u8, d: u8) -> Self {
         Ipv4Addr(EFI_IPv4_ADDRESS {
             Addr: [a, b, c, d]
         })
@@ -72,7 +72,7 @@ impl From<Ipv4Addr > for EFI_IPv4_ADDRESS {
 pub struct Ipv6Addr(EFI_IPv6_ADDRESS);
 
 impl Ipv6Addr {
-    fn new(a: u16, b: u16, c: u16, d: u16, e: u16, f: u16, g: u16, h: u16) -> Self {
+    pub fn new(a: u16, b: u16, c: u16, d: u16, e: u16, f: u16, g: u16, h: u16) -> Self {
         Ipv6Addr(EFI_IPv6_ADDRESS {
             Addr: unsafe { mem::transmute([a, b, c, d, e, f, g, h]) } // Transmuting from an 8 elem array of u16 to 16 elem array of UINT8
         })
