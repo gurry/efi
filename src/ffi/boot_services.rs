@@ -77,7 +77,6 @@ pub type EFI_ALLOCATE_POOL = *const NOT_DEFINED;
 pub type EFI_FREE_POOL = *const NOT_DEFINED;
 pub type EFI_SET_TIMER = *const NOT_DEFINED;
 pub type EFI_SIGNAL_EVENT = *const NOT_DEFINED;
-pub type EFI_CLOSE_EVENT = *const NOT_DEFINED;
 pub type EFI_CHECK_EVENT = *const NOT_DEFINED;
 pub type EFI_REINSTALL_PROTOCOL_INTERFACE = *const NOT_DEFINED;
 pub type EFI_UNINSTALL_PROTOCOL_INTERFACE = *const NOT_DEFINED;
@@ -125,6 +124,10 @@ pub type EFI_CREATE_EVENT = extern "win64" fn(
     NotifyFunction: EFI_EVENT_NOTIFY,
     NotifyContext: *const VOID,
     Event: *mut EFI_EVENT 
+) -> EFI_STATUS;
+
+pub type EFI_CLOSE_EVENT = extern "win64" fn(
+    Event: EFI_EVENT 
 ) -> EFI_STATUS;
 
 pub type EFI_WAIT_FOR_EVENT = extern "win64" fn(

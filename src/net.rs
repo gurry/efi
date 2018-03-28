@@ -45,7 +45,7 @@ use ffi::{
         },
 };
 
-use core::{ptr, mem};
+use core::{ptr, mem, ops::Drop};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Ipv4Addr(EFI_IPv4_ADDRESS);
@@ -222,6 +222,22 @@ impl Tcp4Stream {
     }
 }
 
+impl Drop for Tcp4Stream {
+    fn drop(&mut self) {
+        // TODO: add the code to panic when any of the below calls fail. (Could be difficult) but maybe we can trace something when we do that.
+        let service_binding_protocol: *const EFI_SERVICE_BINDING_PROTOCOL = ptr::null();
+        unsafe {
+            ((*self.bs).CloseProtocol)(self.device_handle, &EFI_TCP4_PROTOCOL_GUID, image_handle(), ptr::null() as EFI_HANDLE);
+            ((*self.bs).LocateProtocol)(&EFI_TCP4_SERVICE_BINDING_PROTOCOL_GUID, ptr::null() as *const VOID, mem::transmute(&service_binding_protocol));
+            ((*service_binding_protocol).DestroyChild)(service_binding_protocol, &mut self.device_handle);
+
+            ((*self.bs).CloseEvent)(self.connect_token.CompletionToken.Event);
+            ((*self.bs).CloseEvent)(self.send_token.CompletionToken.Event);
+            ((*self.bs).CloseEvent)(self.recv_token.CompletionToken.Event);
+            ((*self.bs).CloseEvent)(self.close_token.CompletionToken.Event);
+        }
+    }
+}
 impl Read for Tcp4Stream {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
         let fragment_data = EFI_TCP4_FRAGMENT_DATA {
