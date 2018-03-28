@@ -26,7 +26,7 @@ use ffi::{
         EVT_NOTIFY_SIGNAL,
         EFI_EVENT_NOTIFY,
         TPL_CALLBACK,
-        EFI_OPEN_PROTOCOL_GET_PROTOCOL,
+        EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL,
     },
     tcp4::{
         EFI_TCP4_PROTOCOL_GUID,
@@ -205,7 +205,7 @@ impl Tcp4Stream {
                 mem::transmute(&stream.protocol),
                 image_handle(),
                 ptr::null() as EFI_HANDLE,
-                EFI_OPEN_PROTOCOL_GET_PROTOCOL));
+                EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL)); // TODO: BY_HANDLE is used for applications. Drivers should use GET. Will we ever support drivers?
         
             ret_on_err!(((*stream.protocol).Configure)(stream.protocol, &config_data));
 
