@@ -143,6 +143,7 @@ pub enum SocketAddr {
 
 pub struct Tcp4Stream {
     bs: *mut EFI_BOOT_SERVICES,
+    binding_protocol: *const EFI_SERVICE_BINDING_PROTOCOL,
     device_handle: EFI_HANDLE,
     protocol: *mut EFI_TCP4_PROTOCOL,
     connect_token: EFI_TCP4_CONNECTION_TOKEN,
@@ -158,6 +159,7 @@ impl Tcp4Stream {
     fn new() -> Self {
         Self { 
             bs: system_table().BootServices,
+            binding_protocol: ptr::null() as *const EFI_SERVICE_BINDING_PROTOCOL,
             device_handle: ptr::null() as EFI_HANDLE,
             protocol: ptr::null::<EFI_TCP4_PROTOCOL>() as *mut EFI_TCP4_PROTOCOL,
             connect_token: EFI_TCP4_CONNECTION_TOKEN::default(),
@@ -194,10 +196,9 @@ impl Tcp4Stream {
             ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_SIGNAL, TPL_CALLBACK, empty_cb, ptr::null(), &mut stream.recv_token.CompletionToken.Event));
             ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_SIGNAL, TPL_CALLBACK, empty_cb, ptr::null(), &mut stream.close_token.CompletionToken.Event));
 
-            let service_binding_protocol: *const EFI_SERVICE_BINDING_PROTOCOL = ptr::null();
-            ret_on_err!(((*stream.bs).LocateProtocol)(&EFI_TCP4_SERVICE_BINDING_PROTOCOL_GUID, ptr::null() as *const VOID, mem::transmute(&service_binding_protocol)));
+            ret_on_err!(((*stream.bs).LocateProtocol)(&EFI_TCP4_SERVICE_BINDING_PROTOCOL_GUID, ptr::null() as *const VOID, mem::transmute(&stream.binding_protocol)));
 
-            ret_on_err!(((*service_binding_protocol).CreateChild)( service_binding_protocol, &mut stream.device_handle));
+            ret_on_err!(((*stream.binding_protocol).CreateChild)(stream.binding_protocol, &mut stream.device_handle));
 
             ret_on_err!(((*stream.bs).OpenProtocol)(stream.device_handle,
                 &EFI_TCP4_PROTOCOL_GUID,
@@ -225,11 +226,9 @@ impl Tcp4Stream {
 impl Drop for Tcp4Stream {
     fn drop(&mut self) {
         // TODO: add the code to panic when any of the below calls fail. (Could be difficult) but maybe we can trace something when we do that.
-        let service_binding_protocol: *const EFI_SERVICE_BINDING_PROTOCOL = ptr::null();
         unsafe {
             ((*self.bs).CloseProtocol)(self.device_handle, &EFI_TCP4_PROTOCOL_GUID, image_handle(), ptr::null() as EFI_HANDLE);
-            ((*self.bs).LocateProtocol)(&EFI_TCP4_SERVICE_BINDING_PROTOCOL_GUID, ptr::null() as *const VOID, mem::transmute(&service_binding_protocol));
-            ((*service_binding_protocol).DestroyChild)(service_binding_protocol, &mut self.device_handle);
+            ((*self.binding_protocol).DestroyChild)(self.binding_protocol, &mut self.device_handle);
 
             ((*self.bs).CloseEvent)(self.connect_token.CompletionToken.Event);
             ((*self.bs).CloseEvent)(self.send_token.CompletionToken.Event);
