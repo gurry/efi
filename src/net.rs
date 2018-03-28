@@ -151,7 +151,7 @@ pub struct Tcp4Stream {
     send_token: EFI_TCP4_IO_TOKEN,
     close_token: EFI_TCP4_CLOSE_TOKEN
 }
-extern "win64" fn empty_cb(Event: EFI_EVENT, Context: *const VOID) -> EFI_STATUS {
+extern "win64" fn empty_cb(_event: EFI_EVENT, _context: *const VOID) -> EFI_STATUS {
     EFI_SUCCESS
 }
 
