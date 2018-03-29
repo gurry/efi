@@ -23,8 +23,7 @@ use ffi::{
     EFI_SERVICE_BINDING_PROTOCOL,
     boot_services::{
         EFI_BOOT_SERVICES,
-        EVT_NOTIFY_SIGNAL,
-        EFI_EVENT_NOTIFY,
+        EVT_NOTIFY_WAIT,
         TPL_CALLBACK,
         EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL,
     },
@@ -32,7 +31,6 @@ use ffi::{
         EFI_TCP4_PROTOCOL_GUID,
         EFI_TCP4_SERVICE_BINDING_PROTOCOL_GUID,
         EFI_TCP4_PROTOCOL,
-        EFI_TCP4_COMPLETION_TOKEN,
         EFI_TCP4_CONNECTION_TOKEN,
         EFI_TCP4_IO_TOKEN,
         EFI_TCP4_RECEIVE_DATA,
@@ -191,10 +189,10 @@ impl Tcp4Stream {
         let mut stream = Self::new();
         unsafe {
             // TODO: is there a better way than using a macro to return early? How about newtyping the usize return type of FFI calls and then working off that?
-            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_SIGNAL, TPL_CALLBACK, empty_cb, ptr::null(), &mut stream.connect_token.CompletionToken.Event));
-            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_SIGNAL, TPL_CALLBACK, empty_cb, ptr::null(), &mut stream.send_token.CompletionToken.Event));
-            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_SIGNAL, TPL_CALLBACK, empty_cb, ptr::null(), &mut stream.recv_token.CompletionToken.Event));
-            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_SIGNAL, TPL_CALLBACK, empty_cb, ptr::null(), &mut stream.close_token.CompletionToken.Event));
+            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_WAIT, TPL_CALLBACK, empty_cb, ptr::null(), &mut stream.connect_token.CompletionToken.Event));
+            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_WAIT, TPL_CALLBACK, empty_cb, ptr::null(), &mut stream.send_token.CompletionToken.Event));
+            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_WAIT, TPL_CALLBACK, empty_cb, ptr::null(), &mut stream.recv_token.CompletionToken.Event));
+            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_WAIT, TPL_CALLBACK, empty_cb, ptr::null(), &mut stream.close_token.CompletionToken.Event));
 
             ret_on_err!(((*stream.bs).LocateProtocol)(&EFI_TCP4_SERVICE_BINDING_PROTOCOL_GUID, ptr::null() as *const VOID, mem::transmute(&stream.binding_protocol)));
 
