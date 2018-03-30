@@ -225,6 +225,7 @@ impl Drop for Tcp4Stream {
     fn drop(&mut self) {
         // TODO: add the code to panic when any of the below calls fail. (Could be difficult) but maybe we can trace something when we do that.
         unsafe {
+            ((*self.protocol).Close)(self.protocol, &self.close_token);
             ((*self.bs).CloseProtocol)(self.device_handle, &EFI_TCP4_PROTOCOL_GUID, image_handle(), ptr::null() as EFI_HANDLE);
             ((*self.binding_protocol).DestroyChild)(self.binding_protocol, &mut self.device_handle);
 
