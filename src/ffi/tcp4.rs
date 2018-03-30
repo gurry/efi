@@ -174,9 +174,9 @@ pub struct EFI_TCP4_TRANSMIT_DATA {
     pub Urgent: BOOLEAN,
     pub DataLength: UINT32,
     pub FragmentCount: UINT32,
-    // The actual definition of the FragmentTable field is like this -> FragmentTable: [EFI_TCP4_FRAGMENT_DATA; 1],
-    // but we changed it to the pointer definition below because it's easier to deal with during FFI.
-    pub FragmentTable: *const EFI_TCP4_FRAGMENT_DATA,
+    // TODO: FragmentTable field can contains more than 1 element but this is how
+    // it is declared in C. Is there a better way to declare it in Rust?
+    pub FragmentTable: [EFI_TCP4_FRAGMENT_DATA; 1], 
 }
 
 pub type EFI_TCP4_TRANSMIT = extern "win64" fn(
@@ -214,9 +214,9 @@ pub struct EFI_TCP4_RECEIVE_DATA {
     pub UrgentFlag: BOOLEAN,
     pub DataLength: UINT32,
     pub FragmentCount: UINT32,
-    // The actual definition of the FragmentTable field is like this -> FragmentTable: [EFI_TCP4_FRAGMENT_DATA; 1],
-    // but we changed it to the pointer definition below because it's easier to deal with during FFI.
-    pub FragmentTable: *const EFI_TCP4_FRAGMENT_DATA,
+    // TODO: FragmentTable field can contains more than 1 element but this is how
+    // it is declared in C. Is there a better way to declare it in Rust?
+    pub FragmentTable: [EFI_TCP4_FRAGMENT_DATA; 1], 
 }
 
 #[repr(C)]

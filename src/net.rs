@@ -246,7 +246,7 @@ impl Read for Tcp4Stream {
             UrgentFlag: FALSE,
             DataLength: buf.len() as UINT32,
             FragmentCount: 1,
-            FragmentTable: &fragment_data
+            FragmentTable: [fragment_data] // TODO: will this result in a copy? Should be init fragment data in place here?
         };
 
 
@@ -270,7 +270,7 @@ impl Write for Tcp4Stream {
             Urgent: FALSE,
             DataLength: buf.len() as UINT32,
             FragmentCount: 1,
-            FragmentTable: &fragment_data
+            FragmentTable: [fragment_data] // TODO: will this result in a copy? Should be init fragment data in place here?
         };
 
         self.send_token.Packet.TxData =  &send_data;
