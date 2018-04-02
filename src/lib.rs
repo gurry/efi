@@ -1,7 +1,6 @@
 // TODO: Can we use core::intrinsics (https://doc.rust-lang.org/1.12.0/core/intrinsics/fn.copy.html) instead of compiler_builtins crate?
 #![no_std]
 #![feature(intrinsics)]
-#![feature(conservative_impl_trait)]
 #![feature(try_trait)]
 
 #[macro_use] extern crate failure;
