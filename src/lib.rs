@@ -2,10 +2,13 @@
 #![no_std]
 #![feature(intrinsics)]
 #![feature(try_trait)]
+#![feature(alloc)]
+#![feature(global_allocator)]
+#![feature(allocator_api)]
 
 #[macro_use] extern crate failure;
 #[macro_use] extern crate bitflags;
-
+#[macro_use] extern crate alloc;
 
 #[macro_use] mod utils;
 pub mod ffi;
@@ -13,6 +16,7 @@ pub mod boot_services;
 pub mod protocols;
 pub mod io;
 pub mod net;
+mod allocator;
 
 // Hack: this std declartion is to work around a bug in failure crate
 // wherein it looks for std even in no_std crates. Will remove it when
@@ -27,6 +31,18 @@ use ffi::{EFI_STATUS, EFI_SYSTEM_TABLE, EFI_HANDLE};
 use core::mem::transmute;
 use protocols::console::Console;
 use failure::{Context, Fail, Backtrace};
+use allocator::EfiAllocator;
+
+
+pub use alloc::binary_heap::BinaryHeap;
+pub use alloc::btree_map::BTreeMap;
+pub use alloc::btree_set::BTreeSet;
+pub use alloc::linked_list::LinkedList;
+pub use alloc::vec_deque::VecDeque;
+pub use alloc::string::String;
+pub use alloc::vec::Vec;
+pub use alloc::boxed;
+pub use alloc::rc;
 
 static mut SYSTEM_TABLE: Option<*const EFI_SYSTEM_TABLE> = None;
 static mut IMAGE_HANDLE: Option<EFI_HANDLE> = None;
@@ -49,6 +65,10 @@ pub fn image_handle() -> EFI_HANDLE {
         IMAGE_HANDLE.expect("lib uninitalized")
     }
 }
+
+ #[global_allocator]
+ static ALLOCATOR: EfiAllocator = EfiAllocator;
+
 
 pub struct EfiError {
     inner: Context<EfiErrorKind>

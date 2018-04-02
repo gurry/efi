@@ -73,8 +73,6 @@ pub type EFI_RESTORE_TPL = *const NOT_DEFINED;
 pub type EFI_ALLOCATE_PAGES = *const NOT_DEFINED;
 pub type EFI_FREE_PAGES = *const NOT_DEFINED;
 pub type EFI_GET_MEMORY_MAP = *const NOT_DEFINED;
-pub type EFI_ALLOCATE_POOL = *const NOT_DEFINED;
-pub type EFI_FREE_POOL = *const NOT_DEFINED;
 pub type EFI_SET_TIMER = *const NOT_DEFINED;
 pub type EFI_SIGNAL_EVENT = *const NOT_DEFINED;
 pub type EFI_CHECK_EVENT = *const NOT_DEFINED;
@@ -103,6 +101,15 @@ pub type EFI_COPY_MEM = *const NOT_DEFINED;
 pub type EFI_SET_MEM = *const NOT_DEFINED;
 pub type EFI_CREATE_EVENT_EX = *const NOT_DEFINED;
 
+pub type EFI_ALLOCATE_POOL = extern "win64" fn(
+    PoolType: EFI_MEMORY_TYPE,
+    Size: UINTN,
+    Buffer: *mut *const VOID
+) -> EFI_STATUS;
+
+pub type EFI_FREE_POOL = extern "win64" fn(
+    Buffer: *const VOID
+) -> EFI_STATUS;
 
 pub type EFI_TPL = UINTN;
 
