@@ -10,7 +10,7 @@ use ffi::{
         UINTN,
         BOOLEAN,
         VOID,
-        EFI_Time
+        EFI_TIME
     },
     managed_network::EFI_MANAGED_NETWORK_CONFIG_DATA,
     simple_network::EFI_SIMPLE_NETWORK_MODE,
@@ -108,7 +108,7 @@ pub const EFI_PORT_UNREACHABLE: UINTN = with_high_bit_set!(103);
 
 #[repr(C)]
 pub struct EFI_UDP4_RECEIVE_DATA {
-    pub TimeStamp: EFI_Time,
+    pub TimeStamp: EFI_TIME,
     pub RecycleSignal: EFI_EVENT,
     pub UdpSession: EFI_UDP4_SESSION_DATA,
     pub DataLength: UINT32,

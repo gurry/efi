@@ -12,7 +12,7 @@ use core::{mem, fmt};
 ///  TimeZone:   -1440 to 1440 or 2047
 #[repr(C)]
 #[derive(Debug)]
-pub struct EFI_Time {
+pub struct EFI_TIME {
   Year:   UINT16,
   Month: UINT8,
   Day: UINT8,
