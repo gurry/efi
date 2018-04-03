@@ -16,10 +16,14 @@ unsafe impl<'a> Alloc for &'a EfiAllocator {
             return Err(AllocErr::Unsupported { details: "Odd-number alignment alloc request"});
         }
 
-        // TODO: Ignoring Layout::align() for now. UEFI always allocates to 8-byte aligntment. 
-        // So we're fine if align() says 8 or less.
+        // TODO: Add support for alignment greater than 8. 
+        // UEFI always allocates to 8-byte aligntment. So we're fine if align() says 8 or less.
         // If align() asks for something greater than 8 then we can handle that by rounding up here 
-        // and by doing the converse calculation in dealloc() below. Implement this.
+        // and by doing the converse calculation in dealloc() below. This is yet to be implemented.
+        if layout.align() > 8  {
+            return Err(AllocErr::Unsupported { details: "Request with alignment greater than 8"});
+        }
+
         let mut ptr = ptr::null() as *const VOID;
         let status = ((*system_table().BootServices).AllocatePool)(EFI_MEMORY_TYPE::EfiLoaderData, layout.size(), &mut ptr);
         match status {
