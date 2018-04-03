@@ -8,7 +8,7 @@
 
 #[macro_use] extern crate failure;
 #[macro_use] extern crate bitflags;
-#[macro_use] extern crate alloc;
+extern crate alloc;
 
 #[macro_use] mod utils;
 pub mod ffi;

@@ -43,7 +43,7 @@ impl<'a, C: 'a + FnMut(&DevicePathProtocol, &mut [u8]) -> Result<usize>> Wrapper
 pub extern "win64" fn load_file_callback<'a, C: 'a + FnMut(&DevicePathProtocol, &mut [u8]) -> Result<usize>>(
     this: *const EFI_LOAD_FILE_PROTOCOL, 
     file_path: *const EFI_DEVICE_PATH_PROTOCOL,
-    boot_policy: BOOLEAN,
+    _boot_policy: BOOLEAN,
     buffer_size: *mut UINTN, 
     buffer_ptr: *mut VOID
 ) -> EFI_STATUS {

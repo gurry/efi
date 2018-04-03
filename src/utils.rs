@@ -10,10 +10,6 @@ pub fn to_ptr<'a, W: Wrapper>(value: Option<&'a W>) -> *const W::Inner {
     value.map_or(core::ptr::null(), |v| v.inner_ptr())
 }
 
-pub fn to_ptr_mut<'a, W: Wrapper>(value: Option<&'a mut W>) -> *mut W::Inner {
-    value.map_or(core::ptr::null::<W::Inner>() as *mut W::Inner, |v| v.inner_ptr() as *mut W::Inner)
-}
-
 macro_rules! impl_wrapper {
     ($wrapper: ty, $inner: ty) => {
         impl ::utils::Wrapper for $wrapper {
