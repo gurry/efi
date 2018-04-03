@@ -36,10 +36,10 @@ pub struct EFI_UDP4_PROTOCOL {
 
 pub type EFI_UDP4_GET_MODE_DATA = extern "win64" fn(
     This: *const EFI_UDP4_PROTOCOL,
-    Udp4ConfigData: *const EFI_UDP4_CONFIG_DATA,
-    Ip4ModeData: *const EFI_IP4_MODE_DATA,
-    MnpConfigData: *const EFI_MANAGED_NETWORK_CONFIG_DATA,
-    SnpModeData: *const EFI_SIMPLE_NETWORK_MODE,
+    Udp4ConfigData: *mut EFI_UDP4_CONFIG_DATA,
+    Ip4ModeData: *mut EFI_IP4_MODE_DATA,
+    MnpConfigData: *mut EFI_MANAGED_NETWORK_CONFIG_DATA,
+    SnpModeData: *mut EFI_SIMPLE_NETWORK_MODE,
 ) -> EFI_STATUS;
 
 #[repr(C)]
