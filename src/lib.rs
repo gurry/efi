@@ -32,6 +32,7 @@ use core::mem::transmute;
 use protocols::console::Console;
 use failure::{Context, Fail, Backtrace};
 use allocator::EfiAllocator;
+use ffi::tcp4;
 
 
 pub use alloc::binary_heap::BinaryHeap;
@@ -193,6 +194,18 @@ pub enum EfiErrorKind {
     CompromisedData = ffi::EFI_COMPROMISED_DATA,
     #[fail(display = "There is an address conflict during address allocation")]
     IpAddressConflict = ffi::EFI_IP_ADDRESS_CONFLICT,
+
+    // TODO: The below are not standard, common EFI_STATUSes, but only specific to TCP
+    // So is it good to include them in this enum?
+    // Also is there are chance the same error codes are used for something other than TCP?
+    // Resolve this ambiguity.
+    #[fail(display = "TCP Connection refused")]
+    ConnectionFin = tcp4::EFI_CONNECTION_FIN,
+    #[fail(display = "TCP Connection reset")]
+    ConnectionReset = tcp4::EFI_CONNECTION_RESET,
+    #[fail(display = "TCP Connection reset")]
+    ConnectionRefused = tcp4::EFI_CONNECTION_REFUSED,
+
     #[fail(display = "Unrecognized EFI error")]
     UnrecognizedError = <EFI_STATUS>::max_value()
 }
