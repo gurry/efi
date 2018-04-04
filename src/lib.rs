@@ -212,7 +212,11 @@ pub enum EfiErrorKind {
 
 impl From<EFI_STATUS> for EfiErrorKind {
     fn from(status: ffi::EFI_STATUS) -> Self {
-        if ffi::IsError(status) { unsafe { transmute(status) } } else { EfiErrorKind::UnrecognizedError }
+        match status {
+            | ffi::EFI_LOAD_ERROR..=ffi::EFI_IP_ADDRESS_CONFLICT 
+            | tcp4::EFI_CONNECTION_FIN..=tcp4::EFI_CONNECTION_REFUSED =>  unsafe { transmute(status) },
+            _ => EfiErrorKind::UnrecognizedError
+        }
     }
 }
 
