@@ -1,4 +1,4 @@
-# Attributions
+# COPYRIGHT
 
 This file exists to fulfil the license requirements of other projects whose code we're using by including the needed attribution text here.
 
