@@ -208,7 +208,8 @@ impl Tcp4Stream {
             ret_on_err!(((*stream.protocol).Configure)(stream.protocol, &config_data));
 
             ret_on_err!(((*stream.protocol).Connect)(stream.protocol, &mut stream.connect_token));
-            stream.wait_for_evt(&stream.connect_token.CompletionToken.Event)?; // TODO: Make sure we also check the status on the Event.Status field
+            stream.wait_for_evt(&stream.connect_token.CompletionToken.Event)?;
+            ret_on_err!(stream.connect_token.CompletionToken.Status);
         }
 
         Ok(stream)
@@ -254,7 +255,7 @@ impl Read for Tcp4Stream {
         self.recv_token.Packet.RxData =  &recv_data;
         ret_on_err!(unsafe { ((*self.protocol).Receive)(self.protocol, &self.recv_token) });
 
-        unsafe { self.wait_for_evt(&self.recv_token.CompletionToken.Event)? }; // TODO: Make sure we also check the status on the Event.Status field
+        unsafe { self.wait_for_evt(&self.recv_token.CompletionToken.Event)? };
         to_res(buf.len(), self.recv_token.CompletionToken.Status)
     }
 }
