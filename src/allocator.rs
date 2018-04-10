@@ -12,7 +12,7 @@ unsafe impl<'a> Alloc for &'a EfiAllocator {
             return Err(AllocErr::Unsupported { details: "Zero sized alloc request"});
         }
 
-        if layout.align() % 2 != 0  { // Just in case some fucker asks for an odd-number alignment.
+        if layout.align() % 2 != 0 && layout.align() != 1 { // Just in case some fucker asks for an odd-number alignment -- except if it's 1 which is fine
             return Err(AllocErr::Unsupported { details: "Odd-number alignment alloc request"});
         }
 
