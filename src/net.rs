@@ -21,6 +21,7 @@ use ffi::{
     VOID,
     IsSuccess,
     EFI_SERVICE_BINDING_PROTOCOL,
+    EFI_NO_MAPPING,
     boot_services::{
         EFI_BOOT_SERVICES,
         EVT_NOTIFY_WAIT,
@@ -40,7 +41,8 @@ use ffi::{
         EFI_TCP4_ACCESS_POINT,
         EFI_TCP4_OPTION,
         EFI_TCP4_FRAGMENT_DATA 
-        },
+    },
+    ip4::EFI_IP4_MODE_DATA,
 };
 
 use core::{ptr, mem, ops::Drop};
@@ -172,6 +174,7 @@ impl Tcp4Stream {
     // TODO: Ideally this interface should be identical to the one in stdlib which is:
     // pub fn connect<A: ToSocketAddrs>(addr: A) -> io::Result<TcpStream> {
     pub fn connect(addr: SocketAddrV4) -> Result<Self> {
+        // TODO: this function is too ugly right now. Refactor/clean it up.
         let ip: EFI_IPv4_ADDRESS = (*addr.ip()).into();
         let config_data = EFI_TCP4_CONFIG_DATA {
             TypeOfService: 0,
@@ -207,7 +210,19 @@ impl Tcp4Stream {
                 ptr::null() as EFI_HANDLE,
                 EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL)); // TODO: BY_HANDLE is used for applications. Drivers should use GET. Will we ever support drivers?
         
-            ret_on_err!(((*stream.protocol).Configure)(stream.protocol, &config_data));
+            let status = ((*stream.protocol).Configure)(stream.protocol, &config_data);
+
+            if status == EFI_NO_MAPPING { // Wait until the IP configuration process (probably DHCP) has finished
+                let mut ip_mode_data = EFI_IP4_MODE_DATA::new();
+                loop {
+                    ret_on_err!(((*stream.protocol).GetModeData)(stream.protocol, ptr::null_mut(), ptr::null_mut(), &mut ip_mode_data, ptr::null_mut(), ptr::null_mut()));
+                    if ip_mode_data.IsConfigured == TRUE { break }
+                }
+
+                ret_on_err!(((*stream.protocol).Configure)(stream.protocol, &config_data));
+            } else {
+                ret_on_err!(status);
+            }
 
             ret_on_err!(((*stream.protocol).Connect)(stream.protocol, &mut stream.connect_token));
             stream.wait_for_evt(&stream.connect_token.CompletionToken.Event)?;
