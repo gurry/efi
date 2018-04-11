@@ -41,6 +41,7 @@ pub use alloc::btree_set::BTreeSet;
 pub use alloc::linked_list::LinkedList;
 pub use alloc::vec_deque::VecDeque;
 pub use alloc::string::String;
+pub use alloc::string;
 pub use alloc::vec::Vec;
 pub use alloc::boxed;
 pub use alloc::rc;
