@@ -147,7 +147,8 @@ pub struct Tcp4Stream {
     connect_token: EFI_TCP4_CONNECTION_TOKEN,
     recv_token: EFI_TCP4_IO_TOKEN,
     send_token: EFI_TCP4_IO_TOKEN,
-    close_token: EFI_TCP4_CLOSE_TOKEN
+    close_token: EFI_TCP4_CLOSE_TOKEN,
+    is_connected: bool
 }
 extern "win64" fn empty_cb(_event: EFI_EVENT, _context: *const VOID) -> EFI_STATUS {
     EFI_SUCCESS
@@ -164,6 +165,7 @@ impl Tcp4Stream {
             recv_token: EFI_TCP4_IO_TOKEN::default(),
             send_token: EFI_TCP4_IO_TOKEN::default(),
             close_token: EFI_TCP4_CLOSE_TOKEN::default(),
+            is_connected: false
         }
     }
 
@@ -210,6 +212,7 @@ impl Tcp4Stream {
             ret_on_err!(((*stream.protocol).Connect)(stream.protocol, &mut stream.connect_token));
             stream.wait_for_evt(&stream.connect_token.CompletionToken.Event)?;
             ret_on_err!(stream.connect_token.CompletionToken.Status);
+            stream.is_connected = true;
         }
 
         Ok(stream)
@@ -226,14 +229,28 @@ impl Drop for Tcp4Stream {
     fn drop(&mut self) {
         // TODO: add the code to panic when any of the below calls fail. (Could be difficult) but maybe we can trace something when we do that.
         unsafe {
-            ((*self.protocol).Close)(self.protocol, &self.close_token);
-            ((*self.bs).CloseProtocol)(self.device_handle, &EFI_TCP4_PROTOCOL_GUID, image_handle(), ptr::null() as EFI_HANDLE);
-            ((*self.binding_protocol).DestroyChild)(self.binding_protocol, &mut self.device_handle);
-
             ((*self.bs).CloseEvent)(self.connect_token.CompletionToken.Event);
             ((*self.bs).CloseEvent)(self.send_token.CompletionToken.Event);
             ((*self.bs).CloseEvent)(self.recv_token.CompletionToken.Event);
+
+            self.close_token.AbortOnClose = FALSE;
+
+            ((*self.protocol).Close)(self.protocol, &self.close_token);
+            if self.is_connected { // We don't want want to wait if we weren't connected because then we end up waiting forever
+                if let Err(_) = self.wait_for_evt(&self.close_token.CompletionToken.Event) { // Blocking until the connection is closed for certain
+                     return; // Don't do anything further since we failed to close the connection safely.
+                }
+            }
+
+            // This Configure call and the comment about the bug is copied verbatim from FastBoot protocol in tianocore:
+            // Possible bug in EDK2 TCP4 driver: closing a connection doesn't remove its
+            // PCB from the list of live connections. Subsequent attempts to Configure()
+            // a TCP instance with the same local port will fail with INVALID_PARAMETER.
+            // Calling Configure with NULL is a workaround for this issue.
+            ((*self.protocol).Configure)(self.protocol, ptr::null());
+
             ((*self.bs).CloseEvent)(self.close_token.CompletionToken.Event);
+            ((*self.binding_protocol).DestroyChild)(self.binding_protocol, &mut self.device_handle);
         }
     }
 }
