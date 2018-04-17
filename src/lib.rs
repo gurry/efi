@@ -5,6 +5,8 @@
 #![feature(alloc)]
 #![feature(global_allocator)]
 #![feature(allocator_api)]
+#![feature(str_internals)] // TODO: this looks very new and unstable. Can we get rid of it?
+#![feature(align_offset)]
 
 #[macro_use] extern crate failure;
 #[macro_use] extern crate bitflags;

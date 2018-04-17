@@ -4,7 +4,7 @@ use ::{
     image_handle,
     EfiError,
     to_res,
-    io::{Read, Write}
+    io::{self, Read, Write}
 };
 
 use ffi::{
@@ -238,6 +238,48 @@ impl Tcp4Stream {
         let status = ((*self.bs).WaitForEvent)(1, event, &mut _index);
         to_res((), status)
     }
+
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
+        let fragment_data = EFI_TCP4_FRAGMENT_DATA {
+            FragmentLength: buf.len() as UINT32,
+            FragmentBuffer: buf.as_ptr() as *const VOID
+        };
+
+        let recv_data = EFI_TCP4_RECEIVE_DATA {
+            UrgentFlag: FALSE,
+            DataLength: buf.len() as UINT32,
+            FragmentCount: 1,
+            FragmentTable: [fragment_data] // TODO: will this result in a copy? Should be init fragment data in place here?
+        };
+
+
+        self.recv_token.Packet.RxData =  &recv_data;
+        ret_on_err!(unsafe { ((*self.protocol).Receive)(self.protocol, &self.recv_token) });
+
+        unsafe { self.wait_for_evt(&self.recv_token.CompletionToken.Event)? };
+        to_res(buf.len(), self.recv_token.CompletionToken.Status)
+    }
+
+    fn write(&mut self, buf: &[u8]) -> Result<usize> {
+        let fragment_data = EFI_TCP4_FRAGMENT_DATA {
+            FragmentLength: buf.len() as UINT32,
+            FragmentBuffer: buf.as_ptr() as *const VOID
+        };
+
+        let send_data = EFI_TCP4_TRANSMIT_DATA {
+            Push: FALSE,
+            Urgent: FALSE,
+            DataLength: buf.len() as UINT32,
+            FragmentCount: 1,
+            FragmentTable: [fragment_data] // TODO: will this result in a copy? Should be init fragment data in place here?
+        };
+
+        self.send_token.Packet.TxData =  &send_data;
+        ret_on_err!(unsafe { ((*self.protocol).Transmit)(self.protocol, &self.send_token) });
+
+        unsafe { self.wait_for_evt(&self.send_token.CompletionToken.Event)? }; // TODO: Make sure we also check the status on the Event.Status field
+        to_res(buf.len(), self.send_token.CompletionToken.Status)
+    }
 }
 
 impl Drop for Tcp4Stream {
@@ -270,47 +312,20 @@ impl Drop for Tcp4Stream {
     }
 }
 impl Read for Tcp4Stream {
-    fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
-        let fragment_data = EFI_TCP4_FRAGMENT_DATA {
-            FragmentLength: buf.len() as UINT32,
-            FragmentBuffer: buf.as_ptr() as *const VOID
-        };
-
-        let recv_data = EFI_TCP4_RECEIVE_DATA {
-            UrgentFlag: FALSE,
-            DataLength: buf.len() as UINT32,
-            FragmentCount: 1,
-            FragmentTable: [fragment_data] // TODO: will this result in a copy? Should be init fragment data in place here?
-        };
-
-
-        self.recv_token.Packet.RxData =  &recv_data;
-        ret_on_err!(unsafe { ((*self.protocol).Receive)(self.protocol, &self.recv_token) });
-
-        unsafe { self.wait_for_evt(&self.recv_token.CompletionToken.Event)? };
-        to_res(buf.len(), self.recv_token.CompletionToken.Status)
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.read(buf).map_err(|_| io::ErrorKind::Interrupted.into())
     }
+        
 }
 
 impl Write for Tcp4Stream {
-    fn write(&mut self, buf: &[u8]) -> Result<usize> {
-        let fragment_data = EFI_TCP4_FRAGMENT_DATA {
-            FragmentLength: buf.len() as UINT32,
-            FragmentBuffer: buf.as_ptr() as *const VOID
-        };
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.write(buf).map_err(|_| io::ErrorKind::Interrupted.into())
+    }
 
-        let send_data = EFI_TCP4_TRANSMIT_DATA {
-            Push: FALSE,
-            Urgent: FALSE,
-            DataLength: buf.len() as UINT32,
-            FragmentCount: 1,
-            FragmentTable: [fragment_data] // TODO: will this result in a copy? Should be init fragment data in place here?
-        };
 
-        self.send_token.Packet.TxData =  &send_data;
-        ret_on_err!(unsafe { ((*self.protocol).Transmit)(self.protocol, &self.send_token) });
-
-        unsafe { self.wait_for_evt(&self.send_token.CompletionToken.Event)? }; // TODO: Make sure we also check the status on the Event.Status field
-        to_res(buf.len(), self.send_token.CompletionToken.Status)
+    fn flush(&mut self) -> io::Result<()> {
+        // Does nothing. There's nothing in the underlying UEFI APIs to support this.
+        Ok(())
     }
 }
