@@ -47,6 +47,8 @@ use ffi::{
 
 use core::{ptr, mem, ops::Drop};
 
+pub mod parser;
+
 #[derive(Debug, Copy, Clone)]
 pub struct Ipv4Addr(EFI_IPv4_ADDRESS);
 
@@ -55,6 +57,10 @@ impl Ipv4Addr {
         Ipv4Addr(EFI_IPv4_ADDRESS {
             Addr: [a, b, c, d]
         })
+    }
+
+    pub fn octets(&self) -> [u8; 4] {
+        self.0.Addr
     }
 }
 
