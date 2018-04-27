@@ -4,6 +4,7 @@ use ffi::{
         EFI_STATUS,
         EFI_EVENT,
         EFI_GUID,
+        EFI_SUCCESS,
         UINT8,
         UINT16,
         UINT32,
@@ -16,7 +17,7 @@ use ffi::{
     simple_network::EFI_SIMPLE_NETWORK_MODE,
     ip4::EFI_IP4_MODE_DATA,
 };
-use core::mem;
+use core::{mem, ptr};
 
 pub const EFI_UDP4_SERVICE_BINDING_PROTOCOL_GUID: EFI_GUID = EFI_GUID(0x83f01464, 0x99bd, 0x45e5, [0xb3, 0x83, 0xaf, 0x63, 0x05, 0xd8, 0xe9, 0xe6]);
 
@@ -93,6 +94,16 @@ pub struct EFI_UDP4_COMPLETION_TOKEN {
     pub Event: EFI_EVENT,
     pub Status: EFI_STATUS,
     pub Packet: PacketUnion,
+}
+
+impl Default for EFI_UDP4_COMPLETION_TOKEN  {
+    fn default() -> Self {
+        Self {
+            Event: ptr::null() as EFI_EVENT,
+            Status: EFI_SUCCESS,
+            Packet: PacketUnion { TxData: ptr::null() as *const EFI_UDP4_TRANSMIT_DATA }
+         }
+    }
 }
 
 #[repr(C)]

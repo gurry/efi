@@ -42,6 +42,16 @@ use ffi::{
         EFI_TCP4_OPTION,
         EFI_TCP4_FRAGMENT_DATA 
     },
+    udp4::{
+        EFI_UDP4_SERVICE_BINDING_PROTOCOL_GUID,
+        EFI_UDP4_PROTOCOL_GUID,
+        EFI_UDP4_PROTOCOL,
+        EFI_UDP4_CONFIG_DATA,
+        EFI_UDP4_COMPLETION_TOKEN,
+        EFI_UDP4_FRAGMENT_DATA,
+        EFI_UDP4_TRANSMIT_DATA,
+        EFI_UDP4_SESSION_DATA
+    },
     ip4::EFI_IP4_MODE_DATA,
 };
 
@@ -317,14 +327,160 @@ impl Drop for Tcp4Stream {
         }
     }
 }
+
 impl Read for Tcp4Stream {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         self.read(buf).map_err(|_| io::ErrorKind::Interrupted.into())
     }
-        
 }
 
 impl Write for Tcp4Stream {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.write(buf).map_err(|_| io::ErrorKind::Interrupted.into())
+    }
+
+
+    fn flush(&mut self) -> io::Result<()> {
+        // Does nothing. There's nothing in the underlying UEFI APIs to support this.
+        Ok(())
+    }
+}
+
+pub struct Udp4Socket {
+    bs: *const EFI_BOOT_SERVICES,
+    binding_protocol: *const EFI_SERVICE_BINDING_PROTOCOL,
+    protocol: *const EFI_UDP4_PROTOCOL,
+    device_handle: EFI_HANDLE,
+    recv_token: EFI_UDP4_COMPLETION_TOKEN,
+    send_token: EFI_UDP4_COMPLETION_TOKEN,
+}
+
+impl Udp4Socket {
+    fn new() -> Self {
+        Udp4Socket {
+            bs: system_table().BootServices,
+            binding_protocol: ptr::null() as *const EFI_SERVICE_BINDING_PROTOCOL,
+            protocol: ptr::null() as *const EFI_UDP4_PROTOCOL,
+            device_handle: ptr::null() as EFI_HANDLE,
+            recv_token: EFI_UDP4_COMPLETION_TOKEN::default(),
+            send_token: EFI_UDP4_COMPLETION_TOKEN::default(),
+        }
+    }
+
+    // TODO: Ideally this interface should be identical to the one in stdlib which is:
+    // pub fn connect<A: ToSocketAddrs>(&self, addr: A) -> Result<()>
+    pub fn connect(addr: SocketAddrV4) -> Result<Self> {
+        let ip: EFI_IPv4_ADDRESS = (*addr.ip()).into();
+        let config_data = EFI_UDP4_CONFIG_DATA {
+            AcceptBroadcast: FALSE,
+            AcceptPromiscuous: FALSE,
+            AcceptAnyPort: FALSE,
+            AllowDuplicatePort: FALSE,
+            TypeOfService: 0,
+            TimeToLive: 255,
+            DoNotFragment: TRUE,
+            ReceiveTimeout: 0,
+            TransmitTimeout: 0,
+            UseDefaultAddress: TRUE,
+            StationAddress: EFI_IPv4_ADDRESS::zero(),
+            SubnetMask: EFI_IPv4_ADDRESS::zero(),
+            StationPort: 0,
+            RemoteAddress: ip,
+            RemotePort: addr.port(),
+        };
+        let mut socket = Self::new();
+
+        unsafe {
+            ret_on_err!(((*socket.bs).CreateEvent)(EVT_NOTIFY_WAIT, TPL_CALLBACK, empty_cb, ptr::null(), &mut socket.send_token.Event));
+            ret_on_err!(((*socket.bs).CreateEvent)(EVT_NOTIFY_WAIT, TPL_CALLBACK, empty_cb, ptr::null(), &mut socket.recv_token.Event));
+
+            ret_on_err!(((*socket.bs).LocateProtocol)(&EFI_UDP4_SERVICE_BINDING_PROTOCOL_GUID, ptr::null() as *const VOID, mem::transmute(&socket.binding_protocol)));
+            ret_on_err!(((*socket.binding_protocol).CreateChild)(socket.binding_protocol, &mut socket.device_handle));
+            ret_on_err!(((*socket.bs).OpenProtocol)(socket.device_handle,
+                &EFI_UDP4_PROTOCOL_GUID,
+                mem::transmute(&socket.protocol),
+                image_handle(),
+                ptr::null() as EFI_HANDLE,
+                EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL)); // TODO: BY_HANDLE is used for applications. Drivers should use GET. Will we ever support drivers?
+            let status = ((*socket.protocol).Configure)(socket.protocol, &config_data);
+            if status == EFI_NO_MAPPING { // Wait until the IP configuration process (probably DHCP) has finished
+                let mut ip_mode_data = EFI_IP4_MODE_DATA::new();
+                loop {
+                    ret_on_err!(((*socket.protocol).GetModeData)(socket.protocol, ptr::null_mut(), &mut ip_mode_data, ptr::null_mut(), ptr::null_mut()));
+                    if ip_mode_data.IsConfigured == TRUE { break }
+                }
+
+                ret_on_err!(((*socket.protocol).Configure)(socket.protocol, &config_data));
+            } else {
+                ret_on_err!(status);
+            }
+        }
+
+        Ok(socket)
+    }
+
+    unsafe fn wait_for_evt(&self, event: *const EFI_EVENT) -> Result<()> {
+        let mut _index: UINTN = 0;;
+        let status = ((*self.bs).WaitForEvent)(1, event, &mut _index);
+        to_res((), status)
+    }
+
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
+        ret_on_err!(unsafe { ((*self.protocol).Receive)(self.protocol, &self.recv_token) });
+
+        let buffer_length: usize;
+        unsafe {
+            self.wait_for_evt(&self.recv_token.Event)?;
+            let buffer = (*self.recv_token.Packet.RxData).FragmentTable[0].FragmentBuffer as *const u8;
+            buffer_length = (*self.recv_token.Packet.RxData).FragmentTable[0].FragmentLength as usize;
+            //TODO:Get rid of this copy
+            ptr::copy(buffer, buf.as_mut_ptr(), buffer_length);
+        }
+
+        to_res(buffer_length, self.recv_token.Status)
+    }
+
+    fn write(&mut self, buf: &[u8]) -> Result<usize> {
+        let fragment_data = EFI_UDP4_FRAGMENT_DATA {
+            FragmentLength: buf.len() as UINT32,
+            FragmentBuffer: buf.as_ptr() as *const VOID
+        };
+
+        let send_data = EFI_UDP4_TRANSMIT_DATA {
+            UdpSessionData: ptr::null() as *const EFI_UDP4_SESSION_DATA,
+            GatewayAddress: ptr::null() as *const EFI_IPv4_ADDRESS,
+            DataLength: buf.len() as UINT32,
+            FragmentCount: 1,
+            FragmentTable: [fragment_data] // TODO: will this result in a copy? Should be init fragment data in place here?
+        };
+
+        self.send_token.Packet.TxData =  &send_data;
+        ret_on_err!(unsafe { ((*self.protocol).Transmit)(self.protocol, &self.send_token) });
+
+        unsafe { self.wait_for_evt(&self.send_token.Event)? }; // TODO: Make sure we also check the status on the Event.Status field
+        to_res(buf.len(), self.send_token.Status)
+    }
+}
+
+impl Drop for Udp4Socket {
+    fn drop(&mut self) {
+        // TODO: add the code to panic when any of the below calls fail. (Could be difficult) but maybe we can trace something when we do that.
+        unsafe {
+            ((*self.bs).CloseEvent)(self.send_token.Event);
+            ((*self.bs).CloseEvent)(self.recv_token.Event);
+            ((*self.protocol).Configure)(self.protocol, ptr::null());
+            ((*self.binding_protocol).DestroyChild)(self.binding_protocol, &mut self.device_handle);
+        }
+    }
+}
+
+impl Read for Udp4Socket {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.read(buf).map_err(|_| io::ErrorKind::Interrupted.into())
+    }
+}
+
+impl Write for Udp4Socket {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.write(buf).map_err(|_| io::ErrorKind::Interrupted.into())
     }
