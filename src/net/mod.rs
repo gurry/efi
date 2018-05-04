@@ -353,6 +353,7 @@ pub struct Udp4Socket {
     device_handle: EFI_HANDLE,
     recv_token: EFI_UDP4_COMPLETION_TOKEN,
     send_token: EFI_UDP4_COMPLETION_TOKEN,
+    read_offset: usize
 }
 
 impl Udp4Socket {
@@ -364,6 +365,7 @@ impl Udp4Socket {
             device_handle: ptr::null() as EFI_HANDLE,
             recv_token: EFI_UDP4_COMPLETION_TOKEN::default(),
             send_token: EFI_UDP4_COMPLETION_TOKEN::default(),
+            read_offset: 0
         }
     }
 
@@ -426,18 +428,37 @@ impl Udp4Socket {
     }
 
     fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
-        ret_on_err!(unsafe { ((*self.protocol).Receive)(self.protocol, &self.recv_token) });
-
-        let buffer_length: usize;
-        unsafe {
-            self.wait_for_evt(&self.recv_token.Event)?;
-            let buffer = (*self.recv_token.Packet.RxData).FragmentTable[0].FragmentBuffer as *const u8;
-            buffer_length = (*self.recv_token.Packet.RxData).FragmentTable[0].FragmentLength as usize;
-            //TODO:Get rid of this copy
-            ptr::copy(buffer, buf.as_mut_ptr(), buffer_length);
+        if self.read_offset == 0 {
+            ret_on_err!(unsafe { ((*self.protocol).Receive)(self.protocol, &self.recv_token) });
+            unsafe { self.wait_for_evt(&self.recv_token.Event)?; }
         }
 
-        to_res(buffer_length, self.recv_token.Status)
+        let buffer_length: usize;
+        let buffer: *const u8;
+        unsafe {
+            buffer = (*self.recv_token.Packet.RxData).FragmentTable[0].FragmentBuffer as *const u8;
+            buffer_length = (*self.recv_token.Packet.RxData).FragmentTable[0].FragmentLength as usize;
+        }
+
+        let readable_length = buffer_length - self.read_offset;
+        let min_length;
+        if readable_length < buf.len() {
+            min_length = readable_length;
+        } else {
+            min_length = buf.len();
+        }
+
+        unsafe {
+            //TODO:Get rid of this copy
+            ptr::copy(buffer.add(self.read_offset), buf.as_mut_ptr(), min_length);
+        }
+
+        self.read_offset += min_length;
+        if self.read_offset > buffer_length - 1 {
+            self.read_offset = 0;
+        }
+
+        to_res(min_length, self.recv_token.Status)
     }
 
     fn write(&mut self, buf: &[u8]) -> Result<usize> {
@@ -476,6 +497,9 @@ impl Drop for Udp4Socket {
 
 impl Read for Udp4Socket {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        if buf.len() == 0 {
+            return Err(io::ErrorKind::InvalidInput.into());
+        }
         self.read(buf).map_err(|_| io::ErrorKind::Interrupted.into())
     }
 }
