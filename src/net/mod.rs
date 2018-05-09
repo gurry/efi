@@ -279,7 +279,7 @@ impl Tcp4Stream {
         ret_on_err!(unsafe { ((*self.protocol).Receive)(self.protocol, &self.recv_token) });
 
         unsafe { self.wait_for_evt(&self.recv_token.CompletionToken.Event)? };
-        to_res(buf.len(), self.recv_token.CompletionToken.Status)
+        to_res(recv_data.DataLength as usize, self.recv_token.CompletionToken.Status)
     }
 
     fn write(&mut self, buf: &[u8]) -> Result<usize> {
