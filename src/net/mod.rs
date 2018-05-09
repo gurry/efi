@@ -300,6 +300,8 @@ impl Tcp4Stream {
         ret_on_err!(unsafe { ((*self.protocol).Transmit)(self.protocol, &self.send_token) });
 
         unsafe { self.wait_for_evt(&self.send_token.CompletionToken.Event)? }; // TODO: Make sure we also check the status on the Event.Status field
+        // TODO: is it okay to return buf len below? Would UEFI every tranmist part of the buffer. 
+        // The documentation is unclear about this. Check this with experimentation
         to_res(buf.len(), self.send_token.CompletionToken.Status)
     }
 }
