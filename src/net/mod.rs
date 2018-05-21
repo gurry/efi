@@ -427,41 +427,25 @@ impl Udp4Socket {
         to_res((), status)
     }
 
-    fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
-        if self.read_offset == 0 {
-            ret_on_err!(unsafe { ((*self.protocol).Receive)(self.protocol, &self.recv_token) });
-            unsafe { self.wait_for_evt(&self.recv_token.Event)?; }
-        }
+    pub fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
+        ret_on_err!(unsafe { ((*self.protocol).Receive)(self.protocol, &self.recv_token) });
 
         let buffer_length: usize;
-        let buffer: *const u8;
         unsafe {
-            buffer = (*self.recv_token.Packet.RxData).FragmentTable[0].FragmentBuffer as *const u8;
+            self.wait_for_evt(&self.recv_token.Event)?;
+            let buffer = (*self.recv_token.Packet.RxData).FragmentTable[0].FragmentBuffer as *const u8;
             buffer_length = (*self.recv_token.Packet.RxData).FragmentTable[0].FragmentLength as usize;
-        }
-
-        let readable_length = buffer_length - self.read_offset;
-        let min_length;
-        if readable_length < buf.len() {
-            min_length = readable_length;
-        } else {
-            min_length = buf.len();
-        }
-
-        unsafe {
+            if buf.len() < buffer_length {
+                return Err(EfiError::from(::ffi::EFI_INVALID_PARAMETER));
+            }
             //TODO:Get rid of this copy
-            ptr::copy(buffer.add(self.read_offset), buf.as_mut_ptr(), min_length);
+            ptr::copy(buffer, buf.as_mut_ptr(), buffer_length);
         }
 
-        self.read_offset += min_length;
-        if self.read_offset > buffer_length - 1 {
-            self.read_offset = 0;
-        }
-
-        to_res(min_length, self.recv_token.Status)
+        to_res(buffer_length, self.recv_token.Status)
     }
 
-    fn write(&mut self, buf: &[u8]) -> Result<usize> {
+    pub fn write(&mut self, buf: &[u8]) -> Result<usize> {
         let fragment_data = EFI_UDP4_FRAGMENT_DATA {
             FragmentLength: buf.len() as UINT32,
             FragmentBuffer: buf.as_ptr() as *const VOID
@@ -492,26 +476,5 @@ impl Drop for Udp4Socket {
             ((*self.protocol).Configure)(self.protocol, ptr::null());
             ((*self.binding_protocol).DestroyChild)(self.binding_protocol, &mut self.device_handle);
         }
-    }
-}
-
-impl Read for Udp4Socket {
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        if buf.len() == 0 {
-            return Err(io::ErrorKind::InvalidInput.into());
-        }
-        self.read(buf).map_err(|_| io::ErrorKind::Interrupted.into())
-    }
-}
-
-impl Write for Udp4Socket {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.write(buf).map_err(|_| io::ErrorKind::Interrupted.into())
-    }
-
-
-    fn flush(&mut self) -> io::Result<()> {
-        // Does nothing. There's nothing in the underlying UEFI APIs to support this.
-        Ok(())
     }
 }
