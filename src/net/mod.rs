@@ -86,6 +86,12 @@ impl From<Ipv4Addr > for EFI_IPv4_ADDRESS {
     }
 }
 
+impl From<u32> for Ipv4Addr {
+    fn from(ip: u32) -> Ipv4Addr {
+        Ipv4Addr::new((ip >> 24) as u8, (ip >> 16) as u8, (ip >> 8) as u8, ip as u8)
+    }
+}
+
 #[derive(Debug, Copy, Clone)]
 pub struct Ipv6Addr(EFI_IPv6_ADDRESS);
 
