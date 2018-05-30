@@ -12,6 +12,7 @@ use ffi::{
         UINTN,
         BOOLEAN,
         VOID,
+        TRUE,
         FALSE,
     },
     managed_network::EFI_MANAGED_NETWORK_CONFIG_DATA,
@@ -60,6 +61,20 @@ pub struct EFI_TCP4_ACCESS_POINT {
     pub ActiveFlag: BOOLEAN,
 }
 
+impl Default for EFI_TCP4_ACCESS_POINT {
+    fn default() -> Self {
+        Self {
+            UseDefaultAddress: FALSE,
+            StationAddress: EFI_IPv4_ADDRESS::zero(),
+            SubnetMask: EFI_IPv4_ADDRESS::zero(),
+            StationPort: 0,
+            RemoteAddress: EFI_IPv4_ADDRESS::zero(),
+            RemotePort: 0,
+            ActiveFlag: TRUE,
+        }
+    }
+}
+
 #[repr(C)]
 pub struct EFI_TCP4_OPTION {
     pub ReceiveBufferSize: UINT32,
@@ -87,6 +102,16 @@ pub struct EFI_TCP4_CONFIG_DATA {
     pub ControlOption: *const EFI_TCP4_OPTION,
 }
 
+impl Default for EFI_TCP4_CONFIG_DATA {
+    fn default() -> Self {
+        Self {
+            TypeOfService: 0,
+            TimeToLive: 0,
+            AccessPoint: EFI_TCP4_ACCESS_POINT::default(),
+            ControlOption: ptr::null() as *const EFI_TCP4_OPTION,
+        }
+    }
+}
 #[repr(C)]
 pub enum EFI_TCP4_CONNECTION_STATE{
     Tcp4StateClosed = 0,
