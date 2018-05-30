@@ -385,7 +385,6 @@ pub struct Udp4Socket {
     device_handle: EFI_HANDLE,
     recv_token: EFI_UDP4_COMPLETION_TOKEN,
     send_token: EFI_UDP4_COMPLETION_TOKEN,
-    read_offset: usize
 }
 
 impl Udp4Socket {
@@ -397,7 +396,6 @@ impl Udp4Socket {
             device_handle: ptr::null() as EFI_HANDLE,
             recv_token: EFI_UDP4_COMPLETION_TOKEN::default(),
             send_token: EFI_UDP4_COMPLETION_TOKEN::default(),
-            read_offset: 0
         }
     }
 
