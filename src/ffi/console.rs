@@ -99,7 +99,7 @@ pub const EFI_WIDE_ATTRIBUTE: UINTN = 0x80;
 
 pub type EFI_TEXT_RESET = extern "win64" fn(
     This: *const EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL,
-    ExtendedVerificatio: BOOLEAN
+    ExtendedVerification: BOOLEAN
 ) -> EFI_STATUS;
 
 pub type EFI_TEXT_STRING = extern "win64" fn(
