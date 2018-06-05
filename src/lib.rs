@@ -1,4 +1,5 @@
 // TODO: Can we use core::intrinsics (https://doc.rust-lang.org/1.12.0/core/intrinsics/fn.copy.html) instead of compiler_builtins crate?
+// TODO: At many places in this crate we're not handling errors well. We're swalling inner errors such as EFI_STATUSes. Fix this situation.
 #![no_std]
 #![feature(intrinsics)]
 #![feature(try_trait)]
