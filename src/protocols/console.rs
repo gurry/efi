@@ -1,5 +1,5 @@
-use ffi::{console::{EFI_SIMPLE_TEXT_INPUT_PROTOCOL, EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL}, IsError, IsSuccess};
-use core::{fmt, mem};
+use ffi::{console::{EFI_SIMPLE_TEXT_INPUT_PROTOCOL, EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL}, IsSuccess};
+use core::fmt;
 use io;
 use EfiError;
 use ::Result;
@@ -13,13 +13,18 @@ pub struct Console {
 const WRITE_BUFSIZE: usize = 512;
 impl fmt::Write for Console {
     fn write_str(&mut self, s: &str) -> fmt::Result {
+        self.write_u16(&mut s.chars().map(|c| c as u16)).map_err(|_| fmt::Error)?;
+        Ok(())
+    }
+}
+
+impl Console {
+    fn write_u16<I: Iterator<Item=u16>>(&mut self, iter: &mut I) -> Result<()> {
         let mut buf = [0u16; WRITE_BUFSIZE];
         let mut i = 0;
 
-        let mut chars = s.chars();
-
         loop {
-            let mut chunk = chars.by_ref().take(WRITE_BUFSIZE - 1).peekable();
+            let mut chunk = iter.by_ref().take(WRITE_BUFSIZE - 1).peekable();
 
             if chunk.peek() == None {
                 // TODO: Currently swallowing all warnings in this method. Should we turn them into errors?
@@ -27,18 +32,16 @@ impl fmt::Write for Console {
             }
 
             for c in chunk {
-                buf[i] = c as u16;
+                buf[i] = c;
                 i += 1;
             }
 
             buf[i] = 0;
-            self.write_to_efi(&buf).map_err(|_| fmt::Error)?;
+            self.write_to_efi(&buf)?;
             i = 0;
         }
     }
-}
 
-impl Console {
     fn write_to_efi(&self, buf: &[u16]) -> Result<()> {
         unsafe {
             let (ptr, _) = to_ptr(buf);
@@ -50,12 +53,9 @@ impl Console {
 
 impl io::Write for Console {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        if buf.len() % 2 != 0 {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "Provided buffer has odd length. Cannot interpret as a UCS-2 buffer."));
-        }
+        self.write_u16(&mut buf.iter().map(|i| *i as u16))
+            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to write to EFI_SIMPLE_OUTPUT_PROTOCOL"))?; // TODO: Don't swallaow EFI status like this. Error handling in this whole crate needs fixing
 
-        let buf: &[u16] = unsafe { mem::transmute(buf) };
-        self.write_to_efi(buf).map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to write to EFI_SIMPLE_OUTPUT_PROTOCOL"))?; // TODO: Don't swallaow EFI status like this. Error handling in this whole crate needs fixing
         Ok(buf.len())
     }
 
