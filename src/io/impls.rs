@@ -14,8 +14,7 @@ use io::{self, SeekFrom, Read, Initializer, Write, Seek, Error, ErrorKind};
 use io::BufRead;
 use core::fmt;
 use core::mem;
-use String;
-use Vec;
+use alloc::{String, Vec};
 
 // =============================================================================
 // Forwarding implementations

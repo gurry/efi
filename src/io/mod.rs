@@ -279,9 +279,8 @@ use core::cmp;
 use core::str as core_str;
 use core::fmt;
 use core::result;
-use String;
+use alloc::{String, Vec};
 use core::str;
-use Vec;
 use core::ptr;
 
 pub use self::buffered::{BufReader, BufWriter, LineWriter};

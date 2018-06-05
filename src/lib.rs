@@ -36,21 +36,6 @@ use failure::{Context, Fail, Backtrace};
 use allocator::EfiAllocator;
 use ffi::tcp4;
 
-
-pub use alloc::binary_heap::BinaryHeap;
-pub use alloc::btree_map::BTreeMap;
-pub use alloc::btree_set::BTreeSet;
-pub use alloc::linked_list::LinkedList;
-pub use alloc::vec_deque::VecDeque;
-pub use alloc::string::String;
-pub use alloc::string;
-pub use alloc::vec::Vec;
-pub use alloc::vec;
-pub use alloc::boxed;
-pub use alloc::rc;
-pub use alloc::borrow;
-
-
 static mut SYSTEM_TABLE: Option<*const EFI_SYSTEM_TABLE> = None;
 static mut IMAGE_HANDLE: Option<EFI_HANDLE> = None;
 
