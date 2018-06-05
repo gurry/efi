@@ -1,5 +1,6 @@
 use ffi::base::*;
 
+// OUTPUT PROTOCOL
 pub const EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_GUID: EFI_GUID = EFI_GUID(0x387477c2, 0x69c7, 0x11d2, [0x8e, 0x39, 0x0, 0xa0, 0xc9, 0x69, 0x72, 0x3b]);
 
 pub const BOXDRAW_HORIZONTAL: UINTN = 0x2500;
@@ -168,6 +169,30 @@ pub struct EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL {
   pub Mode: *const EFI_SIMPLE_TEXT_OUTPUT_MODE,
 }
 
-// TODO: will complete this later
+
+// INPUT PROTOCOL
+pub const EFI_SIMPLE_TEXT_INPUT_PROTOCOL_GUID: EFI_GUID = EFI_GUID(0x387477c1, 0x69c7, 0x11d2, [0x8e, 0x39, 0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b]);
+
+pub type EFI_INPUT_RESET = extern "win64" fn(
+    This: *mut EFI_SIMPLE_TEXT_INPUT_PROTOCOL,
+    ExtendedVerification: BOOLEAN
+) -> EFI_STATUS;
+
+pub type EFI_INPUT_READ_KEY = extern "win64" fn(
+    This: *mut EFI_SIMPLE_TEXT_INPUT_PROTOCOL,
+    Key: *mut EFI_INPUT_KEY
+) -> EFI_STATUS;
+
 #[repr(C)]
-pub struct EFI_SIMPLE_TEXT_INPUT_PROTOCOL; 
+#[derive(Debug)]
+pub struct EFI_INPUT_KEY {
+    ScanCode: UINT16,
+    UnicodeChar: CHAR16
+}
+
+#[repr(C)]
+pub struct EFI_SIMPLE_TEXT_INPUT_PROTOCOL {
+    Reset: EFI_INPUT_RESET,
+    ReadKeyStroke: EFI_INPUT_READ_KEY,
+    WaitForKey: EFI_EVENT,
+}
