@@ -1,5 +1,8 @@
-use ffi::{console::{EFI_SIMPLE_TEXT_INPUT_PROTOCOL, EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL}, EFI_STATUS, IsError};
-use core::fmt;
+use ffi::{console::{EFI_SIMPLE_TEXT_INPUT_PROTOCOL, EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL}, IsError, IsSuccess};
+use core::{fmt, mem};
+use io;
+use EfiError;
+use ::Result;
 
 pub struct Console {
     pub input: *const EFI_SIMPLE_TEXT_INPUT_PROTOCOL,
@@ -29,22 +32,36 @@ impl fmt::Write for Console {
             }
 
             buf[i] = 0;
-            let status = self.write_to_efi(&buf);
-            if IsError(status) {
-                return Err(fmt::Error);
-            }
+            self.write_to_efi(&buf).map_err(|_| fmt::Error)?;
             i = 0;
         }
     }
 }
 
 impl Console {
-    fn write_to_efi(&self, buf: &[u16]) -> EFI_STATUS {
+    fn write_to_efi(&self, buf: &[u16]) -> Result<()> {
         unsafe {
             let (ptr, _) = to_ptr(buf);
-            ((*(*self).output).OutputString)(self.output, ptr)
+            ret_on_err!(((*(*self).output).OutputString)(self.output, ptr));
+            Ok(())
         }
     }
+}
+
+impl io::Write for Console {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        if buf.len() % 2 != 0 {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "Provided buffer has odd length. Cannot interpret as a UCS-2 buffer."));
+        }
+
+        let buf: &[u16] = unsafe { mem::transmute(buf) };
+        self.write_to_efi(buf).map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to write to EFI_SIMPLE_OUTPUT_PROTOCOL"))?; // TODO: Don't swallaow EFI status like this. Error handling in this whole crate needs fixing
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(()) // Do nothing. UEFI SIMPLE_TEXT_OUTPUT protocol does not support flushing
+    } 
 }
 
 fn to_ptr<T>(slice: &[T]) -> (*const T, usize) {
