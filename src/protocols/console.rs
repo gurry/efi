@@ -4,12 +4,12 @@ use ffi::{
     UINTN,
     EFI_EVENT,
 };
-use core::fmt;
+use core::{fmt, cmp};
 use io::{self, Cursor};
 use EfiError;
 use ::Result;
 use system_table;
-use alloc::{Vec, String};
+use alloc::{Vec, String, str};
 
 pub struct Console {
     pub input: *const EFI_SIMPLE_TEXT_INPUT_PROTOCOL,
@@ -18,10 +18,20 @@ pub struct Console {
 }
 
 // TODO: write! macros works fine but writeln! doesn't because it inserts into \n characters not the \r\n char pairs. Fix this somehow.
-const WRITE_BUFSIZE: usize = 512;
 impl fmt::Write for Console {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        self.write_u16(&mut s.chars().map(|c| c as u16)).map_err(|_| fmt::Error)?;
+        use io::Write;
+
+        let buf = s.as_bytes();
+        let mut total_written = 0;
+        while total_written < buf.len() {
+            let written = self.write(&buf[total_written..]).map_err(|_| fmt::Error)?; // TODO: Swalling upstream errors. Do not, if possible.
+            if written == 0 {
+                return Err(fmt::Error)
+            }
+
+            total_written += written;
+        }
         Ok(())
     }
 }
@@ -29,29 +39,6 @@ impl fmt::Write for Console {
 impl Console {
     pub fn new(input: *const EFI_SIMPLE_TEXT_INPUT_PROTOCOL, output: *const EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL) -> Self {
         Self { input, output, utf8_buf: Cursor::new(Vec::new()) }
-    }
-
-    fn write_u16<I: Iterator<Item=u16>>(&mut self, iter: &mut I) -> Result<()> {
-        let mut buf = [0u16; WRITE_BUFSIZE];
-        let mut i = 0;
-
-        loop {
-            let mut chunk = iter.by_ref().take(WRITE_BUFSIZE - 1).peekable();
-
-            if chunk.peek() == None {
-                // TODO: Currently swallowing all warnings in this method. Should we turn them into errors?
-                return Ok(());
-            }
-
-            for c in chunk {
-                buf[i] = c;
-                i += 1;
-            }
-
-            buf[i] = 0;
-            self.write_to_efi(&buf)?;
-            i = 0;
-        }
     }
 
     fn write_to_efi(&self, buf: &[u16]) -> Result<()> {
@@ -96,11 +83,23 @@ impl Console {
 }
 
 impl io::Write for Console {
+    /// Writes given UTF8 buffer to the console.
+    /// UEFI console natively only supports UCS-2.
+    /// Therefore any code-points above the BMP will show up garbled.
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.write_u16(&mut buf.iter().map(|i| *i as u16))
-            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to write to EFI_SIMPLE_OUTPUT_PROTOCOL"))?; // TODO: Don't swallaow EFI status like this. Error handling in this whole crate needs fixing
+        const WRITE_BUFSIZE: usize = 8192;
+        let bytes_to_write = cmp::min(buf.len(), WRITE_BUFSIZE);
+        let utf8_buf = match str::from_utf8(&buf[..bytes_to_write]) {
+            Ok(str_) => str_,
+            Err(ref e) if e.valid_up_to() == 0 => return Err(invalid_encoding()),
+            Err(e) => str::from_utf8(&buf[..e.valid_up_to()]).unwrap(), // At least write those that are valid
+        };
 
-        Ok(buf.len())
+        let utf16_buf = utf8_buf.encode_utf16().collect::<Vec<u16>>();
+        self.write_to_efi(&utf16_buf)
+            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to write to EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL"))?; // TODO: Don't swallaow EFI status like this. Error handling in this whole crate needs fixing
+
+        Ok(utf16_buf.len())
     }
 
     fn flush(&mut self) -> io::Result<()> {
@@ -119,7 +118,7 @@ impl io::Read for Console {
             // FIXME: what to do about this data that has already been read?
             let data = match String::from_utf16(&utf16_buf) {
                 Ok(utf8_buf) => utf8_buf.into_bytes(),
-                Err(..) => return Err(io::Error::new(io::ErrorKind::InvalidData, "text was not valid unicode")),
+                Err(..) => return Err(invalid_encoding()),
             };
 
             self.utf8_buf = Cursor::new(data);
@@ -128,6 +127,10 @@ impl io::Read for Console {
         // MemReader shouldn't error here since we just filled it
         self.utf8_buf.read(buf)
     }
+}
+
+fn invalid_encoding() -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, "text was not valid unicode")
 }
 
 fn to_ptr<T>(slice: &[T]) -> (*const T, usize) {
