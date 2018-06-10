@@ -11,7 +11,7 @@
 
 #[macro_use] extern crate failure;
 #[macro_use] extern crate bitflags;
-extern crate alloc;
+#[macro_use] extern crate alloc;
 
 #[macro_use] mod utils;
 pub mod ffi;
@@ -300,7 +300,7 @@ impl SystemTable {
     pub fn console(&self) -> Console {
         unsafe {
             let &SystemTable(table) = self;
-            Console { input:  (*table).ConIn, output: (*table).ConOut }
+            Console::new((*table).ConIn, (*table).ConOut)
         }
     }
 }

@@ -186,13 +186,22 @@ pub type EFI_INPUT_READ_KEY = extern "win64" fn(
 #[repr(C)]
 #[derive(Debug)]
 pub struct EFI_INPUT_KEY {
-    ScanCode: UINT16,
-    UnicodeChar: CHAR16
+    pub ScanCode: UINT16,
+    pub UnicodeChar: CHAR16
+}
+
+impl Default for EFI_INPUT_KEY  {
+    fn default() -> Self {
+        Self {
+            ScanCode: 0,
+            UnicodeChar: 0
+        }
+    }
 }
 
 #[repr(C)]
 pub struct EFI_SIMPLE_TEXT_INPUT_PROTOCOL {
-    Reset: EFI_INPUT_RESET,
-    ReadKeyStroke: EFI_INPUT_READ_KEY,
-    WaitForKey: EFI_EVENT,
+    pub Reset: EFI_INPUT_RESET,
+    pub ReadKeyStroke: EFI_INPUT_READ_KEY,
+    pub WaitForKey: EFI_EVENT,
 }
