@@ -77,7 +77,8 @@ impl io::Write for Console {
             Err(e) => str::from_utf8(&buf[..e.valid_up_to()]).unwrap(), // At least write those that are valid
         };
 
-        let utf16_buf = utf8_buf.encode_utf16().collect::<Vec<u16>>();
+        let mut utf16_buf = utf8_buf.encode_utf16().collect::<Vec<u16>>();
+        utf16_buf.push(0); // Appending the null terminator
         self.write_to_efi(&utf16_buf)
             .map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to write to EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL"))?; // TODO: Don't swallaow EFI status like this. Error handling in this whole crate needs fixing
 
