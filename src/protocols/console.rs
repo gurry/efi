@@ -81,7 +81,7 @@ impl io::Write for Console {
         self.write_to_efi(&utf16_buf)
             .map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to write to EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL"))?; // TODO: Don't swallaow EFI status like this. Error handling in this whole crate needs fixing
 
-        Ok(utf16_buf.len())
+        Ok(utf8_buf.len())
     }
 
     fn flush(&mut self) -> io::Result<()> {
