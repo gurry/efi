@@ -2,7 +2,6 @@ use ffi::{
     console::{EFI_SIMPLE_TEXT_INPUT_PROTOCOL, EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL, EFI_INPUT_KEY}, 
     IsSuccess, 
     UINTN,
-    EFI_EVENT,
 };
 use core::cmp;
 use io::{self, Cursor};
@@ -36,10 +35,11 @@ impl Console {
         let input = (*self).input as *mut EFI_SIMPLE_TEXT_INPUT_PROTOCOL;
         let mut evt_index: UINTN = 0;
         let mut key = EFI_INPUT_KEY::default();
+        let mut evt_list = unsafe { [(*input).WaitForKey; 1] };
 
         while bytes_read < buf.len() {
             // TODO: For some reason we can't use ret_on_err here. Why?
-            let status = unsafe { ((*system_table().BootServices).WaitForEvent)(1, (*input).WaitForKey as *const EFI_EVENT, &mut evt_index) };
+            let status = unsafe { ((*system_table().BootServices).WaitForEvent)(evt_list.len(),  evt_list.as_mut_ptr(), &mut evt_index) };
             if !IsSuccess(status) {
                 return Err(status.into()); // TODO: Can we send some error text too with such errors
             }
