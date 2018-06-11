@@ -4,7 +4,7 @@ use ffi::{
     UINTN,
     EFI_EVENT,
 };
-use core::{fmt, cmp};
+use core::cmp;
 use io::{self, Cursor};
 use EfiError;
 use ::Result;
@@ -15,25 +15,6 @@ pub struct Console {
     pub input: *const EFI_SIMPLE_TEXT_INPUT_PROTOCOL,
     pub output: *const EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL,
     utf8_buf: io::Cursor<Vec<u8>>
-}
-
-// TODO: write! macros works fine but writeln! doesn't because it inserts into \n characters not the \r\n char pairs. Fix this somehow.
-impl fmt::Write for Console {
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        use io::Write;
-
-        let buf = s.as_bytes();
-        let mut total_written = 0;
-        while total_written < buf.len() {
-            let written = self.write(&buf[total_written..]).map_err(|_| fmt::Error)?; // TODO: Swalling upstream errors. Do not, if possible.
-            if written == 0 {
-                return Err(fmt::Error)
-            }
-
-            total_written += written;
-        }
-        Ok(())
-    }
 }
 
 impl Console {
@@ -82,6 +63,7 @@ impl Console {
     }
 }
 
+// TODO: write! macros works fine but writeln! doesn't because it inserts into \n characters not the \r\n char pairs. Fix this somehow.
 impl io::Write for Console {
     /// Writes given UTF8 buffer to the console.
     /// UEFI console natively only supports UCS-2.
