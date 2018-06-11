@@ -205,3 +205,77 @@ pub struct EFI_SIMPLE_TEXT_INPUT_PROTOCOL {
     pub ReadKeyStroke: EFI_INPUT_READ_KEY,
     pub WaitForKey: EFI_EVENT,
 }
+
+pub const EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL_GUID: EFI_GUID = EFI_GUID(0xdd9e7534, 0x7762, 0x4698, [0x8c, 0x14, 0xf5, 0x85, 0x17, 0xa6, 0x25, 0xaa]);
+
+#[repr(C)]
+pub struct EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL{
+    pub Reset: EFI_INPUT_RESET_EX,
+    pub ReadKeyStrokeEx: EFI_INPUT_READ_KEY_EX,
+    pub WaitForKeyEx: EFI_EVENT,
+    pub SetState: EFI_SET_STATE,
+    pub RegisterKeyNotify: EFI_REGISTER_KEYSTROKE_NOTIFY,
+    pub UnregisterKeyNotify: EFI_UNREGISTER_KEYSTROKE_NOTIFY,
+}
+
+pub type EFI_INPUT_RESET_EX = extern "win64" fn(
+    This: *mut EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL,
+    ExtendedVerification: BOOLEAN
+) -> EFI_STATUS;
+
+pub type EFI_INPUT_READ_KEY_EX = extern "win64" fn(
+    This: *mut EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL,
+    KeyData: *mut EFI_KEY_DATA
+) -> EFI_STATUS;
+
+pub type EFI_SET_STATE = extern "win64" fn(
+    This: *mut EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL,
+    KeyToggleState: *const EFI_KEY_TOGGLE_STATE 
+) -> EFI_STATUS;
+
+pub type EFI_REGISTER_KEYSTROKE_NOTIFY = extern "win64" fn(
+    This: *mut EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL,
+    KeyData: *const EFI_KEY_DATA,
+    KeyNotificationFunction: EFI_KEY_NOTIFY_FUNCTION,
+    NotifyHandle: *const *mut VOID
+) -> EFI_STATUS;
+
+pub type EFI_KEY_NOTIFY_FUNCTION = extern "win64" fn(
+    KeyData: *const EFI_KEY_DATA
+) -> EFI_STATUS;
+
+pub type EFI_UNREGISTER_KEYSTROKE_NOTIFY = extern "win64" fn(
+    This: *mut EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL,
+    NotificationHandle: *const VOID
+);
+
+#[repr(C)]
+pub struct EFI_KEY_DATA {
+    pub Key: EFI_INPUT_KEY,
+    pub KeyState: EFI_KEY_STATE
+}
+
+pub const EFI_SHIFT_STATE_VALID: UINTN = 0x80000000;
+pub const EFI_RIGHT_SHIFT_PRESSED: UINTN = 0x00000001;
+pub const EFI_LEFT_SHIFT_PRESSED: UINTN = 0x00000002;
+pub const EFI_RIGHT_CONTROL_PRESSED: UINTN = 0x00000004;
+pub const EFI_LEFT_CONTROL_PRESSED: UINTN = 0x00000008;
+pub const EFI_RIGHT_ALT_PRESSED: UINTN = 0x00000010;
+pub const EFI_LEFT_ALT_PRESSED: UINTN = 0x00000020;
+pub const EFI_RIGHT_LOGO_PRESSED: UINTN = 0x00000040;
+pub const EFI_LEFT_LOGO_PRESSED: UINTN = 0x00000080;
+pub const EFI_MENU_KEY_PRESSED: UINTN = 0x00000100;
+pub const EFI_SYS_REQ_PRESSED: UINTN = 0x00000200;
+
+pub type EFI_KEY_TOGGLE_STATE = UINT8;
+
+pub const EFI_TOGGLE_STATE_VALID: EFI_KEY_TOGGLE_STATE = 0x80;
+pub const EFI_KEY_STATE_EXPOSED: EFI_KEY_TOGGLE_STATE  = 0x40;
+pub const EFI_SCROLL_LOCK_ACTIVE: EFI_KEY_TOGGLE_STATE = 0x01;
+pub const EFI_NUM_LOCK_ACTIVE: EFI_KEY_TOGGLE_STATE = 0x02;
+pub const EFI_CAPS_LOCK_ACTIVE: EFI_KEY_TOGGLE_STATE = 0x04;
+
+pub struct EFI_KEY_STATE {
+    pub KeyShiftState: UINT32,
+    pub KeyToggleState: EFI_KEY_TOGGLE_STATE,
+}
