@@ -109,6 +109,7 @@ impl Console {
     }
 }
 
+// TODO: write! works but writeln! doesn't. It doesn't result in an carriage returns at the end even though we're normalizing line endings in write() below. Fix this.
 impl io::Write for Console {
     /// Writes given UTF8 buffer to the console.
     /// UEFI console natively only supports UCS-2.
