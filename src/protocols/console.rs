@@ -25,6 +25,10 @@ pub struct Console {
     utf8_buf: io::Cursor<Vec<u8>>
 }
 
+const LF: u16 = 10;
+const CR: u16 = 13;
+const BS: u16 = 8;
+
 impl Console {
     pub fn new(input: *const EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL, output: *const EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL) -> Self {
         Self { input, output, utf8_buf: Cursor::new(Vec::new()) }
@@ -66,10 +70,6 @@ impl Console {
                 ((key_data.KeyState.KeyShiftState & EFI_LEFT_CONTROL_PRESSED) != 0 || (key_data.KeyState.KeyShiftState & EFI_RIGHT_CONTROL_PRESSED) != 0) 
             }
 
-            const LF: u16 = 10;
-            const CR: u16 = 13;
-            const BS: u16 = 8;
-
             if key_data.Key.UnicodeChar != 0 { // != 0 means it's a printable unicode char
                 if key_data.Key.UnicodeChar == CR { // Safe to check for CR only without waiting for LF because in my experience UEFI only ever inserts CR when you press the Enter key
                     key_data.Key.UnicodeChar = LF; // Always translate CR's to LF's to normalize line endings.
@@ -109,7 +109,6 @@ impl Console {
     }
 }
 
-// TODO: write! macros works fine but writeln! doesn't because it inserts into \n characters not the \r\n char pairs. Fix this somehow.
 impl io::Write for Console {
     /// Writes given UTF8 buffer to the console.
     /// UEFI console natively only supports UCS-2.
@@ -123,8 +122,24 @@ impl io::Write for Console {
             Err(e) => str::from_utf8(&buf[..e.valid_up_to()]).unwrap(), // At least write those that are valid
         };
 
-        let mut utf16_buf = utf8_buf.encode_utf16().collect::<Vec<u16>>();
+        // Convert to UTF16, normalizing all LF's to CRLF's (if present)
+        // because UEFI console doesn't automatically perform carriage upon seeing LF's
+        let utf16_iter = utf8_buf.encode_utf16();
+        let mut expected_utf16_buf_size = utf16_iter.size_hint().1.unwrap_or(utf8_buf.len()); // Guessing the capacity of utf16 buffer
+        expected_utf16_buf_size = (expected_utf16_buf_size as f32 * 1.05) as usize; // Adding 5% extra in case we have to normalize line endings
+        let mut utf16_buf = Vec::with_capacity(expected_utf16_buf_size);
+
+        let mut last_c = 0_u16;
+        for (i, c) in utf16_iter.enumerate() {
+            if i >= 1 && c == LF && last_c != CR { // Normalizing LF's
+                utf16_buf.push(CR);
+            }
+            utf16_buf.push(c);
+            last_c = c;
+        }
+
         utf16_buf.push(0); // Appending the null terminator
+
         self.write_to_efi(&utf16_buf)
             .map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to write to EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL"))?; // TODO: Don't swallaow EFI status like this. Error handling in this whole crate needs fixing
 
