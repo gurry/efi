@@ -29,13 +29,19 @@ mod std {
     pub use core::fmt;
 }
 
-use core::fmt::{Debug, Display, Formatter};
-use ffi::{EFI_STATUS, EFI_SYSTEM_TABLE, EFI_HANDLE};
-use core::mem::transmute;
+use core::{fmt::{Debug, Display, Formatter}, ptr, mem::transmute};
+use ffi::{
+    tcp4,
+    EFI_STATUS,
+    EFI_SYSTEM_TABLE,
+    EFI_HANDLE, 
+    console::{EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL, EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL_GUID},
+    boot_services::EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL,
+};
+
 use protocols::console::Console;
 use failure::{Context, Fail, Backtrace};
 use allocator::EfiAllocator;
-use ffi::tcp4;
 
 static mut SYSTEM_TABLE: Option<*const EFI_SYSTEM_TABLE> = None;
 static mut IMAGE_HANDLE: Option<EFI_HANDLE> = None;
@@ -286,23 +292,45 @@ fn to_res<T>(value: T, status: ffi::EFI_STATUS) -> Result<T> {
 //     }
 // }
 
-pub struct SystemTable(pub *const EFI_SYSTEM_TABLE);
+pub struct SystemTable { 
+    table_ptr: *const EFI_SYSTEM_TABLE,
+    con_in_ex: *mut EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL,
+}
 
 impl SystemTable {
+    pub fn new(table_ptr: *const EFI_SYSTEM_TABLE) -> Result<Self> {
+        Ok(Self { table_ptr, con_in_ex: get_simple_text_input_ex(table_ptr)? })
+    }
+
     pub fn boot_services(&self) -> boot_services::BootServices {
         unsafe { 
-            let &SystemTable(table) = self;
-            transmute((*table).BootServices.as_ref().unwrap()) // Unwrap safe 'cause ptr can't be null
+            transmute((*self.table_ptr).BootServices.as_ref().unwrap()) // Unwrap safe 'cause ptr can't be null
         }
     }
 
+    // TODO: Split console into StdIn, StdOut and StdErr objects
     // TODO: return a reference to Console here. That will help enforce lifetimes
     pub fn console(&self) -> Console {
         unsafe {
-            let &SystemTable(table) = self;
-            Console::new((*table).ConIn, (*table).ConOut)
+            Console::new(self.con_in_ex, (*self.table_ptr).ConOut)
         }
     }
+}
+
+fn get_simple_text_input_ex(table_ptr: *const EFI_SYSTEM_TABLE) -> Result<*mut EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL> {
+    let mut protocol: *mut EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL = ptr::null_mut();
+
+    let status = unsafe {
+        ((*(*table_ptr).BootServices).OpenProtocol)(
+            (*table_ptr).ConsoleInHandle, 
+            &EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL_GUID, 
+            transmute(&mut protocol), 
+            image_handle(), 
+            ptr::null(), 
+            EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL)
+    };
+
+    to_res(protocol, status)
 }
 
 // Used for opaque pointers such as efi handles

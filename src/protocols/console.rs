@@ -1,5 +1,12 @@
 use ffi::{
-    console::{EFI_SIMPLE_TEXT_INPUT_PROTOCOL, EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL, EFI_INPUT_KEY}, 
+    console::{
+        EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL, 
+        EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL, 
+        EFI_KEY_DATA,
+        EFI_SHIFT_STATE_VALID,
+        EFI_LEFT_CONTROL_PRESSED,
+        EFI_RIGHT_CONTROL_PRESSED,
+    }, 
     IsSuccess, 
     UINTN,
 };
@@ -10,14 +17,16 @@ use ::Result;
 use system_table;
 use alloc::{Vec, String, str};
 
+// TODO: This whole module has gotten ugly. Needs cleanup.
+// TODO: Should we replace Console with two structs, StdIn and StdOut, corresponding to input and output? This is more in line with Rust stdlib.
 pub struct Console {
-    pub input: *const EFI_SIMPLE_TEXT_INPUT_PROTOCOL,
+    pub input: *const EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL,
     pub output: *const EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL,
     utf8_buf: io::Cursor<Vec<u8>>
 }
 
 impl Console {
-    pub fn new(input: *const EFI_SIMPLE_TEXT_INPUT_PROTOCOL, output: *const EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL) -> Self {
+    pub fn new(input: *const EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL, output: *const EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL) -> Self {
         Self { input, output, utf8_buf: Cursor::new(Vec::new()) }
     }
 
@@ -29,34 +38,71 @@ impl Console {
         }
     }
 
+    // TODO: code in this function is super ugly and prone to bugs. Clean it up.
     fn read_from_efi(&self, buf: &mut [u16]) -> Result<usize> {
         let mut bytes_read = 0;
 
-        let input = (*self).input as *mut EFI_SIMPLE_TEXT_INPUT_PROTOCOL;
+        let input = (*self).input as *mut EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL;
         let mut evt_index: UINTN = 0;
-        let mut key = EFI_INPUT_KEY::default();
-        let mut evt_list = unsafe { [(*input).WaitForKey; 1] };
+        let mut key_data = EFI_KEY_DATA::default();
+        let mut evt_list = unsafe { [(*input).WaitForKeyEx; 1] };
 
         while bytes_read < buf.len() {
             // TODO: For some reason we can't use ret_on_err here. Why?
-            let status = unsafe { ((*system_table().BootServices).WaitForEvent)(evt_list.len(),  evt_list.as_mut_ptr(), &mut evt_index) };
+            let status = unsafe { ((*system_table().BootServices).WaitForEvent)(evt_list.len(), evt_list.as_mut_ptr(), &mut evt_index) };
             if !IsSuccess(status) {
                 return Err(status.into()); // TODO: Can we send some error text too with such errors
             }
 
             // TODO: For some reason we can't use ret_on_err here. Why?
-            let status = unsafe { ((*input).ReadKeyStroke)(input, &mut key) };
+            let status = unsafe { ((*input).ReadKeyStrokeEx)(input, &mut key_data) };
             if !IsSuccess(status) {
                 return Err(status.into()); // TODO: Can we send some error text too with such errors
             }
 
-            if key.UnicodeChar >= ' ' as u16 { // Only if it's a non-ctrl char
-                buf[bytes_read] = key.UnicodeChar;
-                bytes_read += 1;
-                // TODO: do we need to echo the char back to Output?
-            } else if key.UnicodeChar == '\n' as u16 { // TODO: should also support ctrl+z as a terminating sequence?
-                break;
-            } 
+            fn is_ctr_z(key_data: &EFI_KEY_DATA) -> bool {
+                (key_data.Key.UnicodeChar == 'z' as u16 || key_data.Key.UnicodeChar == 'Z' as u16) && 
+                (key_data.KeyState.KeyShiftState & EFI_SHIFT_STATE_VALID) != 0  &&
+                ((key_data.KeyState.KeyShiftState & EFI_LEFT_CONTROL_PRESSED) != 0 || (key_data.KeyState.KeyShiftState & EFI_RIGHT_CONTROL_PRESSED) != 0) 
+            }
+
+            const LF: u16 = 10;
+            const CR: u16 = 13;
+            const BS: u16 = 8;
+
+            if key_data.Key.UnicodeChar != 0 { // != 0 means it's a printable unicode char
+                if key_data.Key.UnicodeChar == CR { // Safe to check for CR only without waiting for LF because in my experience UEFI only ever inserts CR when you press the Enter key
+                    key_data.Key.UnicodeChar = LF; // Always translate CR's to LF's to normalize line endings.
+                }
+
+                match key_data.Key.UnicodeChar {
+                    BS => {
+                        if bytes_read > 0 {
+                            bytes_read -= 1;
+                            self.write_to_efi(&[BS, 0])?; // 0 is for null termination
+                        }
+                    },
+                    c => {
+                        if is_ctr_z(&key_data) {
+                            break;
+                        } else {
+                            buf[bytes_read] = c;
+                            bytes_read += 1;
+
+                            if c == LF {
+                                self.write_to_efi(&[CR, LF, 0])?; // Must echo both CR and LF because other wise it fucks up the cursor position.
+                                break;
+                            } else {
+                                self.write_to_efi(&[c, 0])?;
+                            }
+                        }
+                    }
+                };
+            } else {
+                // TODO: handle scan codes here.
+            }
+
+            // TODO: should also support ctrl+z as a terminating sequence?
         }
 
         Ok(bytes_read)

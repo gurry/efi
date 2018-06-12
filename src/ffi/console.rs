@@ -255,17 +255,26 @@ pub struct EFI_KEY_DATA {
     pub KeyState: EFI_KEY_STATE
 }
 
-pub const EFI_SHIFT_STATE_VALID: UINTN = 0x80000000;
-pub const EFI_RIGHT_SHIFT_PRESSED: UINTN = 0x00000001;
-pub const EFI_LEFT_SHIFT_PRESSED: UINTN = 0x00000002;
-pub const EFI_RIGHT_CONTROL_PRESSED: UINTN = 0x00000004;
-pub const EFI_LEFT_CONTROL_PRESSED: UINTN = 0x00000008;
-pub const EFI_RIGHT_ALT_PRESSED: UINTN = 0x00000010;
-pub const EFI_LEFT_ALT_PRESSED: UINTN = 0x00000020;
-pub const EFI_RIGHT_LOGO_PRESSED: UINTN = 0x00000040;
-pub const EFI_LEFT_LOGO_PRESSED: UINTN = 0x00000080;
-pub const EFI_MENU_KEY_PRESSED: UINTN = 0x00000100;
-pub const EFI_SYS_REQ_PRESSED: UINTN = 0x00000200;
+impl Default for EFI_KEY_DATA {
+    fn default() -> Self {
+        Self {
+            Key: EFI_INPUT_KEY::default(),
+            KeyState: EFI_KEY_STATE::default()
+        }
+    }
+}
+
+pub const EFI_SHIFT_STATE_VALID: UINT32 = 0x80000000;
+pub const EFI_RIGHT_SHIFT_PRESSED: UINT32 = 0x00000001;
+pub const EFI_LEFT_SHIFT_PRESSED: UINT32 = 0x00000002;
+pub const EFI_RIGHT_CONTROL_PRESSED: UINT32 = 0x00000004;
+pub const EFI_LEFT_CONTROL_PRESSED: UINT32 = 0x00000008;
+pub const EFI_RIGHT_ALT_PRESSED: UINT32 = 0x00000010;
+pub const EFI_LEFT_ALT_PRESSED: UINT32 = 0x00000020;
+pub const EFI_RIGHT_LOGO_PRESSED: UINT32 = 0x00000040;
+pub const EFI_LEFT_LOGO_PRESSED: UINT32 = 0x00000080;
+pub const EFI_MENU_KEY_PRESSED: UINT32 = 0x00000100;
+pub const EFI_SYS_REQ_PRESSED: UINT32 = 0x00000200;
 
 pub type EFI_KEY_TOGGLE_STATE = UINT8;
 
@@ -278,4 +287,13 @@ pub const EFI_CAPS_LOCK_ACTIVE: EFI_KEY_TOGGLE_STATE = 0x04;
 pub struct EFI_KEY_STATE {
     pub KeyShiftState: UINT32,
     pub KeyToggleState: EFI_KEY_TOGGLE_STATE,
+}
+
+impl Default for EFI_KEY_STATE  {
+    fn default() -> Self {
+        Self {
+            KeyShiftState: 0x00,
+            KeyToggleState: 0x00
+        }
+    }
 }
