@@ -126,8 +126,10 @@ impl io::Write for Console {
         // Convert to UTF16, normalizing all LF's to CRLF's (if present)
         // because UEFI console doesn't automatically perform carriage upon seeing LF's
         let utf16_iter = utf8_buf.encode_utf16();
-        let mut expected_utf16_buf_size = utf16_iter.size_hint().1.unwrap_or(utf8_buf.len()); // Guessing the capacity of utf16 buffer
-        expected_utf16_buf_size = (expected_utf16_buf_size as f32 * 1.05) as usize; // Adding 5% extra in case we have to normalize line endings
+        let mut expected_utf16_buf_size = utf16_iter.size_hint().1.unwrap_or(utf8_buf.len()); // Guessing the capacity of utf16 buffer.
+        let five_percent = (expected_utf16_buf_size as f32 * 0.05) as usize;
+        let extra_size_for_line_endings = cmp::max(5, five_percent); // Least of 5 chars worth of space will come into play for very small writes. Without min limit extra could come out to be zero.
+        expected_utf16_buf_size += extra_size_for_line_endings; // Extra added in case we have to normalize line endings
         let mut utf16_buf = Vec::with_capacity(expected_utf16_buf_size);
 
         let mut last_c = 0_u16;
