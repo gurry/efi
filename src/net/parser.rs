@@ -13,7 +13,7 @@
 //! This module is "publicly exported" through the `FromStr` implementations
 //! below.
 
-use super::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
+use super::addr::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
 use core::str::FromStr;
 use alloc::boxed::Box;
 
