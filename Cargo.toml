@@ -12,6 +12,7 @@ license = "MIT"
 
 [dependencies]
 bitflags = "1.0"
+byteorder = { version = "1", default-features = false }
 
 [dependencies.failure]
 version = "0.1.1"

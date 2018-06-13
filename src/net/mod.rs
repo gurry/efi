@@ -57,6 +57,7 @@ use core::{ptr, mem, ops::Drop};
 pub use self::addr::*;
 
 pub mod addr;
+pub mod dns;
 mod parser;
 
 pub struct Tcp4Stream {

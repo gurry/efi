@@ -8,10 +8,13 @@
 #![feature(allocator_api)]
 #![feature(str_internals)] // TODO: this looks very new and unstable. Can we get rid of it?
 #![feature(align_offset)]
+#![recursion_limit="100"] // Needed for the dns module (because it does recursive name resolution)
+// #![warn(missing_debug_implementations)]
 
 #[macro_use] extern crate failure;
 #[macro_use] extern crate bitflags;
 #[macro_use] extern crate alloc;
+extern crate byteorder;
 
 #[macro_use] mod utils;
 pub mod ffi;
