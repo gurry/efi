@@ -132,7 +132,7 @@ impl io::Write for Console {
 
         let mut last_c = 0_u16;
         for (i, c) in utf16_iter.enumerate() {
-            if i >= 1 && c == LF && last_c != CR { // Normalizing LF's
+            if c == LF && (i == 0 || last_c != CR) { // Normalizing LF's
                 utf16_buf.push(CR);
             }
             utf16_buf.push(c);
