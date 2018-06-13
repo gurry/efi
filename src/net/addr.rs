@@ -157,9 +157,9 @@ pub enum IpAddr {
 
 impl fmt::Display for IpAddr {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            IpAddr::V4(ref a) => a.fmt(fmt),
-            IpAddr::V6(ref a) => a.fmt(fmt),
+        match self {
+            IpAddr::V4(a) => a.fmt(fmt),
+            IpAddr::V6(a) => a.fmt(fmt),
         }
     }
 }
@@ -190,6 +190,7 @@ impl fmt::Display for SocketAddrV4 {
     }
 }
 
+// TODO: Should we implement flow info and scope id?
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct SocketAddrV6 {
     ip: Ipv6Addr,
@@ -222,11 +223,66 @@ pub enum SocketAddr {
     V6(SocketAddrV6)
 }
 
+impl SocketAddr {
+    pub fn new(ip: IpAddr, port: u16) -> SocketAddr {
+        match ip {
+            IpAddr::V4(a) => SocketAddr::V4(SocketAddrV4::new(a, port)),
+            IpAddr::V6(a) => SocketAddr::V6(SocketAddrV6::new(a, port)),
+        }
+    }
+
+    pub fn ip(&self) -> IpAddr {
+        match self {
+            SocketAddr::V4(a) => IpAddr::V4(*a.ip()),
+            SocketAddr::V6(a) => IpAddr::V6(*a.ip()),
+        }
+    }
+
+    pub fn port(&self) -> u16 {
+        match self {
+            SocketAddr::V4(a) => a.port(),
+            SocketAddr::V6(a) => a.port(),
+        }
+    }
+
+    pub fn is_ipv4(&self) -> bool {
+        match *self {
+            SocketAddr::V4(_) => true,
+            SocketAddr::V6(_) => false,
+        }
+    }
+
+    pub fn is_ipv6(&self) -> bool {
+        match *self {
+            SocketAddr::V4(_) => false,
+            SocketAddr::V6(_) => true,
+        }
+    }
+}
+
 impl fmt::Display for SocketAddr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            SocketAddr::V4(ref a) => a.fmt(f),
-            SocketAddr::V6(ref a) => a.fmt(f),
+        match self {
+            SocketAddr::V4(a) => a.fmt(f),
+            SocketAddr::V6(a) => a.fmt(f),
         }
+    }
+}
+
+impl From<SocketAddrV4> for SocketAddr {
+    fn from(sock4: SocketAddrV4) -> SocketAddr {
+        SocketAddr::V4(sock4)
+    }
+}
+
+impl From<SocketAddrV6> for SocketAddr {
+    fn from(sock6: SocketAddrV6) -> SocketAddr {
+        SocketAddr::V6(sock6)
+    }
+}
+
+impl<I: Into<IpAddr>> From<(I, u16)> for SocketAddr {
+    fn from(pieces: (I, u16)) -> SocketAddr {
+        SocketAddr::new(pieces.0.into(), pieces.1)
     }
 }
