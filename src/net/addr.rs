@@ -149,6 +149,7 @@ impl fmt::Display for Ipv6Addr {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
 pub enum IpAddr {
     V4(Ipv4Addr),
     V6(Ipv6Addr)
