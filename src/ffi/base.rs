@@ -28,7 +28,7 @@ pub struct EFI_TIME {
 
 
 /// 4-byte buffer. An IPv4 internet protocol address.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[repr(C)]
 pub struct EFI_IPv4_ADDRESS {
   pub Addr: [UINT8; 4],
@@ -41,7 +41,7 @@ impl EFI_IPv4_ADDRESS {
 }
 
 /// 16-byte buffer. An IPv6 internet protocol address.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[repr(C)]
 pub struct EFI_IPv6_ADDRESS {
   pub Addr: [UINT8; 16],
@@ -54,7 +54,7 @@ impl EFI_IPv6_ADDRESS {
 }
 
 /// 32-byte buffer containing a network Media Access Control address.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 #[repr(C)]
 pub struct EFI_MAC_ADDRESS {
   pub Addr: [UINT8; 32],
@@ -134,7 +134,7 @@ pub const EFI_WARN_WRITE_FAILURE: UINTN = 3; // The handle was closed, but the d
 pub const EFI_WARN_BUFFER_TOO_SMALL: UINTN = 4; // The resulting buffer was too small, and the data was truncated to the buffer size.
 pub const EFI_WARN_STALE_DATA: UINTN = 5; // The data has not been updated within the timeframe set by local policy for this type of data.
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum EFI_STATUS_TYPE {
     SUCCESS,
     ERROR,
@@ -186,7 +186,7 @@ pub type VOID = ();
 pub type EFI_HANDLE = *const VOID;
 pub type EFI_EVENT = *const VOID;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 #[repr(C)]
 pub struct EFI_GUID(pub UINT32, pub UINT16, pub UINT16, pub [UINT8; 8]);
 

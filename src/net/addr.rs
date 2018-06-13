@@ -1,7 +1,7 @@
 use ffi::{EFI_IPv4_ADDRESS, EFI_IPv6_ADDRESS};
 use core::{mem, fmt};
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Ipv4Addr(EFI_IPv4_ADDRESS);
 
 impl Ipv4Addr {
@@ -41,7 +41,7 @@ impl fmt::Display for Ipv4Addr {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Ipv6Addr(EFI_IPv6_ADDRESS);
 
 impl Ipv6Addr {
@@ -149,7 +149,7 @@ impl fmt::Display for Ipv6Addr {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum IpAddr {
     V4(Ipv4Addr),
     V6(Ipv6Addr)
@@ -164,7 +164,7 @@ impl fmt::Display for IpAddr {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct SocketAddrV4 {
     ip: Ipv4Addr,
     port: u16,
@@ -190,7 +190,7 @@ impl fmt::Display for SocketAddrV4 {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct SocketAddrV6 {
     ip: Ipv6Addr,
     port: u16,
@@ -216,7 +216,7 @@ impl fmt::Display for SocketAddrV6 {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum SocketAddr {
     V4(SocketAddrV4),
     V6(SocketAddrV6)
