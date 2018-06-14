@@ -450,8 +450,8 @@ impl Dhcpv4Packet {
         self.0.DhcpMagik
     }
     
-    pub fn dhcp_options(&self) -> &[u8; 56] {
-        &self.0.DhcpOptions
+    pub fn dhcp_options<'a>(&'a self) -> impl Iterator<Item=DhcpOption<'a>> { //&[u8; 56] {
+        DhcpOptionIter { buf: &self.0.DhcpOptions }
     }
 }
 
@@ -465,8 +465,9 @@ impl Dhcpv6Packet {
         self.0.BitField
     }
     
-    pub fn dhcp_options(&self) -> &[u8; 1024] {
-        &self.0.DhcpOptions
+    // TODO: Do DHCPv6 options have the same format as DHCPv4 and therefore is it safe to use the same parsing code for them?
+    pub fn dhcp_options<'a>(&'a self) -> impl Iterator<Item=DhcpOption<'a>> {
+        DhcpOptionIter { buf: &self.0.DhcpOptions }
     }
 }
 
@@ -539,5 +540,65 @@ impl TftpError {
 
     pub fn error_string(&self) -> &[i8; 127] {
         &self.0.ErrorString
+    }
+}
+
+pub struct DhcpOption<'a> {
+    code: u8,
+    val: Option<&'a[u8]>,
+}
+
+impl<'a> DhcpOption<'a> {
+    pub fn code(&self) -> u8 {
+        self.code
+    }
+
+    pub fn value(&self) -> Option<&[u8]> {
+        self.val
+    }
+}
+
+pub struct DhcpOptionIter<'a> {
+    buf: &'a[u8],
+}
+
+impl<'a> Iterator for DhcpOptionIter<'a> {
+    type Item = DhcpOption<'a>;
+    fn next(&mut self) -> Option<Self::Item> {
+        let next_option_start_index = self.buf.iter().position(|b| *b != 0); // Skipping padding bytes
+        self.buf = match next_option_start_index {
+            Some(index) => &self.buf[index..],
+            None => &[]
+        };
+
+        // The below would've been so simple with slice patterns, but they aren't close to stable yet :(
+        const OPTION_END_CODE: u8 = 255;
+        let (code, len, val) = {
+            // as per RFC2132 a valid option must have code and length fields. 
+            // Therefore it must have at least two elements otherwise we end here.
+            // We also end if we have reached option end code
+            if self.buf.len() < 2 || self.buf[0] == OPTION_END_CODE { 
+                self.buf = &[]; // Assign to empty slice so that subsequent calls to this method also end up here
+                return None;
+            }
+
+            let code = self.buf[0];
+            let len = self.buf[1] as usize;
+            let remaining = &self.buf[2..];
+            if remaining.len() < len { // Length of remaining must be at least the value in the length field (otherwise how can we ready the value of the option)
+                self.buf = &[]; // Assign to empty slice so that subsequent calls to this method also end up here
+                return None;
+            }
+            
+            let val = match remaining.len() {
+                0 => None,
+                _ => Some(&remaining[..len])
+            };
+            (code, len, val)
+        };
+
+        self.buf = &self.buf[(len + 2)..];
+
+        Some(DhcpOption { code, val })
     }
 }
