@@ -1,5 +1,5 @@
 
-use utils::{to_ptr, Wrapper};
+use utils::{to_ptr, Wrapper, to_opt};
 use ::{Result, Guid, IpAddr, to_boolean, from_boolean, to_res};
 use protocols::Protocol;
 use ffi::{UINT16, BOOLEAN};
@@ -96,8 +96,9 @@ impl PxeBaseCodeProtocol {
         } 
 
     // TODO: some missing methods here
-    pub fn mode(&self) -> &Mode {
-        unsafe { mem::transmute(self.0.Mode) } }
+    pub fn mode(&self) -> Option<&Mode> {
+        to_opt(self.0.Mode)
+    }
 }
 
 pub const BOOT_LAYER_INITIAL: u16 = 0;
@@ -319,32 +320,32 @@ impl Mode {
         self.0.SubnetMask
     }
     
-    pub fn dhcp_discover(&self) -> &Packet {
-        unsafe { mem::transmute(&self.0.DhcpDiscover) }
+    pub fn dhcp_discover(&self) -> Option<&Packet> {
+        to_opt(&self.0.DhcpDiscover)
     }
 
-    pub fn dhcp_ack(&self) -> &Packet {
-        unsafe { mem::transmute(&self.0.DhcpAck) }
+    pub fn dhcp_ack(&self) -> Option<&Packet> {
+        to_opt(&self.0.DhcpAck)
     }
 
-    pub fn proxy_offer(&self) -> &Packet {
-        unsafe { mem::transmute(&self.0.ProxyOffer) }
+    pub fn proxy_offer(&self) -> Option<&Packet> {
+        to_opt(&self.0.ProxyOffer)
     }
 
-    pub fn pxe_discover(&self) -> &Packet {
-        unsafe { mem::transmute(&self.0.PxeDiscover) }
+    pub fn pxe_discover(&self) -> Option<&Packet> {
+        to_opt(&self.0.PxeDiscover)
     }
     
-    pub fn pxe_reply(&self) -> &Packet {
-        unsafe { mem::transmute(&self.0.PxeReply) }
+    pub fn pxe_reply(&self) -> Option<&Packet> {
+        to_opt(&self.0.PxeReply)
     }
     
-    pub fn pxe_bis_reply(&self) -> &Packet {
-        unsafe { mem::transmute(&self.0.PxeBisReply) }
+    pub fn pxe_bis_reply(&self) -> Option<&Packet> {
+        to_opt(&self.0.PxeBisReply)
     }
     
-    pub fn ip_filter(&self) -> &IpFilter {
-        unsafe { mem::transmute(&self.0.IpFilter)}
+    pub fn ip_filter(&self) -> Option<&IpFilter> {
+        to_opt(&self.0.IpFilter)
     }
    
     pub fn arp_cache(&self) -> &[EFI_PXE_BASE_CODE_ARP_ENTRY] {
@@ -355,12 +356,12 @@ impl Mode {
         &self.0.RouteTable[..self.0.RouteTableEntries as usize] // TODO: is this cast to usize safe. Take another look
     }
 
-    pub fn icmp_error(&self) -> &IcpmError {
-        unsafe { mem::transmute(&self.0.IcmpError) }
+    pub fn icmp_error(&self) -> Option<&IcpmError> {
+        to_opt(&self.0.IcmpError)
     }
 
-    pub fn tftp_error(&self) -> &TftpError {
-        unsafe { mem::transmute(&self.0.TftpError) }
+    pub fn tftp_error(&self) -> Option<&TftpError> {
+        to_opt(&self.0.TftpError)
     }
 }
 
@@ -374,12 +375,12 @@ impl Packet {
         unsafe { &self.0.Raw }
     }
 
-    pub fn as_dhcpv4(&self) -> &Dhcpv4Packet {
-        unsafe { mem::transmute(&self.0.Dhcpv4) }
+    pub fn as_dhcpv4(&self) -> Option<&Dhcpv4Packet> {
+        to_opt(unsafe { &self.0.Dhcpv4 })
     }
 
-    pub fn as_dhcpv6(&self) -> &Dhcpv6Packet {
-        unsafe { mem::transmute(&self.0.Dhcpv6) }
+    pub fn as_dhcpv6(&self) -> Option<&Dhcpv6Packet> {
+        to_opt(unsafe { &self.0.Dhcpv6 })
     }
 }
 

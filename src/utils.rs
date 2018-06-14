@@ -1,5 +1,5 @@
 // TODO: Write a proc macro called derive(TupleWrapper) which automaticlly impls Wrapper trait for any tuple struct wrapping types
-use core;
+use core::{self, mem};
 
 pub trait Wrapper {
     type Inner;
@@ -8,6 +8,11 @@ pub trait Wrapper {
 
 pub fn to_ptr<'a, W: Wrapper>(value: Option<&'a W>) -> *const W::Inner {
     value.map_or(core::ptr::null(), |v| v.inner_ptr())
+}
+
+
+pub fn to_opt<'a, P, R>(ptr: *const P) -> Option<&'a R> {
+    unsafe { ptr.as_ref().map(|p| mem::transmute(p)) }  
 }
 
 macro_rules! impl_wrapper {
