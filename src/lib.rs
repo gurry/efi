@@ -9,6 +9,7 @@
 #![feature(str_internals)] // TODO: this looks very new and unstable. Can we get rid of it?
 #![feature(align_offset)]
 #![recursion_limit="100"] // Needed for the dns module (because it does recursive name resolution)
+#![feature(exact_chunks)]
 // #![warn(missing_debug_implementations)]
 
 #[macro_use] extern crate failure;

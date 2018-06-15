@@ -2,6 +2,7 @@ use ffi::{EFI_IPv4_ADDRESS, EFI_IPv6_ADDRESS};
 use core::{mem, fmt, iter, slice, option};
 use io;
 use alloc::{String, vec, Vec};
+use super::dns::lookup_host;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Ipv4Addr(EFI_IPv4_ADDRESS);
@@ -354,11 +355,10 @@ impl ToSocketAddrs for (Ipv6Addr, u16) {
 }
 
 #[allow(deprecated)]
-fn resolve_socket_addr(s: &str, p: u16) -> io::Result<vec::IntoIter<SocketAddr>> {
-    // let ips = lookup_host(s)?;
-    // let v: Vec<_> = ips.map(|mut a| { a.set_port(p); a }).collect();
-    // Ok(v.into_iter())
-    Ok(Vec::new().into_iter())
+fn resolve_socket_addr(hostname: &str, port: u16) -> io::Result<vec::IntoIter<SocketAddr>> {
+    let ip_addrs = lookup_host(hostname).map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to resolve host name"))?;
+    let sock_addrs: Vec<_> = ip_addrs.into_iter().map(|ip| SocketAddr::new(ip, port)).collect();
+    Ok(sock_addrs.into_iter())
 }
 
 impl<'a> ToSocketAddrs for (&'a str, u16) {
