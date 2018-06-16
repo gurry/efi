@@ -61,6 +61,7 @@ pub mod addr;
 pub mod dns;
 mod parser;
 
+// TODO: There are no timeouts anywhere (e.g. connect, read, write etc.). Add timeouts at all those places
 pub struct TcpStream {
     tcp4_stream: Tcp4Stream,
 }
