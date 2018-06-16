@@ -3,6 +3,7 @@ use ::{
     system_table,
     image_handle,
     EfiError,
+    EfiErrorKind,
     to_res,
     io::{self, Read, Write}
 };
@@ -60,7 +61,61 @@ pub mod addr;
 pub mod dns;
 mod parser;
 
-pub struct Tcp4Stream {
+pub struct TcpStream {
+    tcp4_stream: Tcp4Stream,
+}
+
+fn for_ip4_only<A: ToSocketAddrs, S>(addr: A, callback: fn(SocketAddrV4) -> Result<S>) -> Result<S> {
+    let socket_addrs = addr.to_socket_addrs().map_err(|_| ::EfiError::from(::EfiErrorKind::DeviceError))?; // Not just doing into() on EfiErrKind because compiler wants type annotations
+
+    for addr in socket_addrs {
+        match addr {
+            SocketAddr::V4(addr) => {
+                match callback(addr) {
+                    Ok(s) => return Ok(s),
+                    Err(_) => continue, // TODO: ideally we should be gathering all the errors here to return at the end if no addr works
+                }
+            },
+            SocketAddr::V6(_) => {}
+        }
+    }
+
+    // TODO: If all Ipv4 addresses didn't work and all we got left with was ipv6,
+    // our error must say something to the effect of "Ipv6 not supported yet" 
+    Err(EfiErrorKind::DeviceError.into())
+}
+
+impl TcpStream {
+    pub fn connect<A: ToSocketAddrs>(addr: A) -> Result<Self> {
+        Ok(Self {tcp4_stream: for_ip4_only(addr, |addr| Tcp4Stream::connect(addr))? })
+    }
+
+    pub fn peer_addr(&self) -> Result<SocketAddr> {
+        self.tcp4_stream.peer_addr().map(|a| SocketAddr::V4(a))
+    }
+
+    pub fn local_addr(&self) -> Result<SocketAddr> {
+        self.tcp4_stream.local_addr().map(|a| SocketAddr::V4(a))
+    }
+}
+
+impl Read for TcpStream {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.tcp4_stream.read(buf)
+    }
+}
+
+impl Write for TcpStream {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.tcp4_stream.write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.tcp4_stream.flush()
+    }
+}
+
+struct Tcp4Stream {
     bs: *mut EFI_BOOT_SERVICES,
     binding_protocol: *const EFI_SERVICE_BINDING_PROTOCOL,
     device_handle: EFI_HANDLE,
@@ -71,6 +126,7 @@ pub struct Tcp4Stream {
     close_token: EFI_TCP4_CLOSE_TOKEN,
     is_connected: bool
 }
+
 extern "win64" fn empty_cb(_event: EFI_EVENT, _context: *const VOID) -> EFI_STATUS {
     EFI_SUCCESS
 }
@@ -90,9 +146,7 @@ impl Tcp4Stream {
         }
     }
 
-    // TODO: Ideally this interface should be identical to the one in stdlib which is:
-    // pub fn connect<A: ToSocketAddrs>(addr: A) -> io::Result<TcpStream> {
-    pub fn connect(addr: SocketAddrV4) -> Result<Self> {
+    fn connect(addr: SocketAddrV4) -> Result<Self> {
         // TODO: this function is too ugly right now. Refactor/clean it up.
         let ip: EFI_IPv4_ADDRESS = (*addr.ip()).into();
         let config_data = EFI_TCP4_CONFIG_DATA {
@@ -152,19 +206,19 @@ impl Tcp4Stream {
         Ok(stream)
     }
 
-    pub fn peer_addr(&self) -> Result<SocketAddrV4> {
+    fn peer_addr(&self) -> Result<SocketAddrV4> {
         let mut config_data = EFI_TCP4_CONFIG_DATA::default();
         self.get_config_data(&mut config_data)?;
         Ok(SocketAddrV4::new(config_data.AccessPoint.RemoteAddress.into(), config_data.AccessPoint.RemotePort))
     }
 
-    pub fn local_addr(&self) -> Result<SocketAddrV4> {
+    fn local_addr(&self) -> Result<SocketAddrV4> {
         let mut config_data = EFI_TCP4_CONFIG_DATA::default();
         self.get_config_data(&mut config_data)?;
         Ok(SocketAddrV4::new(config_data.AccessPoint.StationAddress.into(), config_data.AccessPoint.StationPort))
     }
 
-    pub fn get_config_data(&self, config_data: &mut EFI_TCP4_CONFIG_DATA) -> Result<()> {
+    fn get_config_data(&self, config_data: &mut EFI_TCP4_CONFIG_DATA) -> Result<()> {
         unsafe {
             ret_on_err!(((*self.protocol).GetModeData)(self.protocol, 
                 ptr::null_mut(),
@@ -182,7 +236,7 @@ impl Tcp4Stream {
         to_res((), status)
     }
 
-    fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
+    fn read_buf(&mut self, buf: &mut [u8]) -> Result<usize> {
         let fragment_data = EFI_TCP4_FRAGMENT_DATA {
             FragmentLength: buf.len() as UINT32,
             FragmentBuffer: buf.as_ptr() as *const VOID
@@ -203,7 +257,7 @@ impl Tcp4Stream {
         to_res(recv_data.DataLength as usize, self.recv_token.CompletionToken.Status)
     }
 
-    fn write(&mut self, buf: &[u8]) -> Result<usize> {
+    fn write_buf(&mut self, buf: &[u8]) -> Result<usize> {
         let fragment_data = EFI_TCP4_FRAGMENT_DATA {
             FragmentLength: buf.len() as UINT32,
             FragmentBuffer: buf.as_ptr() as *const VOID
@@ -259,13 +313,13 @@ impl Drop for Tcp4Stream {
 
 impl Read for Tcp4Stream {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.read(buf).map_err(|_| io::ErrorKind::Interrupted.into())
+        self.read_buf(buf).map_err(|_| io::ErrorKind::Interrupted.into())
     }
 }
 
 impl Write for Tcp4Stream {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.write(buf).map_err(|_| io::ErrorKind::Interrupted.into())
+        self.write_buf(buf).map_err(|_| io::ErrorKind::Interrupted.into())
     }
 
 
@@ -275,7 +329,26 @@ impl Write for Tcp4Stream {
     }
 }
 
-pub struct Udp4Socket {
+
+struct UdpSocket {
+    udp4_socket: Udp4Socket,
+}
+
+impl UdpSocket {
+    pub fn connect<A: ToSocketAddrs>(addr: A) -> Result<Self> {
+        Ok(Self {udp4_socket: for_ip4_only(addr, |addr| Udp4Socket::connect(addr))? })
+    }
+
+    fn recv(&mut self, buf: &mut [u8]) -> Result<usize> {
+        self.udp4_socket.recv_buf(buf)
+    }
+
+    fn send(&mut self, buf: &[u8]) -> Result<usize> {
+        self.udp4_socket.send_buf(buf)
+    }
+}
+
+struct Udp4Socket {
     bs: *const EFI_BOOT_SERVICES,
     binding_protocol: *const EFI_SERVICE_BINDING_PROTOCOL,
     protocol: *const EFI_UDP4_PROTOCOL,
@@ -296,9 +369,7 @@ impl Udp4Socket {
         }
     }
 
-    // TODO: Ideally this interface should be identical to the one in stdlib which is:
-    // pub fn connect<A: ToSocketAddrs>(&self, addr: A) -> Result<()>
-    pub fn connect(addr: SocketAddrV4) -> Result<Self> {
+    fn connect(addr: SocketAddrV4) -> Result<Self> {
         let ip: EFI_IPv4_ADDRESS = (*addr.ip()).into();
         let config_data = EFI_UDP4_CONFIG_DATA {
             AcceptBroadcast: FALSE,
@@ -354,7 +425,7 @@ impl Udp4Socket {
         to_res((), status)
     }
 
-    pub fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
+    fn recv_buf(&mut self, buf: &mut [u8]) -> Result<usize> {
         ret_on_err!(unsafe { ((*self.protocol).Receive)(self.protocol, &self.recv_token) });
 
         let buffer_length: usize;
@@ -372,7 +443,7 @@ impl Udp4Socket {
         to_res(buffer_length, self.recv_token.Status)
     }
 
-    pub fn write(&mut self, buf: &[u8]) -> Result<usize> {
+    fn send_buf(&mut self, buf: &[u8]) -> Result<usize> {
         let fragment_data = EFI_UDP4_FRAGMENT_DATA {
             FragmentLength: buf.len() as UINT32,
             FragmentBuffer: buf.as_ptr() as *const VOID

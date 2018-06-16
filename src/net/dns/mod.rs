@@ -36,13 +36,13 @@ pub use self::rdata::{RData};
 pub use self::builder::{Builder};
 
 use core;
-use super::{Udp4Socket, SocketAddrV4, IpAddr, Ipv4Addr};
+use super::{UdpSocket, SocketAddr, IpAddr, Ipv4Addr};
 use alloc::Vec;
 use protocols::PxeBaseCodeProtocol;
 use {SystemTable, system_table};
 
 struct DnsServer {
-    addr: SocketAddrV4
+    addr: SocketAddr
 }
 
 // TODO: Swallowing/transmorgifying all errors. Fix this large scale shit wherever present
@@ -52,10 +52,10 @@ impl DnsServer {
         let mut builder = Builder::new_query(1, true);
         builder.add_question(hostname, false, QueryType::A, QueryClass::IN);
         let packet = builder.build().map_err(|_| ::EfiErrorKind::DeviceError)?; 
-        let mut socket = Udp4Socket::connect(self.addr)?;
-        socket.write(&packet)?;
+        let mut socket = UdpSocket::connect(self.addr)?;
+        socket.send(&packet)?;
         let mut buf = [0u8; 4096];
-        socket.read(&mut buf)?;
+        socket.recv(&mut buf)?;
         let pkt = Packet::parse(&buf).unwrap();
         if pkt.header.response_code != ResponseCode::NoError {
             // return Err(pkt.header.response_code.into());
@@ -119,7 +119,7 @@ fn get_dns_servers() -> ::Result<Vec<DnsServer>> {
     let ip_addresses = core::slice::SliceExt::exact_chunks(dns_servers_buf, 4).map(|c| Ipv4Addr::new(c[0], c[1], c[2], c[3])); 
 
     const DNS_PORT: u16 = 53;
-    let dns_servers = ip_addresses.map(|ip| DnsServer { addr: SocketAddrV4::new(ip, DNS_PORT) }).collect::<Vec<_>>();
+    let dns_servers = ip_addresses.map(|ip| DnsServer { addr: (IpAddr::V4(ip), DNS_PORT).into() }).collect::<Vec<_>>();
 
     Ok(dns_servers)
 }
