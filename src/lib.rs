@@ -47,6 +47,8 @@ use protocols::console::Console;
 use failure::{Context, Fail, Backtrace};
 use allocator::EfiAllocator;
 
+pub use protocols::console::{stdin, stdout};
+
 static mut SYSTEM_TABLE: Option<*const EFI_SYSTEM_TABLE> = None;
 static mut IMAGE_HANDLE: Option<EFI_HANDLE> = None;
 
@@ -63,11 +65,13 @@ pub fn system_table() -> &'static EFI_SYSTEM_TABLE {
     }
 }
 
+// TODO: if a function (like this) returns an raw pointer, shouldn't it be marked unsafe?
 pub fn image_handle() -> EFI_HANDLE {
     unsafe {
         IMAGE_HANDLE.expect("lib uninitalized")
     }
 }
+
 
  #[global_allocator]
  static ALLOCATOR: EfiAllocator = EfiAllocator;

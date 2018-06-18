@@ -11,7 +11,7 @@ use ffi::{
     UINTN,
 };
 use core::cmp;
-use io::{self, Cursor};
+use io::{self, Cursor, BufRead, BufReader, LineWriter};
 use EfiError;
 use ::Result;
 use system_table;
@@ -29,8 +29,6 @@ const LF: u16 = 10;
 const CR: u16 = 13;
 const BS: u16 = 8;
 
-// TODO: Expose buffered reads using BufReader. 
-// Will happen when we create separate stdin, stdout and stderr objects.
 impl Console {
     pub fn new(input: *const EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL, output: *const EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL) -> Self {
         Self { input, output, utf8_buf: Cursor::new(Vec::new()) }
@@ -176,6 +174,56 @@ impl io::Read for Console {
         // MemReader shouldn't error here since we just filled it
         self.utf8_buf.read(buf)
     }
+}
+
+// TODO: Implement StdErr
+pub struct StdIn(BufReader<Console>);
+
+impl StdIn {
+    fn new(c: Console) -> Self {
+        StdIn(BufReader::new(c))
+    }
+}
+
+impl io::Read for StdIn {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.0.read(buf)
+    }
+}
+
+impl BufRead for StdIn {
+    fn fill_buf(&mut self) -> io::Result<&[u8]> { self.0.fill_buf() }
+    fn consume(&mut self, n: usize) { self.0.consume(n) }
+}
+
+pub struct StdOut(LineWriter<Console>);
+
+impl StdOut {
+    fn new(c: Console) -> Self {
+        StdOut(LineWriter::new(c))
+    }
+}
+
+impl io::Write for StdOut {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.0.write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.0.flush()
+    }
+}
+
+// TODO: Remove this uncessary SystemTable::new() business
+// Do we need this SystemTable type?
+pub fn stdin() -> StdIn {
+    StdIn::new(::SystemTable::new(system_table())
+        .expect("failed to create system table").console())
+}
+
+pub fn stdout() -> StdOut {
+    StdOut::new(::SystemTable::new(system_table())
+        .expect("failed to create system table").console())
 }
 
 fn invalid_encoding() -> io::Error {
