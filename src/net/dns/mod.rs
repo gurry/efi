@@ -55,7 +55,7 @@ impl DnsServer {
         let mut socket = UdpSocket::connect(self.addr)?;
         socket.send(&packet)?;
         let mut buf = [0u8; 4096];
-        socket.recv(&mut buf)?;
+        socket.recv(&mut buf)?; // TODO: Add timeout to this call. Or it may be stuck forever.
         let pkt = Packet::parse(&buf).unwrap();
         if pkt.header.response_code != ResponseCode::NoError {
             // return Err(pkt.header.response_code.into());
