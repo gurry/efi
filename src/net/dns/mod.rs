@@ -84,7 +84,10 @@ pub (crate) fn lookup_host(hostname: &str) -> ::Result<Vec<IpAddr>> {
     }
 
     for dns_server in dns_servers {
-        let addrs = dns_server.query(hostname)?;
+        let addrs = match dns_server.query(hostname) {
+            Ok(addrs) => addrs,
+            Err(_) => continue
+        };
         if !addrs.is_empty() {
             return Ok(addrs);
         }
