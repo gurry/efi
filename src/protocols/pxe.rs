@@ -542,7 +542,9 @@ impl TftpError {
         &self.0.ErrorString
     }
 }
-
+ 
+// TODO: Move all of this DHCP parsing code into a separate crate (called dhcparse) 
+// so other applications, such as those for testing, can use it as well.
 pub struct DhcpOption<'a> {
     code: u8,
     val: Option<&'a[u8]>,
