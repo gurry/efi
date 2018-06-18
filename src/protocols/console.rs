@@ -29,6 +29,8 @@ const LF: u16 = 10;
 const CR: u16 = 13;
 const BS: u16 = 8;
 
+// TODO: Expose buffered reads using BufReader. 
+// Will happen when we create separate stdin, stdout and stderr objects.
 impl Console {
     pub fn new(input: *const EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL, output: *const EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL) -> Self {
         Self { input, output, utf8_buf: Cursor::new(Vec::new()) }
