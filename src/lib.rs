@@ -23,6 +23,7 @@ pub mod boot_services;
 pub mod protocols;
 pub mod io;
 pub mod net;
+pub mod fmt;
 mod allocator;
 
 // Hack: this std declartion is to work around a bug in failure crate
