@@ -472,7 +472,6 @@ impl Drop for Udp4Socket {
         unsafe {
             ((*self.bs).CloseEvent)(self.send_token.Event);
             ((*self.bs).CloseEvent)(self.recv_token.Event);
-            ((*self.protocol).Configure)(self.protocol, ptr::null());
             ((*self.binding_protocol).DestroyChild)(self.binding_protocol, &mut self.device_handle);
         }
     }
