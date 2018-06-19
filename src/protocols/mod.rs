@@ -1,8 +1,9 @@
+
+#[macro_use] pub mod console;
 mod pxe;
 mod device_path;
 mod load_file;
 mod loaded_image;
-pub mod console;
 
 pub use self::pxe::*;
 pub use self::device_path::*;

@@ -11,11 +11,11 @@ use ffi::{
     UINTN,
 };
 use core::cmp;
-use io::{self, Cursor, BufRead, BufReader, LineWriter};
+use io::{self, Write, Cursor, BufRead, BufReader, LineWriter};
 use EfiError;
 use ::Result;
 use system_table;
-use alloc::{Vec, String, str};
+use alloc::{Vec, String, str, fmt};
 
 // TODO: This whole module has gotten ugly. Needs cleanup.
 // TODO: Should we replace Console with two structs, StdIn and StdOut, corresponding to input and output? This is more in line with Rust stdlib.
@@ -225,6 +225,23 @@ pub fn stdout() -> StdOut {
     StdOut::new(::SystemTable::new(system_table())
         .expect("failed to create system table").console())
 }
+
+#[macro_export]
+macro_rules! println {
+    ($fmt:expr) => (print!(concat!($fmt, "\n")));
+    ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
+}
+
+#[macro_export]
+macro_rules! print {
+    ($($arg:tt)*) => ($crate::protocols::console::print_args(format_args!($($arg)*)));
+}
+
+// TODO: Call to stdout() creates a new StdOut obj everytime. Remove this extravagance.
+pub fn print_args(args: fmt::Arguments) {
+    return stdout().write_fmt(args).expect("Failed to write to stdout")
+}
+
 
 fn invalid_encoding() -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, "text was not valid unicode")
