@@ -3,11 +3,6 @@ use alloc::fmt;
 use io::Write;
 
 #[macro_export]
-macro_rules! format {
-    ($($arg:tt)*) => (alloc::fmt::format(format_args!($($arg)*)))
-}
-
-#[macro_export]
 macro_rules! println {
     ($fmt:expr) => (print!(concat!($fmt, "\n")));
     ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
