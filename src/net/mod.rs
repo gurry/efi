@@ -331,7 +331,7 @@ impl Write for Tcp4Stream {
 }
 
 
-struct UdpSocket {
+pub struct UdpSocket {
     udp4_socket: Udp4Socket,
 }
 
@@ -340,11 +340,11 @@ impl UdpSocket {
         Ok(Self {udp4_socket: for_ip4_only(addr, |addr| Udp4Socket::connect(addr))? })
     }
 
-    fn recv(&mut self, buf: &mut [u8]) -> Result<usize> {
+    pub fn recv(&mut self, buf: &mut [u8]) -> Result<usize> {
         self.udp4_socket.recv_buf(buf)
     }
 
-    fn send(&mut self, buf: &[u8]) -> Result<usize> {
+    pub fn send(&mut self, buf: &[u8]) -> Result<usize> {
         self.udp4_socket.send_buf(buf)
     }
 }
