@@ -99,7 +99,7 @@ impl<'a> BootServices<'a> {
      // For that we may need to expose a lifetime param on OpaqeDevice
      // This whole story about adding memory safety requires more thinking
     pub fn install_protocol_interface<T: Protocol + Wrapper>(&mut self, handle: Option<&'a OpaqueDevice>, protocol: &'a T, interface_type: InterfaceType) -> Result<&'a OpaqueDevice> {
-        let handle_ptr: EFI_HANDLE = handle.map_or(ptr::null(), |v| unsafe { mem::transmute(v) });
+        let handle_ptr: *mut EFI_HANDLE = handle.map_or(ptr::null_mut(), |v| unsafe { mem::transmute(v) });
         let guid_ptr = &T::guid() as *const Guid;
 
         let status = unsafe {

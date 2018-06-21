@@ -149,7 +149,7 @@ pub enum EFI_INTERFACE_TYPE {
 }
 
 pub type EFI_INSTALL_PROTOCOL_INTERFACE = extern "win64" fn(
-    Handle: EFI_HANDLE,
+    Handle: *mut EFI_HANDLE,
     Protocol: *const EFI_GUID,
     InterfaceType: EFI_INTERFACE_TYPE,
     Interface: *const VOID
