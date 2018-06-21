@@ -18,7 +18,6 @@ use ffi::{
     UINTN,
     UINT32,
     VOID,
-    IsSuccess,
     EFI_SERVICE_BINDING_PROTOCOL,
     EFI_NO_MAPPING,
     boot_services::{

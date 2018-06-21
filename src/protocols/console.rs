@@ -12,7 +12,6 @@ use ffi::{
 };
 use core::cmp;
 use io::{self, Write, Cursor, BufRead, BufReader, LineWriter};
-use EfiError;
 use ::Result;
 use system_table;
 use alloc::{Vec, String, str, fmt};

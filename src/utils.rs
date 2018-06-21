@@ -41,8 +41,8 @@ macro_rules! impl_protocol {
 macro_rules! ret_on_err {
     ($e:expr) => {
         let status: ::ffi::EFI_STATUS = $e;
-        if !IsSuccess(status) {
-            return Err(EfiError::from(status));
+        if !$crate::ffi::IsSuccess(status) {
+            return Err($crate::EfiError::from(status));
         }
     }
 }
