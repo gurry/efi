@@ -34,7 +34,7 @@ unsafe impl<'a> Alloc for &'a EfiAllocator {
     }
 
     unsafe fn dealloc(&mut self, ptr: *mut u8, _layout: Layout) {
-        // As mentioned above, stop ignoring layout::align() here
+        // TODO: As mentioned above, stop ignoring layout::align() here
         let status = ((*system_table().BootServices).FreePool)(ptr as *const VOID);
 
         if status != EFI_SUCCESS {
