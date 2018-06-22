@@ -77,6 +77,8 @@ pub fn image_handle() -> EFI_HANDLE {
  static ALLOCATOR: EfiAllocator = EfiAllocator;
 
 
+// TODO: instead of calling them errors we should change the name to status and remove Fail etc. from them.
+// They'll then only be used in as the "causes" of actual errors which we will introduce
 pub struct EfiError {
     inner: Context<EfiErrorKind>
 }
