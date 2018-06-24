@@ -77,7 +77,6 @@ pub type EFI_SET_TIMER = *const NOT_DEFINED;
 pub type EFI_SIGNAL_EVENT = *const NOT_DEFINED;
 pub type EFI_CHECK_EVENT = *const NOT_DEFINED;
 pub type EFI_REINSTALL_PROTOCOL_INTERFACE = *const NOT_DEFINED;
-pub type EFI_UNINSTALL_PROTOCOL_INTERFACE = *const NOT_DEFINED;
 pub type EFI_HANDLE_PROTOCOL = *const NOT_DEFINED;
 pub type EFI_REGISTER_PROTOCOL_NOTIFY = *const NOT_DEFINED;
 pub type EFI_LOCATE_HANDLE = *const NOT_DEFINED;
@@ -86,7 +85,6 @@ pub type EFI_INSTALL_CONFIGURATION_TABLE = *const NOT_DEFINED;
 pub type EFI_EXIT = *const NOT_DEFINED;
 pub type EFI_IMAGE_UNLOAD = *const NOT_DEFINED;
 pub type EFI_EXIT_BOOT_SERVICES = *const NOT_DEFINED;
-pub type EFI_GET_NEXT_MONOTONIC_COUNT = *const NOT_DEFINED;
 pub type EFI_STALL = *const NOT_DEFINED;
 pub type EFI_SET_WATCHDOG_TIMER = *const NOT_DEFINED;
 pub type EFI_CONNECT_CONTROLLER = *const NOT_DEFINED;
@@ -155,6 +153,12 @@ pub type EFI_INSTALL_PROTOCOL_INTERFACE = extern "win64" fn(
     Interface: *const VOID
 ) -> EFI_STATUS;
 
+pub type EFI_UNINSTALL_PROTOCOL_INTERFACE  = extern "win64" fn(
+    Handle: EFI_HANDLE,
+    Protocol: *const EFI_GUID,
+    Interface: *const VOID
+) -> EFI_STATUS;
+
 pub type EFI_EVENT_NOTIFY = extern "win64" fn(
     Event: EFI_EVENT,
     Context: *const VOID
@@ -204,6 +208,9 @@ pub type EFI_IMAGE_START = extern "win64" fn(
     ExitData: *mut *const CHAR16
 ) -> EFI_STATUS;
 
+pub type EFI_GET_NEXT_MONOTONIC_COUNT = extern "win64" fn(
+    Count: *mut UINT64  
+) -> EFI_STATUS;
 
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
