@@ -92,7 +92,7 @@ pub fn load_image<R: Read + Len>(reader: &mut R) -> Result<LoadedImage> {
         let loadimg_status = ((*bs).LoadImage)(FALSE, current_image_handle, dev_path, ptr::null(), 0, &mut loaded_img_handle); // TODO: should we pass true or false to first arg? What difference does it make? Should we expose it out to the caller?
 
         // Uninstall the load file and device path protocols since our load file object is about to go out of scope
-        ret_on_err!(((*bs).UninstallProtocolInterface)(proto_handle, &EFI_DEVICE_PATH_PROTOCOL_GUID, mem::transmute(&dev_path)));
+        ret_on_err!(((*bs).UninstallProtocolInterface)(proto_handle, &EFI_DEVICE_PATH_PROTOCOL_GUID, mem::transmute(dev_path)));
         ret_on_err!(((*bs).UninstallProtocolInterface)(proto_handle, &EFI_LOAD_FILE_PROTOCOL_GUID, mem::transmute(&loader.proto)));
 
         // We check LoadImage status here because we want to run the above two 
