@@ -313,13 +313,32 @@ impl Drop for Tcp4Stream {
 
 impl Read for Tcp4Stream {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.read_buf(buf).map_err(|_| io::ErrorKind::Interrupted.into())
+        self.read_buf(buf).map_err(|e| {
+            match e.kind() {
+                // Handling errors that indicate connection closed specially so the caller can retry
+                EfiErrorKind::ConnectionReset => io::ErrorKind::ConnectionReset.into(),
+                EfiErrorKind::ConnectionFin => io::ErrorKind::ConnectionAborted.into(),
+                EfiErrorKind::AccessDenied => io::ErrorKind::NotConnected.into(), // As per UEFI spec we get access denied error when the connection has been closed
+                EfiErrorKind::Timeout => io::ErrorKind::TimedOut.into(),
+                _ => io::ErrorKind::Other.into(),
+            }
+        })
     }
 }
 
 impl Write for Tcp4Stream {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.write_buf(buf).map_err(|_| io::ErrorKind::Interrupted.into())
+        self.write_buf(buf).map_err(|e| {
+            match e.kind() {
+                // Handling errors that indicate connection closed specially so the caller can retry
+                EfiErrorKind::ConnectionReset => io::ErrorKind::ConnectionReset.into(),
+                EfiErrorKind::ConnectionFin => io::ErrorKind::ConnectionAborted.into(),
+                EfiErrorKind::AccessDenied => io::ErrorKind::NotConnected.into(), // As per UEFI spec we get access denied error when the connection has been closed
+                EfiErrorKind::Timeout => io::ErrorKind::TimedOut.into(),
+                _ => io::ErrorKind::Other.into(),
+            }
+        })
+
     }
 
 
