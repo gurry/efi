@@ -36,6 +36,7 @@ pub trait Len { // TODO: Move this a more general module like 'io' or something.
     fn len(&mut self) -> Result<usize>; // TODO: was forced to use &mut self because some reaers like HTTP reader mutated when the read lenght (e.g. do a PUT request on their underlying HTTP stream and thus mutating it). Is interior mutability the answer?
 }
 
+//TODO: Provide a way for the user to specify load options as well
 /// Loads image read from the given reader
 pub fn load_image<R: Read + Len>(reader: &mut R) -> Result<LoadedImage> {
     let loader = Loader::new(reader);
