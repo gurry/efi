@@ -38,8 +38,7 @@ pub use self::builder::{Builder};
 use core;
 use super::{UdpSocket, SocketAddr, IpAddr, Ipv4Addr};
 use alloc::Vec;
-use protocols::PxeBaseCodeProtocol;
-use {SystemTable, system_table};
+use net::dhcp;
 
 struct DnsServer {
     addr: SocketAddr
@@ -98,19 +97,10 @@ pub (crate) fn lookup_host(hostname: &str) -> ::Result<Vec<IpAddr>> {
 
 fn get_dns_servers() -> ::Result<Vec<DnsServer>> {
     // TODO: Assuming here that PXE has already happened. Should we kick it off here if it hasn't?
-    let sys_table = SystemTable::new(system_table()).expect("Failed to initialize system table");
-    let bs = sys_table.boot_services();
-    let pxe_protocol = bs.locate_protocol::<PxeBaseCodeProtocol>()?;
-
-    let last_dhcp_ack = pxe_protocol.mode()
-                .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))? // Should've ideally done .into() on errkind, but compiler wanted explicit annotations
-                .dhcp_ack()
-                .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?
-                .as_dhcpv4() // We support only IPv4 currently. Will change in future
+    let dhcp_config = dhcp::cached_dhcp_config()?
                 .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
-    
     const DHCP_DNS_SERVERS_OPTION: u8 = 6;
-    let dns_servers_option = last_dhcp_ack.dhcp_options().find(|o| o.code() == DHCP_DNS_SERVERS_OPTION)
+    let dns_servers_option = dhcp_config.dhcp_ack_packet().dhcp_options().find(|o| o.code() == DHCP_DNS_SERVERS_OPTION)
                 .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
     let dns_servers_buf = dns_servers_option.value()
                 .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;

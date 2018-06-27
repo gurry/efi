@@ -70,6 +70,12 @@ pub union EFI_IP_ADDRESS {
   pub v6: EFI_IPv6_ADDRESS,
 }
 
+impl EFI_IP_ADDRESS {
+    pub fn zero() -> Self {
+        Self { Addr: [0; 4] }
+    }
+}
+
 // Had to implement by hand 'cause Debug derive not allowed for unions
 impl fmt::Debug for EFI_IP_ADDRESS {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

@@ -609,6 +609,18 @@ impl From<Ipv6Addr> for IpAddr {
     }
 }
 
+impl From<EFI_IPv4_ADDRESS> for IpAddr {
+    fn from(ipv4: EFI_IPv4_ADDRESS) -> IpAddr {
+        IpAddr::V4(ipv4.into())
+    }
+}
+
+impl From<EFI_IPv6_ADDRESS> for IpAddr {
+    fn from(ipv6: EFI_IPv6_ADDRESS) -> IpAddr {
+        IpAddr::V6(ipv6.into())
+    }
+}
+
 impl From<[u8; 16]> for IpAddr {
     fn from(octets: [u8; 16]) -> IpAddr {
         IpAddr::V6(Ipv6Addr::from(octets))
