@@ -24,7 +24,6 @@ use {
     EfiError,
     EfiErrorKind,
     Result,
-    Guid,
     to_boolean,
     from_boolean,
     to_res,
@@ -34,7 +33,6 @@ use {
 
 use core::{mem, ptr, default::Default};
 use utils::{to_ptr, Wrapper, to_opt};
-use protocols::Protocol;
 use alloc::String;
 
 // TODO: THIS WHOLE MODULE NEEDS A COMPLETE OVERHAUL. 
@@ -198,7 +196,6 @@ fn locate_pxe_protocol<'a>() -> Result<&'a PxeBaseCodeProtocol> {
 #[repr(C)]
 pub struct PxeBaseCodeProtocol(EFI_PXE_BASE_CODE_PROTOCOL);
 impl_wrapper!(PxeBaseCodeProtocol, EFI_PXE_BASE_CODE_PROTOCOL);
-impl_protocol!(PxeBaseCodeProtocol, EFI_PXE_BASE_CODE_PROTOCOL, EFI_PXE_BASE_CODE_PROTOCOL_GUID);
 
 impl From<EFI_PXE_BASE_CODE_PROTOCOL> for PxeBaseCodeProtocol {
     fn from(raw_protocol: EFI_PXE_BASE_CODE_PROTOCOL) -> Self {

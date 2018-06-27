@@ -233,7 +233,7 @@ macro_rules! println {
 
 #[macro_export]
 macro_rules! print {
-    ($($arg:tt)*) => ($crate::protocols::console::print_args(format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::console::print_args(format_args!($($arg)*)));
 }
 
 // TODO: Call to stdout() creates a new StdOut obj everytime. Remove this extravagance.

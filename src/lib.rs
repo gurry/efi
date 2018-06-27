@@ -13,14 +13,12 @@
 // #![warn(missing_debug_implementations)]
 
 #[macro_use] extern crate failure;
-#[macro_use] extern crate bitflags;
 #[macro_use] extern crate alloc;
 extern crate byteorder;
 
 #[macro_use] mod utils;
-#[macro_use] pub mod protocols;
+#[macro_use] pub mod console;
 pub mod ffi;
-pub mod boot_services;
 pub mod io;
 pub mod net;
 pub mod image;
@@ -44,11 +42,10 @@ use ffi::{
     boot_services::EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL,
 };
 
-use protocols::console::Console;
 use failure::{Context, Fail, Backtrace};
 use allocator::EfiAllocator;
+pub use console::{Console, stdin, stdout};
 
-pub use protocols::console::{stdin, stdout};
 
 static mut SYSTEM_TABLE: Option<*const EFI_SYSTEM_TABLE> = None;
 static mut IMAGE_HANDLE: Option<EFI_HANDLE> = None;
@@ -300,12 +297,6 @@ pub struct SystemTable {
 impl SystemTable {
     pub fn new(table_ptr: *const EFI_SYSTEM_TABLE) -> Result<Self> {
         Ok(Self { table_ptr, con_in_ex: get_simple_text_input_ex(table_ptr)? })
-    }
-
-    pub fn boot_services(&self) -> boot_services::BootServices {
-        unsafe { 
-            transmute((*self.table_ptr).BootServices.as_ref().unwrap()) // Unwrap safe 'cause ptr can't be null
-        }
     }
 
     // TODO: Split console into StdIn, StdOut and StdErr objects

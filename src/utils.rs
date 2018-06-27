@@ -27,17 +27,6 @@ macro_rules! impl_wrapper {
     };
 }
 
-macro_rules! impl_protocol {
-    ($wrapper: ty, $inner: ty, $guid:tt) => {
-        impl Protocol for $wrapper {
-            type FfiType = $inner;
-            fn guid() -> Guid {
-                $guid
-            }
-        }
-    }
-}
-
 macro_rules! ret_on_err {
     ($e:expr) => {
         let status: ::ffi::EFI_STATUS = $e;
