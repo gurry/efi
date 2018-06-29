@@ -28,7 +28,7 @@ use {
     from_boolean,
     to_res,
     system_table,
-    net::IpAddr,
+    net::{IpAddr, Ipv4Addr},
 };
 
 use core::{mem, ptr, default::Default};
@@ -69,8 +69,13 @@ impl<'a> DhcpConfig<'a> {
         IpAddr::V4(unsafe { self.mode.subnet_mask().v4}.into())
     }
 
-    pub fn server_ip(&self) -> IpAddr {
-        IpAddr::V4((*self.mode.dhcp_ack().as_dhcpv4().bootp_si_addr()).into())
+    pub fn server_ip(&self) -> Option<IpAddr> {
+        const DHCP_SERVER_IDENTFIER_OPTION: u8 = 54;
+        let server_id_option = self.mode.dhcp_ack().as_dhcpv4().dhcp_options()
+            .find(|o| o.code() == DHCP_SERVER_IDENTFIER_OPTION)?;
+
+        let val = server_id_option.value()?;
+        Some(Ipv4Addr::new(val[0], val[1], val[2], val[3]).into()) 
     } 
 
     pub fn dhcp_ack_packet(&self) -> &Dhcpv4Packet {
