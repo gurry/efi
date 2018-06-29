@@ -150,17 +150,13 @@ pub fn run_dhcp<'a>() -> Result<DhcpConfig<'a>> {
         pxe.start(use_ipv6)?;
     }
 
-    println!("Performing dhcp");
     let sort_offers = false; // TODO: may want to expose this out to the caller
     pxe.dhcp(sort_offers)?;
 
-    println!("Dhcp done");
     if !mode.dhcp_ack_received() {
-        println!("Dhcp ack NOT received");
         return Err(EfiErrorKind::ProtocolError.into());
     }
 
-    println!("Returning config");
     Ok(DhcpConfig { mode } )
 }
 
