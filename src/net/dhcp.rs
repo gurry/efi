@@ -103,30 +103,24 @@ impl DhcpConfig {
     }
 }
 
-pub struct BootServerConfig<'a> {
-    // TODO: DANGEROUS. We are carrying a ref to mode around which is backed by a raw ptr.
-    // This ptr could change underneath our feet. Intead of returning references
-    // in this struct's methods (like &Dhcpv4Packet) returned owned copies (i.e. Dhcpv4Packet).
-    mode: &'a Mode,
+pub struct BootServerConfig {
+    boot_server_ip: IpAddr,
     boot_file: String,
+    pxe_ack_packet: Dhcpv4Packet,
 }
 
 // TODO: should we expose other packets like PxeDiscover as well?
-impl<'a> BootServerConfig<'a> {
-    fn new (mode: &'a Mode) -> Result<Self> {
-        // TODO: Is it safe to rely on proxy_offer() for getting boot file? Some question:
-        // 1. If there are multiple proxy offers received, which one is recorded by UEFI in this field?
-        // 2. What if there are zero proxy offers received and the bootfile was sent in the DHCP offer?
-        if !mode.proxy_offer_received() {
-            return Err(EfiErrorKind::ProtocolError.into());
-        }
-
+impl BootServerConfig {
+    fn new (mode: &Mode) -> Self {
+        let boot_server_ip = IpAddr::V4((*mode.proxy_offer().as_dhcpv4().bootp_si_addr()).into());
         let boot_file = String::from_utf8_lossy(mode.proxy_offer().as_dhcpv4().bootp_boot_file()).into_owned();
-        Ok(Self { mode, boot_file })
+        let pxe_ack_packet = mode.pxe_reply().as_dhcpv4().clone();
+
+        Self { boot_server_ip, boot_file, pxe_ack_packet }
     }
 
     pub fn boot_server_ip(&self) -> IpAddr {
-        IpAddr::V4((*self.mode.pxe_reply().as_dhcpv4().bootp_si_addr()).into())
+        self.boot_server_ip
     } 
 
     pub fn boot_file(&self) -> &str {
@@ -134,7 +128,7 @@ impl<'a> BootServerConfig<'a> {
     }
 
     pub fn pxe_ack_packet(&self) -> &Dhcpv4Packet {
-        self.mode.pxe_reply().as_dhcpv4()
+        &self.pxe_ack_packet
     }
 }
 
@@ -180,7 +174,7 @@ pub fn run_dhcp() -> Result<DhcpConfig> {
 
 // TODO: allow user to specify discovery options such as whether to do unicast, broadcast or multicast 
 // and list of boot servers to use for unicast etc.
-pub fn run_boot_server_discovery<'a>(_dhcp_config: &DhcpConfig) -> Result<BootServerConfig<'a>> {
+pub fn run_boot_server_discovery(_dhcp_config: &DhcpConfig) -> Result<BootServerConfig> {
     // We're requring the '_dhcp_config' argument above only to enforce the fact that user should've run DHCP first before calling this method.
     let info = DiscoverInfo::default();
 
@@ -192,8 +186,14 @@ pub fn run_boot_server_discovery<'a>(_dhcp_config: &DhcpConfig) -> Result<BootSe
     pxe.discover(BootType::Bootstrap, BOOT_LAYER_INITIAL, false, Some(&info))?; 
 
     let mode = pxe.mode().ok_or_else::<EfiError, _>(|| EfiErrorKind::ProtocolError.into())?;
+    // TODO: Is it safe to rely on proxy_offer() for getting boot file? Some question:
+    // 1. If there are multiple proxy offers received, which one is recorded by UEFI in this field?
+    // 2. What if there are zero proxy offers received and the bootfile was sent in the DHCP offer?
+    if !mode.proxy_offer_received() {
+        return Err(EfiErrorKind::ProtocolError.into());
+    }
 
-    Ok(BootServerConfig::new(mode)?)
+    Ok(BootServerConfig::new(mode))
 }
 
 
