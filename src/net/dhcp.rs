@@ -85,6 +85,10 @@ impl DhcpConfig {
         self.subnet_mask
     }
 
+    pub fn dhcp_server_ip(&self) -> Option<IpAddr> {
+        self.dhcp_server_ip
+    }
+
     pub fn dhcp_ack_packet(&self) -> &Dhcpv4Packet {
         &self.dhcp_ack_packet
     }
