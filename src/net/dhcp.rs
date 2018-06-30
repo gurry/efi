@@ -53,41 +53,53 @@ use alloc::String;
 // }
 
 // TODO: should we expose other packets like DhcpDiscover as well?
-pub struct DhcpConfig<'a> {
-    // TODO: DANGEROUS. We are carrying a ref to mode around which is backed by a raw ptr.
-    // This ptr could change underneath our feet. Intead of returning references
-    // in this struct's methods (like &Dhcpv4Packet) returned owned copies (i.e. Dhcpv4Packet).
-    mode: &'a Mode,
+#[derive(Debug, Clone)]
+pub struct DhcpConfig {
+    ip: IpAddr,
+    subnet_mask: IpAddr,
+    dhcp_server_ip: Option<IpAddr>,
+    dhcp_ack_packet: Dhcpv4Packet,
+    proxy_offer_packet: Option<Dhcpv4Packet>,
 }
 
-impl<'a> DhcpConfig<'a> {
+impl DhcpConfig {
+    fn new(mode: &Mode) -> Self {
+        let ip = IpAddr::V4(unsafe { mode.station_ip().v4 }.into());
+        let subnet_mask = IpAddr::V4(unsafe { mode.subnet_mask().v4}.into());
+        let dhcp_server_ip = Self::extract_server_ip(mode);
+        let dhcp_ack_packet = mode.dhcp_ack().as_dhcpv4().clone();
+        let proxy_offer_packet =  if mode.proxy_offer_received() {
+            Some(mode.proxy_offer().as_dhcpv4().clone())
+        } else {
+            None
+        };
+
+        Self { ip, subnet_mask, dhcp_server_ip, dhcp_ack_packet, proxy_offer_packet }
+    }
+
     pub fn ip(&self) -> IpAddr {
-        IpAddr::V4(unsafe { self.mode.station_ip().v4 }.into())
+        self.ip
     }
 
     pub fn subnet_mask(&self) -> IpAddr {
-        IpAddr::V4(unsafe { self.mode.subnet_mask().v4}.into())
+        self.subnet_mask
     }
 
-    pub fn server_ip(&self) -> Option<IpAddr> {
-        const DHCP_SERVER_IDENTFIER_OPTION: u8 = 54;
-        let server_id_option = self.mode.dhcp_ack().as_dhcpv4().dhcp_options()
-            .find(|o| o.code() == DHCP_SERVER_IDENTFIER_OPTION)?;
-
-        let val = server_id_option.value()?;
-        Some(Ipv4Addr::new(val[0], val[1], val[2], val[3]).into()) 
-    } 
-
     pub fn dhcp_ack_packet(&self) -> &Dhcpv4Packet {
-        self.mode.dhcp_ack().as_dhcpv4()
+        &self.dhcp_ack_packet
     }
 
     pub fn proxy_offer_packet(&self) -> Option<&Dhcpv4Packet> {
-        if self.mode.proxy_offer_received() {
-            Some(self.mode.proxy_offer().as_dhcpv4())
-        } else {
-            None
-        }
+        self.proxy_offer_packet.as_ref()
+    }
+
+    fn extract_server_ip(mode: &Mode) -> Option<IpAddr> {
+        const DHCP_SERVER_IDENTFIER_OPTION: u8 = 54;
+        let server_id_option = mode.dhcp_ack().as_dhcpv4().dhcp_options()
+            .find(|o| o.code() == DHCP_SERVER_IDENTFIER_OPTION)?;
+
+        let val = server_id_option.value()?;
+        Some(Ipv4Addr::new(val[0], val[1], val[2], val[3]).into())
     }
 }
 
@@ -128,7 +140,7 @@ impl<'a> BootServerConfig<'a> {
 
 // TODO expose public apis to check if DHCP has already happned or not.
 // Same for PXE
-pub fn cached_dhcp_config<'a>() -> Result<Option<DhcpConfig<'a>>> {
+pub fn cached_dhcp_config() -> Result<Option<DhcpConfig>> {
     let pxe = locate_pxe_protocol()?;
     let mode = pxe.mode().ok_or_else::<EfiError, _>(|| EfiErrorKind::ProtocolError.into())?;
 
@@ -136,10 +148,10 @@ pub fn cached_dhcp_config<'a>() -> Result<Option<DhcpConfig<'a>>> {
         return Ok(None)
     }
 
-    Ok(Some(DhcpConfig { mode } ))
+    Ok(Some(DhcpConfig::new(&mode)))
 }
 
-pub fn run_dhcp<'a>() -> Result<DhcpConfig<'a>> {
+pub fn run_dhcp() -> Result<DhcpConfig> {
     // TODO: see tianocore-edk2\NetworkPkg\UefiPxeBcDxe\PxeBcBoot.c file to know to implement PXE sequence especially the method PxeBcDiscoverBootFile
 
     // TODO: we're using PxeBaseCodeProtocol for now for expediency,
@@ -158,11 +170,12 @@ pub fn run_dhcp<'a>() -> Result<DhcpConfig<'a>> {
     let sort_offers = false; // TODO: may want to expose this out to the caller
     pxe.dhcp(sort_offers)?;
 
-    if !mode.dhcp_ack_received() {
-        return Err(EfiErrorKind::ProtocolError.into());
-    }
+    // The above code will result in the config being cached.
+    // So return that
+    let config = cached_dhcp_config()?
+        .ok_or_else::<EfiError, _>(|| EfiErrorKind::ProtocolError.into())?;
 
-    Ok(DhcpConfig { mode } )
+    Ok(config)
 }
 
 // TODO: allow user to specify discovery options such as whether to do unicast, broadcast or multicast 
@@ -554,7 +567,7 @@ impl Packet {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[repr(C)]
 pub struct Dhcpv4Packet(EFI_PXE_BASE_CODE_DHCPV4_PACKET);
 impl_wrapper!(Dhcpv4Packet, EFI_PXE_BASE_CODE_DHCPV4_PACKET);
