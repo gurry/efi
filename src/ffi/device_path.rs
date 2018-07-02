@@ -47,6 +47,15 @@ pub type EFI_DEVICE_PATH_UTILS_CREATE_NODE = extern "win64" fn(
     NodeLength: UINT16
 ) -> *const EFI_DEVICE_PATH_PROTOCOL;
 
-// Device path types and sub-types
-pub const MEDIA_DEVICE_PATH: UINT8 = 0x04; // Media device path type
+// Device path types
+pub const HARDWARE_DEVICE_PATH: UINT8 = 0x01; 
+pub const ACPI_DEVICE_PATH: UINT8 = 0x02;
+pub const MESSAGING_DEVICE_PATH: UINT8 = 0x03;
+pub const MEDIA_DEVICE_PATH: UINT8 = 0x04;
+pub const BBS_DEVICE_PATH: UINT8 = 0x05; // BIOS Boot Specification device path
+pub const END_DEVICE_PATH_TYPE: UINT8 = 0x7f;
+
+// Device path sub-types
 pub const MEDIA_FILEPATH_DP: UINT8 = 0x04; // File device path sub type
+pub const END_ENTIRE_DEVICE_PATH_SUBTYPE: UINT8 = 0xFF;
+pub const END_INSTANCE_DEVICE_PATH_SUBTYPE: UINT8 = 0x01;
