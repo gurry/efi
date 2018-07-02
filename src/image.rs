@@ -79,8 +79,8 @@ pub fn load_image<R: Read + Len>(reader: &mut R) -> Result<LoadedImage> {
         // TODO: Must create a safe RAII based and ergonomic abstraction over device paths.
         // It could implement iterator over nodes and have a UEFI-spec-compliant display impl
         let dummy_image_file_name = "image_file";
-        let file_path_node  = ((*dev_path_utils).CreateDeviceNode)(MEDIA_DEVICE_PATH, MEDIA_FILEPATH_DP, dummy_image_file_name.len() as UINT16); // safe to cast to UINT16 since we know the file name is pretty short
         const DEV_PATH_NODE_HEADER_SIZE: usize = 4;
+        let file_path_node  = ((*dev_path_utils).CreateDeviceNode)(MEDIA_DEVICE_PATH, MEDIA_FILEPATH_DP, (dummy_image_file_name.len() + DEV_PATH_NODE_HEADER_SIZE) as UINT16); // safe to cast to UINT16 since we know the file name is pretty short
         let node_data_start: *mut u8 = (file_path_node as *mut u8).offset(DEV_PATH_NODE_HEADER_SIZE as isize);
         ptr::copy_nonoverlapping(dummy_image_file_name.as_ptr(), node_data_start, dummy_image_file_name.len());
 
