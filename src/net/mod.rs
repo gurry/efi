@@ -189,6 +189,8 @@ impl Tcp4Stream {
             if status == EFI_NO_MAPPING { // Wait until the IP configuration process (probably DHCP) has finished
                 let mut ip_mode_data = EFI_IP4_MODE_DATA::new();
                 loop {
+                    // TODO: This becomes an infinite loop on some firmeware such as Hyper-v
+                    // Figure out why and fix it.
                     ret_on_err!(((*stream.protocol).GetModeData)(stream.protocol, ptr::null_mut(), ptr::null_mut(), &mut ip_mode_data, ptr::null_mut(), ptr::null_mut()));
                     if ip_mode_data.IsConfigured == TRUE { break }
                 }
@@ -426,6 +428,8 @@ impl Udp4Socket {
             if status == EFI_NO_MAPPING { // Wait until the IP configuration process (probably DHCP) has finished
                 let mut ip_mode_data = EFI_IP4_MODE_DATA::new();
                 loop {
+                    // TODO: This becomes an infinite loop on some firmeware such as Hyper-v
+                    // Figure out why and fix it.
                     ret_on_err!(((*socket.protocol).GetModeData)(socket.protocol, ptr::null_mut(), &mut ip_mode_data, ptr::null_mut(), ptr::null_mut()));
                     if ip_mode_data.IsConfigured == TRUE { break }
                 }
