@@ -11,6 +11,8 @@ pub fn to_ptr<'a, W: Wrapper>(value: Option<&'a W>) -> *const W::Inner {
 }
 
 
+// TODO: In rust an Option<*T> is represented the same way as *T
+// So we can use Options directly instead of using this method
 pub fn to_opt<'a, P, R>(ptr: *const P) -> Option<&'a R> {
     unsafe { ptr.as_ref().map(|p| mem::transmute(p)) }  
 }
