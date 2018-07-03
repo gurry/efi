@@ -23,6 +23,7 @@ use ffi::{
     VOID,
     FALSE,
 };
+use device_path::DevicePath;
 use core::{ptr, mem, slice, cmp};
 
 
@@ -36,13 +37,28 @@ pub trait Len { // TODO: Move this a more general module like 'io' or something.
     fn len(&mut self) -> Result<usize>; // TODO: was forced to use &mut self because some reaers like HTTP reader mutated when the read lenght (e.g. do a PUT request on their underlying HTTP stream and thus mutating it). Is interior mutability the answer?
 }
 
+// TODO: this whole shit about wrapping raw paths into DevicePath type is unsafe. Address this unsafety
+pub fn load_image_from_path(path: &mut DevicePath) -> Result<LoadedImage> {
+    let bs = (*system_table()).BootServices;
+    let current_image_handle = image_handle();
+    let path = path.inner();
+
+    let loaded_img_handle = unsafe {
+        let mut loaded_img_handle: EFI_HANDLE = ptr::null_mut();
+        ret_on_err!(((*bs).LoadImage)(FALSE, current_image_handle, path, ptr::null(), 0, &mut loaded_img_handle)); // TODO: should we pass true or false to first arg? What difference does it make? Should we expose it out to the caller?
+        loaded_img_handle
+    };
+
+    Ok(LoadedImage(loaded_img_handle))
+}
+
 //TODO: Provide a way for the user to specify load options as well
 /// Loads image read from the given reader
 pub fn load_image<R: Read + Len>(reader: &mut R) -> Result<LoadedImage> {
     let loader = Loader::new(reader);
     let bs = (*system_table()).BootServices;
 
-    let loaded_img_handle = unsafe {
+    let (image_path, proto_handle) = unsafe {
         // Install our load file protocol and get a newly generated handle to it
         let mut proto_handle: EFI_HANDLE = ptr::null_mut();
         ret_on_err!(((*bs).InstallProtocolInterface)(&mut proto_handle, &EFI_LOAD_FILE_PROTOCOL_GUID, EFI_INTERFACE_TYPE::EFI_NATIVE_INTERFACE, mem::transmute(&loader.proto)));
@@ -85,27 +101,22 @@ pub fn load_image<R: Read + Len>(reader: &mut R) -> Result<LoadedImage> {
         ptr::copy_nonoverlapping(dummy_image_file_name.as_ptr(), node_data_start, dummy_image_file_name.len());
 
         // Create a new device path and associate it with the our load file protocol. This path will be used for loading the image in LoadImage EFI call later
-        let dev_path = ((*dev_path_utils).AppendDeviceNode)(current_image_device_path, file_path_node); // TODO: Is this appraoch okay? Should we create a more proper path than this?
-        ret_on_err!(((*bs).InstallProtocolInterface)(&mut proto_handle, &EFI_DEVICE_PATH_PROTOCOL_GUID, EFI_INTERFACE_TYPE::EFI_NATIVE_INTERFACE, mem::transmute(dev_path)));
+        let image_path = ((*dev_path_utils).AppendDeviceNode)(current_image_device_path, file_path_node); // TODO: Is this appraoch okay? Should we create a more proper path than this?
+        ret_on_err!(((*bs).InstallProtocolInterface)(&mut proto_handle, &EFI_DEVICE_PATH_PROTOCOL_GUID, EFI_INTERFACE_TYPE::EFI_NATIVE_INTERFACE, mem::transmute(image_path)));
 
-        // Now load the image using the new device path
-        let mut loaded_img_handle: EFI_HANDLE = ptr::null_mut();
-        let loadimg_status = ((*bs).LoadImage)(FALSE, current_image_handle, dev_path, ptr::null(), 0, &mut loaded_img_handle); // TODO: should we pass true or false to first arg? What difference does it make? Should we expose it out to the caller?
-
-        // Uninstall the load file and device path protocols since our load file object is about to go out of scope
-        ret_on_err!(((*bs).UninstallProtocolInterface)(proto_handle, &EFI_DEVICE_PATH_PROTOCOL_GUID, mem::transmute(dev_path)));
-        ret_on_err!(((*bs).UninstallProtocolInterface)(proto_handle, &EFI_LOAD_FILE_PROTOCOL_GUID, mem::transmute(&loader.proto)));
-
-        // We check LoadImage status here because we want to run the above two 
-        // uninstall calls regardless of whether LoadImage failed or succeeded
-        ret_on_err!(loadimg_status);
-
-        // TODO: IMPORTANT - must uninstall the protocols even if one of the preceding calls (like LoadImage) fails. Can we use RAII somehow to ensure this? May be put all the unsafe shit above inside the Loader and then impl Drop for it?
-
-        loaded_img_handle
+        (image_path, proto_handle)
     };
 
-    Ok(LoadedImage(loaded_img_handle))
+    let mut dev_path = DevicePath(image_path);
+    let loaded_image = load_image_from_path(&mut dev_path);
+
+    unsafe {
+        // Uninstall the load file and device path protocols since our load file object is about to go out of scope
+        ret_on_err!(((*bs).UninstallProtocolInterface)(proto_handle, &EFI_DEVICE_PATH_PROTOCOL_GUID, mem::transmute(image_path)));
+        ret_on_err!(((*bs).UninstallProtocolInterface)(proto_handle, &EFI_LOAD_FILE_PROTOCOL_GUID, mem::transmute(&loader.proto)));
+    }
+
+    loaded_image
 }
 
 /// Starts an image previously loaded using load_image
