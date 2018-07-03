@@ -22,6 +22,7 @@ pub mod ffi;
 pub mod io;
 pub mod net;
 pub mod image;
+pub mod device_path;
 mod allocator;
 
 // Hack: this std declartion is to work around a bug in failure crate
