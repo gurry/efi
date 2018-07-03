@@ -85,6 +85,8 @@ impl fmt::Debug for EFI_IP_ADDRESS {
     }
 }
 
+pub type EFI_PHYSICAL_ADDRESS = UINT64;
+
 #[derive(Debug)]
 #[repr(C)]
 pub struct EFI_TABLE_HEADER {
