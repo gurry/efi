@@ -38,7 +38,7 @@ pub struct EFI_SIMPLE_FILE_SYSTEM_PROTOCOL {
 
 pub type EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_OPEN_VOLUME = extern "win64" fn(
     This: *const EFI_SIMPLE_FILE_SYSTEM_PROTOCOL,
-    Root: *mut *const EFI_FILE_PROTOCOL,
+    Root: *mut *const EFI_FILE_PROTOCOL
 ) -> EFI_STATUS;
 
 #[repr(C)]
