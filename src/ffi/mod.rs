@@ -5,7 +5,7 @@
 
 #[macro_use] mod base;
 pub mod pxe;
-pub mod load_file;
+pub mod media;
 pub mod device_path;
 pub mod loaded_image;
 pub mod simple_network;

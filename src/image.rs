@@ -1,6 +1,6 @@
 use {Result, io::{self, Read}, system_table, image_handle, EfiErrorKind};
 use ffi::{
-    load_file::{EFI_LOAD_FILE_PROTOCOL, EFI_LOAD_FILE_PROTOCOL_GUID}, 
+    media::{EFI_LOAD_FILE_PROTOCOL, EFI_LOAD_FILE_PROTOCOL_GUID}, 
     loaded_image::{EFI_LOADED_IMAGE_PROTOCOL, EFI_LOADED_IMAGE_PROTOCOL_GUID},
     device_path::{EFI_DEVICE_PATH_PROTOCOL, EFI_DEVICE_PATH_PROTOCOL_GUID},
     EFI_HANDLE,
