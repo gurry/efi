@@ -3,6 +3,9 @@ use ffi::device_path::EFI_DEVICE_PATH_PROTOCOL;
 // TODO: the whole concept of wrapping device path pointers like
 // this is not safe. We need to analyze memory lifetimes etc.
 // to make this safe. Either that or declare it unsafe or drop the idea.
+
+// TODO: should we deallocate underlying pointer in drop? 
+// How do you dealloc a path in UEFI?
 pub struct DevicePath(pub (crate) *const EFI_DEVICE_PATH_PROTOCOL);
 
 impl DevicePath {
