@@ -22,7 +22,7 @@ use system_table;
 pub struct DevicePath(pub (crate) *const EFI_DEVICE_PATH_PROTOCOL);
 
 impl DevicePath {
-    pub (crate) fn as_ptr(&self) -> *const EFI_DEVICE_PATH_PROTOCOL {
+    pub fn as_ptr(&self) -> *const EFI_DEVICE_PATH_PROTOCOL {
         self.0
     }
 
