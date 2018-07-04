@@ -2,13 +2,7 @@ use {Result, io::{self, Read}, system_table, image_handle, EfiErrorKind};
 use ffi::{
     load_file::{EFI_LOAD_FILE_PROTOCOL, EFI_LOAD_FILE_PROTOCOL_GUID}, 
     loaded_image::{EFI_LOADED_IMAGE_PROTOCOL, EFI_LOADED_IMAGE_PROTOCOL_GUID},
-    device_path::{EFI_DEVICE_PATH_PROTOCOL,
-        EFI_DEVICE_PATH_PROTOCOL_GUID,
-        EFI_DEVICE_PATH_UTILITIES_PROTOCOL,
-        EFI_DEVICE_PATH_UTILITIES_PROTOCOL_GUID,
-        MEDIA_DEVICE_PATH,
-        MEDIA_FILEPATH_DP,
-    },
+    device_path::{EFI_DEVICE_PATH_PROTOCOL, EFI_DEVICE_PATH_PROTOCOL_GUID},
     EFI_HANDLE,
     EFI_STATUS,
     EFI_SUCCESS,
@@ -17,13 +11,12 @@ use ffi::{
     EFI_DEVICE_ERROR,
     boot_services::{EFI_INTERFACE_TYPE, EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL},
     UINTN,
-    UINT16,
     CHAR16,
     BOOLEAN,
     VOID,
     FALSE,
 };
-use device_path::DevicePath;
+use device_path::{DevicePath, create_file_path_node, append_path};
 use core::{ptr, mem, slice, cmp};
 
 
@@ -58,7 +51,7 @@ pub fn load_image<R: Read + Len>(reader: &mut R) -> Result<LoadedImage> {
     let loader = Loader::new(reader);
     let bs = (*system_table()).BootServices;
 
-    let (image_path, proto_handle) = unsafe {
+    let (mut image_path, proto_handle) = unsafe {
         // Install our load file protocol and get a newly generated handle to it
         let mut proto_handle: EFI_HANDLE = ptr::null_mut();
         ret_on_err!(((*bs).InstallProtocolInterface)(&mut proto_handle, &EFI_LOAD_FILE_PROTOCOL_GUID, EFI_INTERFACE_TYPE::EFI_NATIVE_INTERFACE, mem::transmute(&loader.proto)));
@@ -66,52 +59,39 @@ pub fn load_image<R: Read + Len>(reader: &mut R) -> Result<LoadedImage> {
         // Open loaded image protocol on the currently running image in order to obtain its device handle
         let current_image_handle = image_handle();
         let loaded_image: *mut EFI_LOADED_IMAGE_PROTOCOL = ptr::null_mut();
-        ret_on_err!(((*bs).OpenProtocol)(current_image_handle, &EFI_LOADED_IMAGE_PROTOCOL_GUID, mem::transmute(&loaded_image), current_image_handle, ptr::null(), EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL));
+        ret_on_err!(((*bs).OpenProtocol)(current_image_handle, &EFI_LOADED_IMAGE_PROTOCOL_GUID, mem::transmute(&loaded_image), current_image_handle, ptr::null(), EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL)); // TODO: should we use GET_PROTOCOL instead of BY_HANDLE_PROTOCOL? Not clear from UEFI documentation.
+
 
         if loaded_image.is_null() { // If above call returned null protocol that means no such protocol is associated with the handle (which is odd)
             return Err(EfiErrorKind::LoadError.into()); // TODO: Need proper error here
         }
 
+        ret_on_err!(((*bs).CloseProtocol)(current_image_handle, &EFI_LOADED_IMAGE_PROTOCOL_GUID, current_image_handle, ptr::null()));
+
         // Open device path protocol on the device handle of the currently running image
         let current_image_device_path: *mut EFI_DEVICE_PATH_PROTOCOL  = ptr::null_mut();
-        ret_on_err!(((*bs).OpenProtocol)((*loaded_image).DeviceHandle, &EFI_DEVICE_PATH_PROTOCOL_GUID, mem::transmute(&current_image_device_path), current_image_handle, ptr::null(), EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL));
+        ret_on_err!(((*bs).OpenProtocol)((*loaded_image).DeviceHandle, &EFI_DEVICE_PATH_PROTOCOL_GUID, mem::transmute(&current_image_device_path), current_image_handle, ptr::null(), EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL)); // TODO: should we use GET_PROTOCOL instead of BY_HANDLE_PROTOCOL? Not clear from UEFI documentation.
 
         if current_image_device_path.is_null() { // If above call returned null protocol that means no such protocol is associated with the handle (which is odd)
             return Err(EfiErrorKind::LoadError.into()); // TODO: Need proper error here
         }
 
-        // Get hold of device path utils proto which we use below
-        let dev_path_utils: *mut EFI_DEVICE_PATH_UTILITIES_PROTOCOL   = ptr::null_mut();
-        ret_on_err!(((*bs).LocateProtocol)(&EFI_DEVICE_PATH_UTILITIES_PROTOCOL_GUID, ptr::null(), mem::transmute(&dev_path_utils)));
-
-        if dev_path_utils.is_null() { // If above call returned null protocol that means no such protocol is associated with the handle (which is odd)
-            return Err(EfiErrorKind::LoadError.into()); // TODO: Need proper error here
-        }
-
-        // Close loaded image and device path protocols. Don't need them anymore
         ret_on_err!(((*bs).CloseProtocol)((*loaded_image).DeviceHandle, &EFI_DEVICE_PATH_PROTOCOL_GUID, current_image_handle, ptr::null()));
-        ret_on_err!(((*bs).CloseProtocol)(current_image_handle, &EFI_LOADED_IMAGE_PROTOCOL_GUID, current_image_handle, ptr::null()));
-
-        // TODO: Must create a safe RAII based and ergonomic abstraction over device paths.
-        // It could implement iterator over nodes and have a UEFI-spec-compliant display impl
-        let dummy_image_file_name = "image_file";
-        const DEV_PATH_NODE_HEADER_SIZE: usize = 4;
-        let file_path_node  = ((*dev_path_utils).CreateDeviceNode)(MEDIA_DEVICE_PATH, MEDIA_FILEPATH_DP, (dummy_image_file_name.len() + DEV_PATH_NODE_HEADER_SIZE) as UINT16); // safe to cast to UINT16 since we know the file name is pretty short
-        let node_data_start: *mut u8 = (file_path_node as *mut u8).offset(DEV_PATH_NODE_HEADER_SIZE as isize);
-        ptr::copy_nonoverlapping(dummy_image_file_name.as_ptr(), node_data_start, dummy_image_file_name.len());
 
         // Create a new device path and associate it with the our load file protocol. This path will be used for loading the image in LoadImage EFI call later
-        let image_path = ((*dev_path_utils).AppendDeviceNode)(current_image_device_path, file_path_node); // TODO: Is this appraoch okay? Should we create a more proper path than this?
-        ret_on_err!(((*bs).InstallProtocolInterface)(&mut proto_handle, &EFI_DEVICE_PATH_PROTOCOL_GUID, EFI_INTERFACE_TYPE::EFI_NATIVE_INTERFACE, mem::transmute(image_path)));
+        let dummy_image_file_name = "image_file";
+        let file_path_node = create_file_path_node(dummy_image_file_name)?;
+        let current_image_device_path = DevicePath(current_image_device_path);
+        let image_path = append_path(&current_image_device_path, &file_path_node)?; // TODO: Is this appraoch okay? Should we create a more proper path than this?
+        ret_on_err!(((*bs).InstallProtocolInterface)(&mut proto_handle, &EFI_DEVICE_PATH_PROTOCOL_GUID, EFI_INTERFACE_TYPE::EFI_NATIVE_INTERFACE, mem::transmute(image_path.as_ptr())));
 
         (image_path, proto_handle)
     };
 
-    let mut dev_path = DevicePath(image_path);
-    let loaded_image = load_image_from_path(&mut dev_path);
+    let loaded_image = load_image_from_path(&mut image_path);
 
     unsafe {
-        // Uninstall the load file and device path protocols since our load file object is about to go out of scope
+        // Uninstall the load file and device path protocols since our protocol handle is about to go out of scope
         ret_on_err!(((*bs).UninstallProtocolInterface)(proto_handle, &EFI_DEVICE_PATH_PROTOCOL_GUID, mem::transmute(image_path)));
         ret_on_err!(((*bs).UninstallProtocolInterface)(proto_handle, &EFI_LOAD_FILE_PROTOCOL_GUID, mem::transmute(&loader.proto)));
     }
