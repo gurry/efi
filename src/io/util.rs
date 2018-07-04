@@ -68,6 +68,23 @@ pub fn copy<R: ?Sized, W: ?Sized>(reader: &mut R, writer: &mut W) -> io::Result<
     }
 }
 
+pub fn copy_to_fill_buf<R: Read>(reader: &mut R, buf: &mut [u8]) -> io::Result<usize> {
+    let mut bytes_read = 0;
+    loop {
+        match reader.read(&mut buf[bytes_read..]) {
+            Ok(n) => {
+                bytes_read += n;
+                if n == 0 || bytes_read == buf.len() { // Either EOF or we filled the buf
+                    return Ok(bytes_read)
+                } else if bytes_read > buf.len() { // WTF. Should never happen 
+                    return Err(io::ErrorKind::Other.into())
+                }
+            },
+            Err(_) => return Err(io::ErrorKind::Other.into()) , // TODO: Do not swallow upstream error here
+        }
+    }
+}
+
 /// A reader which is always at EOF.
 ///
 /// This struct is generally created by calling [`empty`]. Please see

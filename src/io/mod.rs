@@ -287,7 +287,7 @@ pub use self::buffered::{BufReader, BufWriter, LineWriter};
 pub use self::buffered::IntoInnerError;
 pub use self::cursor::Cursor;
 pub use self::error::{Result, Error, ErrorKind};
-pub use self::util::{copy, sink, Sink, empty, Empty, repeat, Repeat};
+pub use self::util::{copy, copy_to_fill_buf, sink, Sink, empty, Empty, repeat, Repeat};
 
 pub mod prelude;
 mod buffered;

@@ -172,7 +172,7 @@ pub extern "win64" fn load_file_callback<'a, R: 'a + Read + Len>(
 
     // Everything good. Let's read the data.
     let mut buf = unsafe { slice::from_raw_parts_mut(buffer_ptr as *mut u8, *buffer_size) };
-    match read_to_fill_buf(&mut loader.reader, &mut buf) {
+    match io::copy_to_fill_buf(&mut loader.reader, &mut buf) {
         Ok(bytes_read) => {
             unsafe { *buffer_size = bytes_read };
             EFI_SUCCESS
@@ -181,22 +181,7 @@ pub extern "win64" fn load_file_callback<'a, R: 'a + Read + Len>(
     }
 }
 
-fn read_to_fill_buf<R: Read>(reader: &mut R, buf: &mut [u8]) -> io::Result<usize> {
-    let mut bytes_read = 0;
-    loop {
-        match reader.read(&mut buf[bytes_read..]) {
-            Ok(n) => {
-                bytes_read += n;
-                if n == 0 || bytes_read == buf.len() { // Either EOF or we filled the buf
-                    return Ok(bytes_read)
-                } else if bytes_read > buf.len() { // WTF. Should never happen 
-                    return Err(io::ErrorKind::Other.into())
-                }
-            },
-            Err(_) => return Err(io::ErrorKind::Other.into()) , // TODO: Do not swallow upstream error here
-        }
-    }
-}
+
 
 pub struct LoadedImage(EFI_HANDLE);
 
