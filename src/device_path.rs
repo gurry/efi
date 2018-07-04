@@ -6,7 +6,7 @@ use ffi::device_path::EFI_DEVICE_PATH_PROTOCOL;
 pub struct DevicePath(pub (crate) *const EFI_DEVICE_PATH_PROTOCOL);
 
 impl DevicePath {
-    pub (crate) fn inner(&self) -> *const EFI_DEVICE_PATH_PROTOCOL {
+    pub (crate) fn as_ptr(&self) -> *const EFI_DEVICE_PATH_PROTOCOL {
         self.0
     }
 }

@@ -41,7 +41,7 @@ pub trait Len { // TODO: Move this a more general module like 'io' or something.
 pub fn load_image_from_path(path: &mut DevicePath) -> Result<LoadedImage> {
     let bs = (*system_table()).BootServices;
     let current_image_handle = image_handle();
-    let path = path.inner();
+    let path = path.as_ptr();
 
     let loaded_img_handle = unsafe {
         let mut loaded_img_handle: EFI_HANDLE = ptr::null_mut();
