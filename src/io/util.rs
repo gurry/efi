@@ -68,7 +68,7 @@ pub fn copy<R: ?Sized, W: ?Sized>(reader: &mut R, writer: &mut W) -> io::Result<
     }
 }
 
-pub fn copy_to_fill_buf<R: Read>(reader: &mut R, buf: &mut [u8]) -> io::Result<usize> {
+pub fn fill_buf<R: Read>(reader: &mut R, buf: &mut [u8]) -> io::Result<usize> {
     let mut bytes_read = 0;
     loop {
         match reader.read(&mut buf[bytes_read..]) {

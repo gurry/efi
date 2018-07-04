@@ -172,7 +172,7 @@ pub extern "win64" fn load_file_callback<'a, R: 'a + Read + Len>(
 
     // Everything good. Let's read the data.
     let mut buf = unsafe { slice::from_raw_parts_mut(buffer_ptr as *mut u8, *buffer_size) };
-    match io::copy_to_fill_buf(&mut loader.reader, &mut buf) {
+    match io::fill_buf(&mut loader.reader, &mut buf) {
         Ok(bytes_read) => {
             unsafe { *buffer_size = bytes_read };
             EFI_SUCCESS
