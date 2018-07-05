@@ -51,10 +51,10 @@ pub fn load_image<R: Read + Len>(reader: &mut R) -> Result<LoadedImage> {
     let loader = Loader::new(reader);
     let bs = (*system_table()).BootServices;
 
-    let (mut image_path, proto_handle) = unsafe {
+    let (mut image_path, device_handle) = unsafe {
         // Install our load file protocol and get a newly generated handle to it
-        let mut proto_handle: EFI_HANDLE = ptr::null_mut();
-        ret_on_err!(((*bs).InstallProtocolInterface)(&mut proto_handle, &EFI_LOAD_FILE_PROTOCOL_GUID, EFI_INTERFACE_TYPE::EFI_NATIVE_INTERFACE, mem::transmute(&loader.proto)));
+        let mut device_handle: EFI_HANDLE = ptr::null_mut();
+        ret_on_err!(((*bs).InstallProtocolInterface)(&mut device_handle, &EFI_LOAD_FILE_PROTOCOL_GUID, EFI_INTERFACE_TYPE::EFI_NATIVE_INTERFACE, mem::transmute(&loader.proto)));
 
         // Open loaded image protocol on the currently running image in order to obtain its device handle
         let current_image_handle = image_handle();
@@ -83,9 +83,9 @@ pub fn load_image<R: Read + Len>(reader: &mut R) -> Result<LoadedImage> {
         let file_path_node = create_file_path_node(dummy_image_file_name)?;
         let current_image_device_path = DevicePath(current_image_device_path);
         let image_path = append_path(&current_image_device_path, &file_path_node)?; // TODO: Is this appraoch okay? Should we create a more proper path than this?
-        ret_on_err!(((*bs).InstallProtocolInterface)(&mut proto_handle, &EFI_DEVICE_PATH_PROTOCOL_GUID, EFI_INTERFACE_TYPE::EFI_NATIVE_INTERFACE, mem::transmute(image_path.as_ptr())));
+        ret_on_err!(((*bs).InstallProtocolInterface)(&mut device_handle, &EFI_DEVICE_PATH_PROTOCOL_GUID, EFI_INTERFACE_TYPE::EFI_NATIVE_INTERFACE, mem::transmute(image_path.as_ptr())));
 
-        (image_path, proto_handle)
+        (image_path, device_handle)
     };
 
     let loaded_image = load_image_from_path(&mut image_path);
@@ -93,8 +93,8 @@ pub fn load_image<R: Read + Len>(reader: &mut R) -> Result<LoadedImage> {
     unsafe {
         // Uninstall the load file and device path protocols since our protocol handle is about to go out of scope
         // TODO: how will the device_handle be deallocated?
-        ret_on_err!(((*bs).UninstallProtocolInterface)(proto_handle, &EFI_DEVICE_PATH_PROTOCOL_GUID, mem::transmute(image_path)));
-        ret_on_err!(((*bs).UninstallProtocolInterface)(proto_handle, &EFI_LOAD_FILE_PROTOCOL_GUID, mem::transmute(&loader.proto)));
+        ret_on_err!(((*bs).UninstallProtocolInterface)(device_handle, &EFI_DEVICE_PATH_PROTOCOL_GUID, mem::transmute(image_path)));
+        ret_on_err!(((*bs).UninstallProtocolInterface)(device_handle, &EFI_LOAD_FILE_PROTOCOL_GUID, mem::transmute(&loader.proto)));
     }
 
     loaded_image
