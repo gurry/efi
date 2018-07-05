@@ -174,7 +174,7 @@ pub const EFI_OPEN_PROTOCOL_EXCLUSIVE: UINT32 = 0x00000020;
 pub type EFI_OPEN_PROTOCOL =  extern "win64" fn(
     Handle: EFI_HANDLE,
     Protocol: *const EFI_GUID,
-    Interface: *mut *mut VOID,
+    Interface: *mut *const VOID,
     AgentHandle: EFI_HANDLE,
     ControllerHandle: EFI_HANDLE,
     Attributes: UINT32
