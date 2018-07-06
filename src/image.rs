@@ -17,7 +17,7 @@ use ffi::{
     FALSE,
 };
 use device_path::{DevicePath, create_file_path_node, append_path};
-use core::{ptr, mem, slice, cmp};
+use core::{self, ptr, mem, slice, cmp};
 
 
 // TODO: we should create a virtualfs (filesystem) and put all our images there.
@@ -27,7 +27,7 @@ use core::{ptr, mem, slice, cmp};
 /// A trait that provides the length of the object that implements it.
 /// An example can be a file implementing this interface to expose a way to get its length.
 pub trait Len { // TODO: Move this a more general module like 'io' or something.
-    fn len(&mut self) -> Result<usize>; // TODO: was forced to use &mut self because some reaers like HTTP reader mutated when the read lenght (e.g. do a PUT request on their underlying HTTP stream and thus mutating it). Is interior mutability the answer?
+    fn len(&mut self) -> Result<u64>; // TODO: was forced to use &mut self because some reaers like HTTP reader mutated when the read lenght (e.g. do a PUT request on their underlying HTTP stream and thus mutating it). Is interior mutability the answer?
 }
 
 // TODO: this whole shit about wrapping raw paths into DevicePath type is unsafe. Address this unsafety
@@ -116,7 +116,7 @@ pub fn start_image(image: &LoadedImage ) -> Result<ExitData> {
 struct Loader<'a, R: 'a + Read + Len> {
     proto: EFI_LOAD_FILE_PROTOCOL,
     reader: &'a mut R,
-    cached_len: Option<usize>,
+    cached_len: Option<u64>,
 }
 
 impl<'a, R: 'a + Read + Len> Loader<'a, R> {
@@ -156,7 +156,15 @@ pub extern "win64" fn load_file_callback<'a, R: 'a + Read + Len>(
     // If buffer_ptr is null the firmware just wants to know the size of the file
     // So we just set that and return
     if buffer_ptr.is_null() {
-        unsafe { *buffer_size  = file_len };
+        // There's a chance *buffer_size can overflow
+        // because file_len is u64 while *buffer_size
+        // is UINTN (which is an alias for usize).
+        // So here we just error out if it overflows.
+        if (core::usize::MAX as u64) < file_len {
+            return EFI_DEVICE_ERROR;
+        }
+
+        unsafe { *buffer_size  = file_len as UINTN };
 
         // The UEFI spec 2.4 DOES NOT say that we should return EFI_BUFFER_TOO_SMALL
         // when the incoming buffer_ptr is null. However, if you return any other status,
@@ -167,7 +175,7 @@ pub extern "win64" fn load_file_callback<'a, R: 'a + Read + Len>(
 
     // As per UEFI spec, if the provided buf is smaller 
     // than the file we have, we must return EFI_BUFFER_TOO_SMALL
-    if incoming_buf_size < file_len { 
+    if (incoming_buf_size as u64) < file_len { 
         return EFI_BUFFER_TOO_SMALL
     }
 
@@ -233,7 +241,7 @@ impl Drop for ExitData {
 }
 
 impl<'a> Len for &'a[u8] {
-    fn len(&mut self) -> Result<usize> {
-        Ok(<[u8]>::len(self))
+    fn len(&mut self) -> Result<u64> {
+        Ok(<[u8]>::len(self) as u64)
     }
 }
