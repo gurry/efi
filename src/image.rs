@@ -125,7 +125,7 @@ impl<'a, R: 'a + Read + Len> Loader<'a, R> {
     }
 }
 
-pub extern "win64" fn load_file_callback<'a, R: 'a + Read + Len>(
+extern "win64" fn load_file_callback<'a, R: 'a + Read + Len>(
     this: *const EFI_LOAD_FILE_PROTOCOL, 
     file_path: *const EFI_DEVICE_PATH_PROTOCOL,
     _boot_policy: BOOLEAN,
