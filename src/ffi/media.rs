@@ -196,6 +196,10 @@ pub struct EFI_FILE_INFO {
     FileName: *const CHAR16, // TODO: CAUTION - this is NOT a pointer but a null terminated string embeeded in struct. Must a find a way to represent it in Rust.
 }
 
+pub const EFI_FILE_MODE_READ: UINT64 = 0x0000000000000001;
+pub const EFI_FILE_MODE_WRITE: UINT64 = 0x0000000000000002;
+pub const EFI_FILE_MODE_CREATE: UINT64 = 0x8000000000000000;
+
 pub const EFI_FILE_READ_ONLY: UINT64 = 0x0000000000000001;
 pub const EFI_FILE_HIDDEN: UINT64 = 0x0000000000000002;
 pub const EFI_FILE_SYSTEM: UINT64 = 0x0000000000000004;
