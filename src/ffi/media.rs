@@ -193,7 +193,7 @@ pub struct EFI_FILE_INFO {
     LastAccessTime: EFI_TIME,
     ModificationTime: EFI_TIME,
     Attribute: UINT64,
-    FileName: *const CHAR16, // TODO: CAUTION - this is NOT a pointer but a null terminated string embeeded in struct. Must a find a way to represent it in Rust.
+    FileName: [CHAR16; 1], // Dynamically sized, null-terminated embedded string
 }
 
 pub const EFI_FILE_MODE_READ: UINT64 = 0x0000000000000001;
@@ -218,5 +218,5 @@ pub struct EFI_FILE_SYSTEM_INFO {
     VolumeSize: UINT64,
     FreeSpace: UINT64,
     BlockSize: UINT32,
-    VolumeLabel: *const CHAR16, // TODO: CAUTION - this is NOT a pointer but a null terminated string embeeded in struct. Must a find a way to represent it in Rust.
+    VolumeLabel: [CHAR16; 1], // Dynamically sized, null-terminated embedded string
 }
