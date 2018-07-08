@@ -98,7 +98,7 @@ pub type EFI_FILE_WRITE = extern "win64" fn(
 ) -> EFI_STATUS;
 
 pub type EFI_FILE_GET_POSITION = extern "win64" fn(
-    This: *mut EFI_FILE_PROTOCOL,
+    This: *const EFI_FILE_PROTOCOL,
     Position: *mut UINT64
 ) -> EFI_STATUS;
 
@@ -108,7 +108,7 @@ pub type EFI_FILE_SET_POSITION = extern "win64" fn(
 ) -> EFI_STATUS;
 
 pub type EFI_FILE_GET_INFO = extern "win64" fn(
-    This: *mut EFI_FILE_PROTOCOL,
+    This: *const EFI_FILE_PROTOCOL,
     InformationType: *const EFI_GUID,
     BufferSize: *mut UINTN,
     Buffer: *mut VOID
