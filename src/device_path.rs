@@ -43,6 +43,16 @@ impl DevicePath {
         
         Ok(DevicePath(node))
     }
+
+    pub fn try_clone(&self) -> Result<Self> {
+        let dev_path_utils = path_utils()?;
+
+        let path = unsafe {
+            ((*dev_path_utils).DuplicateDevicePath)(self.as_ptr())
+        };
+
+        Ok(DevicePath(path))
+    }
 }
 
 // TODO: Make device paths strongly typed by introducing independent types for
