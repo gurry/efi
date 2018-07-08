@@ -158,12 +158,12 @@ pub struct EFI_FILE_IO_TOKEN {
   // The caller must be prepared to handle the case where the callback associated with Event
   // occurs before the original asynchronous I/O request call returns.
   //
-  Event: EFI_EVENT,
+  pub Event: EFI_EVENT,
 
   //
   // Defines whether or not the signaled event encountered an error.
   //
-  Status: EFI_STATUS,
+  pub Status: EFI_STATUS,
 
   //
   // For OpenEx():  Not Used, ignored.
@@ -173,7 +173,7 @@ pub struct EFI_FILE_IO_TOKEN {
   //                In both cases, the size is measured in bytes.
   // For FlushEx(): Not used, ignored.
   //
-  BufferSize: UINTN,
+  pub BufferSize: UINTN,
 
   //
   // For OpenEx():  Not Used, ignored.
@@ -181,7 +181,7 @@ pub struct EFI_FILE_IO_TOKEN {
   // For WriteEx(): The buffer of data to write.
   // For FlushEx(): Not Used, ignored.
   //
-  Buffer: *mut VOID,
+  pub Buffer: *mut VOID,
 }
 
 pub const EFI_FILE_INFO_ID: EFI_GUID = EFI_GUID(0x09576E92, 0x6D3F, 0x11D2, [0x8E, 0x39, 0x00, 0xA0, 0xC9, 0x69, 0x72, 0x3B]);
@@ -189,14 +189,14 @@ pub const EFI_FILE_INFO_ID: EFI_GUID = EFI_GUID(0x09576E92, 0x6D3F, 0x11D2, [0x8
 #[repr(C)]
 #[derive(Debug)]
 pub struct EFI_FILE_INFO {
-    Size: UINT64,
-    FileSize: UINT64,
-    PhysicalSize: UINT64,
-    CreateTime: EFI_TIME,
-    LastAccessTime: EFI_TIME,
-    ModificationTime: EFI_TIME,
-    Attribute: UINT64,
-    FileName: [CHAR16; 1], // Dynamically sized, null-terminated embedded string
+    pub Size: UINT64,
+    pub FileSize: UINT64,
+    pub PhysicalSize: UINT64,
+    pub CreateTime: EFI_TIME,
+    pub LastAccessTime: EFI_TIME,
+    pub ModificationTime: EFI_TIME,
+    pub Attribute: UINT64,
+    pub FileName: [CHAR16; 1], // Dynamically sized, null-terminated embedded string
 }
 
 pub const EFI_FILE_MODE_READ: UINT64 = 0x0000000000000001;
@@ -216,10 +216,10 @@ pub const EFI_FILE_SYSTEM_INFO_ID: EFI_GUID = EFI_GUID(0x09576E93, 0x6D3F, 0x11D
 #[repr(C)]
 #[derive(Debug)]
 pub struct EFI_FILE_SYSTEM_INFO {
-    Size: UINT64,
-    ReadOnly: BOOLEAN,
-    VolumeSize: UINT64,
-    FreeSpace: UINT64,
-    BlockSize: UINT32,
-    VolumeLabel: [CHAR16; 1], // Dynamically sized, null-terminated embedded string
+    pub Size: UINT64,
+    pub ReadOnly: BOOLEAN,
+    pub VolumeSize: UINT64,
+    pub FreeSpace: UINT64,
+    pub BlockSize: UINT32,
+    pub VolumeLabel: [CHAR16; 1], // Dynamically sized, null-terminated embedded string
 }
