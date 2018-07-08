@@ -36,8 +36,8 @@ pub const EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_REVISION: UINT64 = 0x00010000;
 #[repr(C)]
 #[derive(Clone)]
 pub struct EFI_SIMPLE_FILE_SYSTEM_PROTOCOL {
-    Revision: UINT64,
-    OpenVolume: EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_OPEN_VOLUME,
+    pub Revision: UINT64,
+    pub OpenVolume: EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_OPEN_VOLUME,
 }
 
 pub type EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_OPEN_VOLUME = extern "win64" fn(
@@ -52,21 +52,21 @@ pub const EFI_FILE_PROTOCOL_LATEST_REVISION: UINT64 = EFI_FILE_PROTOCOL_REVISION
 #[repr(C)]
 #[derive(Clone)]
 pub struct EFI_FILE_PROTOCOL {
-    Revision: UINT64,
-    Open: EFI_FILE_OPEN,
-    Close: EFI_FILE_CLOSE,
-    Delete: EFI_FILE_DELETE,
-    Read: EFI_FILE_READ,
-    Write: EFI_FILE_WRITE,
-    GetPosition: EFI_FILE_GET_POSITION,
-    SetPosition: EFI_FILE_SET_POSITION,
-    GetInfo: EFI_FILE_GET_INFO,
-    SetInfo: EFI_FILE_SET_INFO,
-    Flush: EFI_FILE_FLUSH,
-    OpenEx: EFI_FILE_OPEN_EX,
-    ReadEx: EFI_FILE_READ_EX,
-    WriteEx: EFI_FILE_WRITE_EX,
-    FlushEx: EFI_FILE_FLUSH_EX,
+    pub Revision: UINT64,
+    pub Open: EFI_FILE_OPEN,
+    pub Close: EFI_FILE_CLOSE,
+    pub Delete: EFI_FILE_DELETE,
+    pub Read: EFI_FILE_READ,
+    pub Write: EFI_FILE_WRITE,
+    pub GetPosition: EFI_FILE_GET_POSITION,
+    pub SetPosition: EFI_FILE_SET_POSITION,
+    pub GetInfo: EFI_FILE_GET_INFO,
+    pub SetInfo: EFI_FILE_SET_INFO,
+    pub Flush: EFI_FILE_FLUSH,
+    pub OpenEx: EFI_FILE_OPEN_EX,
+    pub ReadEx: EFI_FILE_READ_EX,
+    pub WriteEx: EFI_FILE_WRITE_EX,
+    pub FlushEx: EFI_FILE_FLUSH_EX,
 }
 
 pub type EFI_FILE_OPEN = extern "win64" fn(
