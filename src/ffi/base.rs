@@ -26,6 +26,24 @@ pub struct EFI_TIME {
   Pad2: UINT8,
 }
 
+impl EFI_TIME {
+    pub fn zero() -> Self {
+        EFI_TIME {
+            Year: 0,
+            Month: 0,
+            Day: 0,
+            Hour: 0,
+            Minute: 0,
+            Second: 0,
+            Pad1: 0,
+            Nanosecond: 0,
+            TimeZone: 0,
+            Daylight: 0,
+            Pad2: 0,
+        }
+    }
+}
+
 
 /// 4-byte buffer. An IPv4 internet protocol address.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
