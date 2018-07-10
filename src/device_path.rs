@@ -48,7 +48,7 @@ impl DeviceNode {
             node
         };
         
-        Ok(DeviceNode { inner, path_utils })
+        Ok(Self { inner, path_utils })
     }
 
     pub fn as_ptr(&self) -> *const EFI_DEVICE_PATH_PROTOCOL {
@@ -85,7 +85,7 @@ pub struct DevicePath {
 
 impl DevicePath {
     pub (crate) fn from_ptr(ptr: *const EFI_DEVICE_PATH_PROTOCOL) -> Result<Self> {
-        Ok(DevicePath { inner: ptr, path_utils: path_utils()? })
+        Ok(Self { inner: ptr, path_utils: path_utils()? })
     }
 
     pub fn as_ptr(&self) -> *const EFI_DEVICE_PATH_PROTOCOL {
