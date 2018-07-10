@@ -93,7 +93,7 @@ pub fn load_image<R: Read + Len>(reader: &mut R) -> Result<LoadedImage> {
     unsafe {
         // Uninstall the load file and device path protocols since our protocol handle is about to go out of scope
         // TODO: how will the device_handle be deallocated?
-        ret_on_err!(((*bs).UninstallProtocolInterface)(device_handle, &EFI_DEVICE_PATH_PROTOCOL_GUID, mem::transmute(image_path)));
+        ret_on_err!(((*bs).UninstallProtocolInterface)(device_handle, &EFI_DEVICE_PATH_PROTOCOL_GUID, mem::transmute(image_path.as_ptr())));
         ret_on_err!(((*bs).UninstallProtocolInterface)(device_handle, &EFI_LOAD_FILE_PROTOCOL_GUID, mem::transmute(&loader.proto)));
     }
 
