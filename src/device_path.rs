@@ -93,6 +93,7 @@ pub struct DevicePath {
     path_utils: *mut EFI_DEVICE_PATH_UTILITIES_PROTOCOL, // Carrying this around so that we don't have to ask for it 'cause that operation is fallible and don't want to fail later (fucks up Clone impl for example)
 }
 
+// TODO: Implement From<DeviceNode> for DevicePath
 impl DevicePath {
     pub (crate) fn from_ptr(ptr: *const EFI_DEVICE_PATH_PROTOCOL) -> Result<Self> {
         Ok(Self { inner: ptr, path_utils: path_utils()? })
