@@ -997,8 +997,8 @@ pub const EFI_DEVICE_PATH_TO_TEXT_PROTOCOL_GUID: EFI_GUID = EFI_GUID(0x8b843e20,
 
 #[repr(C)]
 pub struct EFI_DEVICE_PATH_TO_TEXT_PROTOCOL {
-    ConvertDeviceNodeToText: EFI_DEVICE_PATH_TO_TEXT_NODE,
-    ConvertDevicePathToText: EFI_DEVICE_PATH_TO_TEXT_PATH,
+    pub ConvertDeviceNodeToText: EFI_DEVICE_PATH_TO_TEXT_NODE,
+    pub ConvertDevicePathToText: EFI_DEVICE_PATH_TO_TEXT_PATH,
 }
 
 pub type EFI_DEVICE_PATH_TO_TEXT_NODE = extern "win64" fn(
