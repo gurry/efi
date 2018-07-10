@@ -1,5 +1,6 @@
 // TODO: Write a proc macro called derive(TupleWrapper) which automaticlly impls Wrapper trait for any tuple struct wrapping types
-use core::{self, mem};
+use ffi::CHAR16;
+use core::{self, mem, slice};
 
 pub trait Wrapper {
     type Inner;
@@ -36,4 +37,15 @@ macro_rules! ret_on_err {
             return Err($crate::EfiError::from(status));
         }
     }
+}
+
+pub unsafe fn as_slice<'a>(s: *const CHAR16) -> &'a [CHAR16] {
+    let mut len = 0;
+    let mut temp = s;
+    while  *temp != 0 {
+        len += 1;
+        temp = temp.offset(1);
+    }
+
+    slice::from_raw_parts(s, len)
 }

@@ -81,7 +81,7 @@ pub fn load_image<R: Read + Len>(reader: &mut R) -> Result<LoadedImage> {
         // Create a new device path and associate it with the our load file protocol. This path will be used for loading the image in LoadImage EFI call later
         let dummy_image_file_name = "image_file";
         let file_path_node = create_file_path_node(dummy_image_file_name)?;
-        let current_image_device_path = DevicePath(current_image_device_path);
+        let current_image_device_path = DevicePath { inner: current_image_device_path, is_single_node: false };
         let image_path = append_path(&current_image_device_path, &file_path_node)?; // TODO: Is this appraoch okay? Should we create a more proper path than this?
         ret_on_err!(((*bs).InstallProtocolInterface)(&mut device_handle, &EFI_DEVICE_PATH_PROTOCOL_GUID, EFI_INTERFACE_TYPE::EFI_NATIVE_INTERFACE, mem::transmute(image_path.as_ptr())));
 

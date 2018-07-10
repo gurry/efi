@@ -1,17 +1,23 @@
 use ffi::{
+    IsSuccess,
+    CHAR16,
+    FALSE,
     device_path::{
         MEDIA_FILEPATH_DP,
         MEDIA_DEVICE_PATH,
         EFI_DEVICE_PATH_PROTOCOL,
         EFI_DEVICE_PATH_UTILITIES_PROTOCOL,
         EFI_DEVICE_PATH_UTILITIES_PROTOCOL_GUID,
+        EFI_DEVICE_PATH_TO_TEXT_PROTOCOL,
+        EFI_DEVICE_PATH_TO_TEXT_PROTOCOL_GUID,
     },
     UINT16,
 };
 
-use {EfiErrorKind, Result};
-use core::{mem, ptr};
+use {EfiErrorKind, Result, utils::as_slice};
+use core::{mem, ptr, fmt, slice};
 use system_table;
+use alloc::{String, boxed::Box, Vec};
 
 // TODO: the whole concept of wrapping device path pointers like
 // this is not safe. We need to analyze memory lifetimes etc.
@@ -19,11 +25,14 @@ use system_table;
 
 // TODO: should we deallocate underlying pointer in drop? 
 // How do you dealloc a path in UEFI?
-pub struct DevicePath(pub (crate) *const EFI_DEVICE_PATH_PROTOCOL);
+pub struct DevicePath{ 
+    pub (crate) inner: *const EFI_DEVICE_PATH_PROTOCOL, // TODO: should we not use NotNull here? In fact in all such wrapper structs?
+    pub (crate) is_single_node: bool, // Indicates that this is a single node (i.e. without an end node). TODO: This shit is ugly. Ideally node and path should be separate types
+}
 
 impl DevicePath {
     pub fn as_ptr(&self) -> *const EFI_DEVICE_PATH_PROTOCOL {
-        self.0
+        self.inner
     }
 
     // TODO: right now the args are weakly-typed. Will make it strongly typed later (will need an enum for node types and sub-types)
@@ -41,7 +50,7 @@ impl DevicePath {
             node
         };
         
-        Ok(DevicePath(node))
+        Ok(DevicePath{ inner: node, is_single_node: true })
     }
 
     pub fn try_clone(&self) -> Result<Self> {
@@ -51,7 +60,49 @@ impl DevicePath {
             ((*dev_path_utils).DuplicateDevicePath)(self.as_ptr())
         };
 
-        Ok(DevicePath(path))
+        Ok(DevicePath { inner: path, is_single_node: self.is_single_node })
+    }
+}
+
+impl fmt::Display for DevicePath {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let bs = (*system_table()).BootServices;
+
+        let protocol: *mut EFI_DEVICE_PATH_TO_TEXT_PROTOCOL   = ptr::null_mut();
+        unsafe {
+            // TODO: Are we supposed to call CloseProtocol on a protocol pointer obtained via LocateProtocol?
+            // UEFI documentation seems to suggest it's not required but doesn't the firmeware need to know we're
+            // no longer using the pointer and hence if needed it can clean it up? Check this.
+            let status = ((*bs).LocateProtocol)(&EFI_DEVICE_PATH_TO_TEXT_PROTOCOL_GUID, ptr::null(), mem::transmute(&protocol));
+
+            if !IsSuccess(status) {
+                return Err(fmt::Error);
+            }
+
+            if protocol.is_null() { // If above call returned null protocol that means no such protocol is associated with the handle (which is odd)
+                return Err(fmt::Error); // TODO: Need proper error here
+            }
+        }
+
+        let text_ptr = unsafe { if self.is_single_node {
+            ((*protocol).ConvertDeviceNodeToText)(self.as_ptr(), FALSE, FALSE)
+        } else {
+            ((*protocol).ConvertDevicePathToText)(self.as_ptr(), FALSE, FALSE)
+        }} as *mut CHAR16 ;
+
+        let utf16_buf = unsafe { as_slice(text_ptr) };
+
+        let display_utf8 = String::from_utf16(utf16_buf).map_err(|_| fmt::Error)?; // TODO: Can we do something to propagate the underlying error?
+
+        write!(f, "{}", display_utf8)?;
+
+        // TODO: the below is dangerous. There are no guarantees how Box 
+        // will release this ptr, but we hope it'll call our allocator 
+        // which in turn will call UEFI's heap free routine.
+        // Secondly, won't the compiler optimize this statement away?
+        unsafe { Box::from_raw(text_ptr) };
+
+        Ok(())
     }
 }
 
@@ -97,5 +148,5 @@ pub fn append_path(path1: &DevicePath, path2: &DevicePath) -> Result<DevicePath>
         ((*dev_path_utils).AppendDeviceNode)(path1.as_ptr(), path2.as_ptr())
     };
 
-    Ok(DevicePath(path))
+    Ok(DevicePath { inner: path, is_single_node: false })
 }
