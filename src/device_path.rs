@@ -82,7 +82,12 @@ fn path_utils() -> Result<*mut EFI_DEVICE_PATH_UTILITIES_PROTOCOL> {
 
 pub fn create_file_path_node<P: AsRef<str>>(relative_file_path: P) -> Result<DevicePath> { // TODO: return value should be strongly typed as FileDevicePath 
     let relative_file_path = relative_file_path.as_ref();
-    DevicePath::with_single_node(MEDIA_DEVICE_PATH, MEDIA_FILEPATH_DP, relative_file_path.as_bytes())
+
+    // Convert to UTF16, becuase UEFI expects UCS-2 (We can't do anything about non-representable code points coming from UTF8)
+    let utf16_buf = relative_file_path.encode_utf16().collect::<Vec<_>>();
+    let bytes_buf = unsafe { slice::from_raw_parts(utf16_buf.as_slice().as_ptr() as *const u8, utf16_buf.len() * 2) }; // * 2 because u16 is 2 bytes
+
+    DevicePath::with_single_node(MEDIA_DEVICE_PATH, MEDIA_FILEPATH_DP, bytes_buf)
 }
 
 pub fn append_path(path1: &DevicePath, path2: &DevicePath) -> Result<DevicePath> { // TODO: return value should be strongly typed as FileDevicePath 
