@@ -990,3 +990,25 @@ pub const END_INSTANCE_DEVICE_PATH_SUBTYPE: UINT8 = 0x01;
 //                       (((_Type)           & 0xf) << 8)  |  \
 //                       (((_Port)           & 0xf) << 4)  |  \
 //                        ((_Index)          & 0xf) ))
+
+
+
+pub const EFI_DEVICE_PATH_TO_TEXT_PROTOCOL_GUID: EFI_GUID = EFI_GUID(0x8b843e20, 0x8132, 0x4852, [0x90, 0xcc, 0x55, 0x1a, 0x4e, 0x4a,0x7f, 0x1c]);
+
+#[repr(C)]
+pub struct EFI_DEVICE_PATH_TO_TEXT_PROTOCOL {
+    ConvertDeviceNodeToText: EFI_DEVICE_PATH_TO_TEXT_NODE,
+    ConvertDevicePathToText: EFI_DEVICE_PATH_TO_TEXT_PATH,
+}
+
+pub type EFI_DEVICE_PATH_TO_TEXT_NODE = extern "win64" fn(
+    DeviceNode: *const EFI_DEVICE_PATH_PROTOCOL,
+    DisplayOnly: BOOLEAN,
+    AllowShortcuts: BOOLEAN
+) -> *const CHAR16;
+
+pub type EFI_DEVICE_PATH_TO_TEXT_PATH = extern "win64" fn(
+    DevicePath: *const EFI_DEVICE_PATH_PROTOCOL,
+    DisplayOnly: BOOLEAN,
+    AllowShortcuts: BOOLEAN
+) -> *const CHAR16;
