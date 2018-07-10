@@ -907,6 +907,7 @@ pub const BBS_BBS_DP: UINT8 = 0x01;
 ///
 /// This Device Path is used to describe the booting of non-EFI-aware operating systems.
 ///
+#[repr(packed)]
 pub struct BBS_BBS_DEVICE_PATH {
   pub Header: EFI_DEVICE_PATH_PROTOCOL,
   ///
