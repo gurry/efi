@@ -65,6 +65,16 @@ impl DeviceNode {
     }
 }
 
+impl Clone for DeviceNode {
+    fn clone(&self) -> Self {
+        let path = unsafe {
+            ((*self.path_utils).DuplicateDevicePath)(self.inner)
+        };
+
+        Self { inner: path, path_utils: self.path_utils }
+    }
+}
+
 impl fmt::Display for DeviceNode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let display = to_string(self.inner, false).map_err(|_| fmt::Error)?; // TODO: don't swallow lower level I/O
@@ -98,6 +108,16 @@ impl DevicePath {
         };
 
         Ok(DevicePath { inner: path, path_utils: self.path_utils })
+    }
+}
+
+impl Clone for DevicePath {
+    fn clone(&self) -> Self {
+        let path = unsafe {
+            ((*self.path_utils).DuplicateDevicePath)(self.inner)
+        };
+
+        Self { inner: path, path_utils: self.path_utils }
     }
 }
 
