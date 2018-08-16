@@ -197,7 +197,8 @@ pub fn create_file_path_node<P: AsRef<str>>(relative_file_path: P) -> Result<Dev
     let relative_file_path = relative_file_path.as_ref();
 
     // Convert to UTF16, becuase UEFI expects UCS-2 (We can't do anything about non-representable code points coming from UTF8)
-    let utf16_buf = relative_file_path.encode_utf16().collect::<Vec<_>>();
+    let mut utf16_buf = relative_file_path.encode_utf16().collect::<Vec<_>>();
+    utf16_buf.push(0); //Adding null terminator
     let bytes_buf = unsafe { slice::from_raw_parts(utf16_buf.as_slice().as_ptr() as *const u8, utf16_buf.len() * 2) }; // * 2 because u16 is 2 bytes
 
     DeviceNode::new(MEDIA_DEVICE_PATH, MEDIA_FILEPATH_DP, bytes_buf)
