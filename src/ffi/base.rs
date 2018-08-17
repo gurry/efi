@@ -44,6 +44,33 @@ impl EFI_TIME {
     }
 }
 
+impl Default for EFI_TIME {
+    fn default() -> Self {
+        Self::zero()
+    }
+}
+
+pub const EFI_TIME_ADJUST_DAYLIGHT: UINTN = 0x01;
+pub const EFI_TIME_IN_DAYLIGHT: UINTN = 0x02;
+pub const EFI_UNSPECIFIED_TIMEZONE: UINTN = 0x07FF;
+
+#[repr(C)]
+#[derive(Debug)]
+pub struct EFI_TIME_CAPABILITIES {
+    Resolution: UINT32,
+    Accuracy: UINT32,
+    SetsToZero: BOOLEAN,
+}
+
+impl EFI_TIME_CAPABILITIES  {
+    pub fn zero() -> Self {
+        Self {
+            Resolution: 0,
+            Accuracy: 0,
+            SetsToZero: 0,
+        }
+    }
+}
 
 /// 4-byte buffer. An IPv4 internet protocol address.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
