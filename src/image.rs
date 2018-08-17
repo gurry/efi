@@ -18,6 +18,7 @@ use ffi::{
 };
 use device_path::{DevicePath, create_file_path_node, append_path};
 use core::{self, ptr, mem, slice, cmp};
+use alloc::Vec;
 
 
 // TODO: we should create a virtualfs (filesystem) and put all our images there.
@@ -243,5 +244,11 @@ impl Drop for ExitData {
 impl<'a> Len for &'a[u8] {
     fn len(&mut self) -> Result<u64> {
         Ok(<[u8]>::len(self) as u64)
+    }
+}
+
+impl Len for io::Cursor<Vec<u8>> {
+    fn len(&mut self) -> Result<u64> {
+        Ok(self.get_ref().len() as u64)
     }
 }
