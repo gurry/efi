@@ -13,17 +13,17 @@ use core::{mem, fmt};
 #[repr(C)]
 #[derive(Debug)]
 pub struct EFI_TIME {
-  Year:   UINT16,
-  Month: UINT8,
-  Day: UINT8,
-  Hour: UINT8,
-  Minute: UINT8,
-  Second: UINT8,
-  Pad1: UINT8,
-  Nanosecond: UINT32,
-  TimeZone: INT16,
-  Daylight: UINT8,
-  Pad2: UINT8,
+    pub Year:   UINT16,
+    pub Month: UINT8,
+    pub Day: UINT8,
+    pub Hour: UINT8,
+    pub Minute: UINT8,
+    pub Second: UINT8,
+    pub Pad1: UINT8,
+    pub Nanosecond: UINT32,
+    pub TimeZone: INT16,
+    pub Daylight: UINT8,
+    pub Pad2: UINT8,
 }
 
 impl EFI_TIME {
@@ -57,9 +57,9 @@ pub const EFI_UNSPECIFIED_TIMEZONE: UINTN = 0x07FF;
 #[repr(C)]
 #[derive(Debug)]
 pub struct EFI_TIME_CAPABILITIES {
-    Resolution: UINT32,
-    Accuracy: UINT32,
-    SetsToZero: BOOLEAN,
+    pub Resolution: UINT32,
+    pub Accuracy: UINT32,
+    pub SetsToZero: BOOLEAN,
 }
 
 impl EFI_TIME_CAPABILITIES  {
