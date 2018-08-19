@@ -15,10 +15,23 @@ pub mod udp4;
 pub mod tcp4;
 pub mod console;
 pub mod boot_services;
+pub mod runtime_services;
 
 pub use self::base::*;
 use ffi::boot_services::EFI_BOOT_SERVICES;
+use ffi::runtime_services::EFI_RUNTIME_SERVICES;
 use ffi::console::{EFI_SIMPLE_TEXT_INPUT_PROTOCOL, EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL};
+
+pub const EFI_SYSTEM_TABLE_SIGNATURE: UINTN = 0x5453595320494249;
+pub const EFI_2_31_SYSTEM_TABLE_REVISION: UINTN = ((2<<16) | (31));
+pub const EFI_2_30_SYSTEM_TABLE_REVISION: UINTN = ((2<<16) | (30));
+pub const EFI_2_20_SYSTEM_TABLE_REVISION: UINTN = ((2<<16) | (20));
+pub const EFI_2_10_SYSTEM_TABLE_REVISION: UINTN = ((2<<16) | (10));
+pub const EFI_2_00_SYSTEM_TABLE_REVISION: UINTN = ((2<<16) | (00));
+pub const EFI_1_10_SYSTEM_TABLE_REVISION: UINTN = ((1<<16) | (10));
+pub const EFI_1_02_SYSTEM_TABLE_REVISION: UINTN = ((1<<16) | (02));
+pub const EFI_SYSTEM_TABLE_REVISION: UINTN = EFI_2_31_SYSTEM_TABLE_REVISION;
+pub const EFI_SPECIFICATION_VERSION: UINTN = EFI_SYSTEM_TABLE_REVISION;
 
 #[repr(C)]
 pub struct EFI_SYSTEM_TABLE {
@@ -38,7 +51,6 @@ pub struct EFI_SYSTEM_TABLE {
 }
 
 
-pub struct EFI_RUNTIME_SERVICES;
 
 #[repr(C)]
 pub struct EFI_CONFIGURATION_TABLE {

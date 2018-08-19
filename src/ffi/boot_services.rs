@@ -1,11 +1,14 @@
 use ffi::{
     base::{EFI_GUID, EFI_HANDLE, EFI_STATUS, EFI_EVENT, EFI_TABLE_HEADER, UINT32, UINT64, UINTN, CHAR16, BOOLEAN, VOID, NOT_DEFINED},
+    EFI_SPECIFICATION_VERSION,
     device_path::EFI_DEVICE_PATH_PROTOCOL
 };
 // use base::{Event, Handle, Handles, MemoryType, Status};
 // use guid;
 // use table;
 
+pub const EFI_BOOT_SERVICES_SIGNATURE: UINTN = 0x56524553544f4f42;
+pub const EFI_BOOT_SERVICES_REVISION: UINTN = EFI_SPECIFICATION_VERSION;
 
 #[repr(C)]
 pub struct EFI_BOOT_SERVICES {
