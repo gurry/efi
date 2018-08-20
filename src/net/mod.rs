@@ -158,13 +158,21 @@ impl Tcp4Stream {
     fn connect(addr: SocketAddrV4) -> Result<Self> {
         // TODO: this function is too ugly right now. Refactor/clean it up.
         let ip: EFI_IPv4_ADDRESS = (*addr.ip()).into();
+
+        let dhcp_config = dhcp::cached_dhcp_config()?
+                .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
+
+        let station_ip = if let IpAddr::V4(ip) = dhcp_config.ip() { ip.into() } else { EFI_IPv4_ADDRESS::zero() };
+        let subnet_mask = if let IpAddr::V4(ip) = dhcp_config.subnet_mask() { ip.into() } else { EFI_IPv4_ADDRESS::zero() };
         let config_data = EFI_TCP4_CONFIG_DATA {
             TypeOfService: 0,
             TimeToLive: 255,
             AccessPoint: EFI_TCP4_ACCESS_POINT {
-                UseDefaultAddress: TRUE,
-                StationAddress: EFI_IPv4_ADDRESS::zero(),
-                SubnetMask: EFI_IPv4_ADDRESS::zero(),
+                UseDefaultAddress: FALSE,
+                // TODO: make the use of DefaultAddress here vs using the addr from the DHCP config 
+                // configurable via some settings on this class similar to Rust std lib
+                StationAddress: station_ip, //EFI_IPv4_ADDRESS::zero(),
+                SubnetMask: subnet_mask, //EFI_IPv4_ADDRESS::zero(),
                 StationPort: 0,
                 RemoteAddress: ip,
                 RemotePort: addr.port(),
@@ -407,6 +415,11 @@ impl Udp4Socket {
 
     fn connect(addr: SocketAddrV4) -> Result<Self> {
         let ip: EFI_IPv4_ADDRESS = (*addr.ip()).into();
+        let dhcp_config = dhcp::cached_dhcp_config()?
+                .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
+
+        let station_ip = if let IpAddr::V4(ip) = dhcp_config.ip() { ip.into() } else { EFI_IPv4_ADDRESS::zero() };
+        let subnet_mask = if let IpAddr::V4(ip) = dhcp_config.subnet_mask() { ip.into() } else { EFI_IPv4_ADDRESS::zero() };
         let config_data = EFI_UDP4_CONFIG_DATA {
             AcceptBroadcast: FALSE,
             AcceptPromiscuous: FALSE,
@@ -417,9 +430,11 @@ impl Udp4Socket {
             DoNotFragment: TRUE,
             ReceiveTimeout: 0,
             TransmitTimeout: 0,
-            UseDefaultAddress: TRUE,
-            StationAddress: EFI_IPv4_ADDRESS::zero(),
-            SubnetMask: EFI_IPv4_ADDRESS::zero(),
+            UseDefaultAddress: FALSE,
+            // TODO: make the use of DefaultAddress here vs using the addr from the DHCP config 
+            // configurable via some settings on this class similar to Rust std lib
+            StationAddress: station_ip, //EFI_IPv4_ADDRESS::zero(),
+            SubnetMask: subnet_mask, //EFI_IPv4_ADDRESS::zero(),
             StationPort: 0,
             RemoteAddress: ip,
             RemotePort: addr.port(),
