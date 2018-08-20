@@ -23,7 +23,9 @@ use ffi::{
     boot_services::{
         EFI_BOOT_SERVICES,
         EVT_NOTIFY_WAIT,
+        EVT_NOTIFY_SIGNAL,
         TPL_CALLBACK,
+        TPL_NOTIFY,
         EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL,
     },
     tcp4::{
@@ -132,6 +134,12 @@ extern "win64" fn empty_cb(_event: EFI_EVENT, _context: *const VOID) -> EFI_STAT
     EFI_SUCCESS
 }
 
+static mut RECV_DONE: bool = false;
+extern "win64" fn recv_cb(_event: EFI_EVENT, _context: *const VOID) -> EFI_STATUS {
+    unsafe { RECV_DONE = true };
+    EFI_SUCCESS
+}
+
 impl Tcp4Stream {
     fn new() -> Self {
         Self { 
@@ -170,7 +178,7 @@ impl Tcp4Stream {
             // TODO: is there a better way than using a macro to return early? How about newtyping the usize return type of FFI calls and then working off that?
             ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_WAIT, TPL_CALLBACK, empty_cb, ptr::null(), &mut stream.connect_token.CompletionToken.Event));
             ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_WAIT, TPL_CALLBACK, empty_cb, ptr::null(), &mut stream.send_token.CompletionToken.Event));
-            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_WAIT, TPL_CALLBACK, empty_cb, ptr::null(), &mut stream.recv_token.CompletionToken.Event));
+            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_SIGNAL, TPL_NOTIFY, recv_cb, ptr::null(), &mut stream.recv_token.CompletionToken.Event));
             ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_WAIT, TPL_CALLBACK, empty_cb, ptr::null(), &mut stream.close_token.CompletionToken.Event));
 
             ret_on_err!(((*stream.bs).LocateProtocol)(&EFI_TCP4_SERVICE_BINDING_PROTOCOL_GUID, ptr::null() as *const VOID, mem::transmute(&stream.binding_protocol)));
@@ -253,10 +261,15 @@ impl Tcp4Stream {
         };
 
 
+        unsafe { RECV_DONE = false };
         self.recv_token.Packet.RxData =  &recv_data;
         ret_on_err!(unsafe { ((*self.protocol).Receive)(self.protocol, &self.recv_token) });
 
-        unsafe { self.wait_for_evt(&self.recv_token.CompletionToken.Event)? };
+        // TODO: add a read timeout. Can be done by setting a timer for the length of the timeout
+        while unsafe { !RECV_DONE } {
+            ret_on_err!(unsafe { ((*self.protocol).Poll)(self.protocol) });
+        }
+
         to_res(recv_data.DataLength as usize, self.recv_token.CompletionToken.Status)
     }
 
@@ -277,6 +290,7 @@ impl Tcp4Stream {
         self.send_token.Packet.TxData =  &send_data;
         ret_on_err!(unsafe { ((*self.protocol).Transmit)(self.protocol, &self.send_token) });
 
+        // TODO: Add polling here to make transmit fast just like we do in read_buf above.
         unsafe { self.wait_for_evt(&self.send_token.CompletionToken.Event)? }; // TODO: Make sure we also check the status on the Event.Status field
         // TODO: is it okay to return buf len below? Would UEFI every tranmist part of the buffer. 
         // The documentation is unclear about this. Check this with experimentation
