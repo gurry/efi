@@ -222,6 +222,8 @@ impl Tcp4Stream {
             stream.is_connected = true;
         }
 
+        // TODO: We should try to close all events that have been created if we're returning early
+
         Ok(stream)
     }
 
@@ -468,6 +470,8 @@ impl Udp4Socket {
                 ret_on_err!(status);
             }
         }
+
+        // TODO: We should try to close all events that have been created if we're returning early
 
         Ok(socket)
     }

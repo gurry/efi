@@ -138,6 +138,9 @@ impl BootServerConfig {
 
 // TODO expose public apis to check if DHCP has already happned or not.
 // Same for PXE
+// TODO: In case of multiple network cards we'll have to return
+// multiple configs. We can do that by locating _all_ pxe protocols 
+// and getting config from each.
 pub fn cached_dhcp_config() -> Result<Option<DhcpConfig>> {
     let pxe = locate_pxe_protocol()?;
     let mode = pxe.mode().ok_or_else::<EfiError, _>(|| EfiErrorKind::ProtocolError.into())?;
