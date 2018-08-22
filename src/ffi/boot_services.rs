@@ -145,6 +145,7 @@ pub type EFI_WAIT_FOR_EVENT = extern "win64" fn(
 ) -> EFI_STATUS;
 
 #[derive(Debug)]
+#[repr(C)]
 pub enum EFI_INTERFACE_TYPE {
     EFI_NATIVE_INTERFACE = 0
 }
