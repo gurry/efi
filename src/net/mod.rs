@@ -61,6 +61,7 @@ pub use self::addr::*;
 pub mod addr;
 pub mod dns;
 pub mod dhcp;
+pub mod ifconfig;
 mod parser;
 
 // TODO: There are no timeouts anywhere (e.g. connect, read, write etc.). Add timeouts at all those places

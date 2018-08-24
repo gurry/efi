@@ -10,6 +10,8 @@
 #![feature(align_offset)]
 #![recursion_limit="100"] // Needed for the dns module (because it does recursive name resolution)
 #![feature(exact_chunks)]
+#![feature(ptr_internals)]
+
 // #![warn(missing_debug_implementations)]
 
 #[macro_use] extern crate failure;

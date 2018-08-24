@@ -94,7 +94,6 @@ pub type EFI_CONNECT_CONTROLLER = *const NOT_DEFINED;
 pub type EFI_DISCONNECT_CONTROLLER = *const NOT_DEFINED;
 pub type EFI_OPEN_PROTOCOL_INFORMATION = *const NOT_DEFINED;
 pub type EFI_PROTOCOLS_PER_HANDLE = *const NOT_DEFINED;
-pub type EFI_LOCATE_HANDLE_BUFFER = *const NOT_DEFINED;
 pub type EFI_INSTALL_MULTIPLE_PROTOCOL_INTERFACES = *const NOT_DEFINED;
 pub type EFI_UNINSTALL_MULTIPLE_PROTOCOL_INTERFACES = *const NOT_DEFINED;
 pub type EFI_CALCULATE_CRC32 = *const NOT_DEFINED;
@@ -191,6 +190,25 @@ pub type EFI_CLOSE_PROTOCOL = extern "win64" fn(
   ControllerHandle: EFI_HANDLE
 ) -> EFI_STATUS;
 
+#[repr(C)]
+pub enum EFI_LOCATE_SEARCH_TYPE {
+  /// Retrieve all the handles in the handle database.
+  AllHandles,
+  /// Retrieve the next handle fron a RegisterProtocolNotify() event.
+  ByRegisterNotify,
+  /// Retrieve the set of handles from the handle database that support a 
+  /// specified protocol.
+  ByProtocol
+}
+
+pub type EFI_LOCATE_HANDLE_BUFFER = extern "win64" fn(
+    SearchType: EFI_LOCATE_SEARCH_TYPE,
+    Protocol: *const EFI_GUID,
+    SearchKey: *const VOID,
+    NoHandles: *mut UINTN,
+    Buffer: *mut *const EFI_HANDLE
+) -> EFI_STATUS;
+ 
 pub type EFI_LOCATE_PROTOCOL = extern "win64" fn(
     Protocol: *const EFI_GUID,
     Registration: *const VOID,
