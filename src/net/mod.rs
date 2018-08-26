@@ -69,7 +69,7 @@ pub struct TcpStream {
     tcp4_stream: Tcp4Stream,
 }
 
-fn for_ip4_only<A: ToSocketAddrs, S>(addr: A, callback: fn(SocketAddrV4) -> Result<S>) -> Result<S> {
+fn for_ip4_only<A: ToSocketAddrs, F: FnMut(SocketAddrV4) -> Result<S>, S>(addr: A, mut callback: F) -> Result<S> {
     let socket_addrs = addr.to_socket_addrs().map_err(|_| ::EfiError::from(::EfiErrorKind::DeviceError))?; // Not just doing into() on EfiErrKind because compiler wants type annotations
 
     for addr in socket_addrs {
@@ -170,8 +170,6 @@ impl Tcp4Stream {
             TimeToLive: 255,
             AccessPoint: EFI_TCP4_ACCESS_POINT {
                 UseDefaultAddress: FALSE,
-                // TODO: make the use of DefaultAddress here vs using the addr from the DHCP config 
-                // configurable via some settings on this class similar to Rust std lib
                 StationAddress: station_ip, //EFI_IPv4_ADDRESS::zero(),
                 SubnetMask: subnet_mask, //EFI_IPv4_ADDRESS::zero(),
                 StationPort: 0,
@@ -382,18 +380,51 @@ pub struct UdpSocket {
 }
 
 impl UdpSocket {
-    pub fn connect<A: ToSocketAddrs>(addr: A) -> Result<Self> {
-        Ok(Self {udp4_socket: for_ip4_only(addr, |addr| Udp4Socket::connect(addr))? })
+    pub fn bind<A: ToSocketAddrs>(addr: A) -> Result<Self> {
+        Ok(Self {udp4_socket: for_ip4_only(addr, |addr| Udp4Socket::bind(addr))? })
     }
 
-    pub fn recv(&mut self, buf: &mut [u8]) -> Result<usize> {
+    pub fn connect<A: ToSocketAddrs>(&mut self, addr: A) -> Result<()> {
+        for_ip4_only(addr, |addr| self.udp4_socket.connect(addr))
+    }
+
+    pub fn recv(&self, buf: &mut [u8]) -> Result<usize> {
         self.udp4_socket.recv_buf(buf)
     }
 
+    // TODO: need to make self non-mut just like in the std lib
     pub fn send(&mut self, buf: &[u8]) -> Result<usize> {
-        self.udp4_socket.send_buf(buf)
+        self.udp4_socket.send_buf(buf, None)
+    }
+
+    // TODO: implement recv_from() as well
+
+    // TODO: need to make self non-mut just like in the std lib
+    pub fn send_to<A: ToSocketAddrs>(&mut self, buf: &[u8], addr: A) -> Result<usize> {
+        let mut last_error = EfiError::from(EfiErrorKind::InvalidParameter);
+        let socket_addrs = addr.to_socket_addrs().map_err(|_| ::EfiError::from(::EfiErrorKind::DeviceError))?; // Not just doing into() on EfiErrKind because compiler wants type annotations
+        for addr in socket_addrs {
+            if let SocketAddr::V4(addr) = addr {
+                let session_data = EFI_UDP4_SESSION_DATA{
+                    SourceAddress: Ipv4Addr::unspecified().into(), // Unspecified to use the socket's configured addr
+                    SourcePort: 0, // zero to use the socket's configured port
+                    DestinationAddress: (*addr.ip()).into(),
+                    DestinationPort: addr.port(),
+                };
+                match self.udp4_socket.send_buf(buf, Some(&session_data)) {
+                    Ok(s) => return Ok(s),
+                    Err(e) => {
+                        last_error = e;
+                        continue;
+                    },
+                };
+            }
+        }
+
+        Err(last_error)
     }
 }
+
 
 struct Udp4Socket {
     bs: *const EFI_BOOT_SERVICES,
@@ -402,28 +433,25 @@ struct Udp4Socket {
     device_handle: EFI_HANDLE,
     recv_token: EFI_UDP4_COMPLETION_TOKEN,
     send_token: EFI_UDP4_COMPLETION_TOKEN,
+    current_config: EFI_UDP4_CONFIG_DATA,
 }
 
 impl Udp4Socket {
-    fn new() -> Self {
-        Udp4Socket {
-            bs: system_table().BootServices,
-            binding_protocol: ptr::null() as *const EFI_SERVICE_BINDING_PROTOCOL,
-            protocol: ptr::null() as *const EFI_UDP4_PROTOCOL,
-            device_handle: ptr::null() as EFI_HANDLE,
-            recv_token: EFI_UDP4_COMPLETION_TOKEN::default(),
-            send_token: EFI_UDP4_COMPLETION_TOKEN::default(),
-        }
-    }
+    pub fn bind(addr: SocketAddrV4) -> Result<Self> {
+        let station_addr = *addr.ip();
+        let subnet_mask = if station_addr.is_unspecified() {
+            // If the station addr is unspecified then the subnet mask is unspecified as well
+            Ipv4Addr::unspecified()
+        } else {
+            // If not station addr is not unspecified then we locate the interface associated with this IP
+            // and get its subnet mask
+            let matching_interface = ifconfig::interfaces()?.into_iter()
+                                        .find(|i| i.station_address_ipv4() == station_addr)
+                                        .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
+            matching_interface.subnet_mask_ipv4()
+        };
 
-    fn connect(addr: SocketAddrV4) -> Result<Self> {
-        let ip: EFI_IPv4_ADDRESS = (*addr.ip()).into();
-        let dhcp_config = dhcp::cached_dhcp_config()?
-                .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
-
-        let station_ip = if let IpAddr::V4(ip) = dhcp_config.ip() { ip.into() } else { EFI_IPv4_ADDRESS::zero() };
-        let subnet_mask = if let IpAddr::V4(ip) = dhcp_config.subnet_mask() { ip.into() } else { EFI_IPv4_ADDRESS::zero() };
-        let config_data = EFI_UDP4_CONFIG_DATA {
+        let config = EFI_UDP4_CONFIG_DATA {
             AcceptBroadcast: FALSE,
             AcceptPromiscuous: FALSE,
             AcceptAnyPort: FALSE,
@@ -436,13 +464,22 @@ impl Udp4Socket {
             UseDefaultAddress: FALSE,
             // TODO: make the use of DefaultAddress here vs using the addr from the DHCP config 
             // configurable via some settings on this class similar to Rust std lib
-            StationAddress: station_ip, //EFI_IPv4_ADDRESS::zero(),
-            SubnetMask: subnet_mask, //EFI_IPv4_ADDRESS::zero(),
-            StationPort: 0,
-            RemoteAddress: ip,
-            RemotePort: addr.port(),
+            StationAddress: station_addr.into(),
+            SubnetMask: subnet_mask.into(),
+            StationPort: addr.port(),
+            RemoteAddress: Ipv4Addr::unspecified().into(), // Unspecified means we're not connecting to any remote addr
+            RemotePort: 0, // 0 means we're not connecting to any remote port
         };
-        let mut socket = Self::new();
+
+        let mut socket = Udp4Socket {
+            bs: system_table().BootServices,
+            binding_protocol: ptr::null() as *const EFI_SERVICE_BINDING_PROTOCOL,
+            protocol: ptr::null() as *const EFI_UDP4_PROTOCOL,
+            device_handle: ptr::null() as EFI_HANDLE,
+            recv_token: EFI_UDP4_COMPLETION_TOKEN::default(),
+            send_token: EFI_UDP4_COMPLETION_TOKEN::default(),
+            current_config: config,
+        };
 
         unsafe {
             ret_on_err!(((*socket.bs).CreateEvent)(EVT_NOTIFY_WAIT, TPL_CALLBACK, empty_cb, ptr::null(), &mut socket.send_token.Event));
@@ -456,7 +493,7 @@ impl Udp4Socket {
                 image_handle(),
                 ptr::null() as EFI_HANDLE,
                 EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL)); // TODO: BY_HANDLE is used for applications. Drivers should use GET. Will we ever support drivers?
-            let status = ((*socket.protocol).Configure)(socket.protocol, &config_data);
+            let status = ((*socket.protocol).Configure)(socket.protocol, &socket.current_config);
             if status == EFI_NO_MAPPING { // Wait until the IP configuration process (probably DHCP) has finished
                 let mut ip_mode_data = EFI_IP4_MODE_DATA::new();
                 loop {
@@ -466,15 +503,26 @@ impl Udp4Socket {
                     if ip_mode_data.IsConfigured == TRUE { break }
                 }
 
-                ret_on_err!(((*socket.protocol).Configure)(socket.protocol, &config_data));
+                ret_on_err!(((*socket.protocol).Configure)(socket.protocol, &socket.current_config));
             } else {
                 ret_on_err!(status);
             }
-        }
+       }
+
+       // TODO: set up routes here as well. 
 
         // TODO: We should try to close all events that have been created if we're returning early
 
         Ok(socket)
+    }
+
+    pub fn connect(&mut self, addr: SocketAddrV4) -> Result<()> {
+        self.current_config.RemoteAddress = (*addr.ip()).into();
+        self.current_config.RemotePort = addr.port();
+        unsafe {
+            ret_on_err!(((*self.protocol).Configure)(self.protocol, &self.current_config));
+        }
+        Ok(())
     }
 
     unsafe fn wait_for_evt(&self, event: *const EFI_EVENT) -> Result<()> {
@@ -483,7 +531,7 @@ impl Udp4Socket {
         to_res((), status)
     }
 
-    fn recv_buf(&mut self, buf: &mut [u8]) -> Result<usize> {
+    fn recv_buf(&self, buf: &mut [u8]) -> Result<usize> {
         ret_on_err!(unsafe { ((*self.protocol).Receive)(self.protocol, &self.recv_token) });
 
         let buffer_length: usize;
@@ -501,14 +549,14 @@ impl Udp4Socket {
         to_res(buffer_length, self.recv_token.Status)
     }
 
-    fn send_buf(&mut self, buf: &[u8]) -> Result<usize> {
+    fn send_buf(&mut self, buf: &[u8], session_data: Option<&EFI_UDP4_SESSION_DATA>) -> Result<usize> {
         let fragment_data = EFI_UDP4_FRAGMENT_DATA {
             FragmentLength: buf.len() as UINT32,
             FragmentBuffer: buf.as_ptr() as *const VOID
         };
 
         let send_data = EFI_UDP4_TRANSMIT_DATA {
-            UdpSessionData: ptr::null() as *const EFI_UDP4_SESSION_DATA,
+            UdpSessionData: if session_data.is_some() { session_data.unwrap() } else { ptr::null() as *const EFI_UDP4_SESSION_DATA },
             GatewayAddress: ptr::null() as *const EFI_IPv4_ADDRESS,
             DataLength: buf.len() as UINT32,
             FragmentCount: 1,

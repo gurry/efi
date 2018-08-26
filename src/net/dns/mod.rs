@@ -51,8 +51,8 @@ impl DnsServer {
         let mut builder = Builder::new_query(1, true);
         builder.add_question(hostname, false, QueryType::A, QueryClass::IN);
         let packet = builder.build().map_err(|_| ::EfiErrorKind::DeviceError)?; 
-        let mut socket = UdpSocket::connect(self.addr)?;
-        socket.send(&packet)?;
+        let mut socket = UdpSocket::bind("0.0.0.0:0")?;
+        socket.send_to(&packet, self.addr)?;
         let mut buf = [0u8; 4096];
         socket.recv(&mut buf)?; // TODO: Add timeout to this call. Or it may be stuck forever.
         let pkt = Packet::parse(&buf).unwrap();
