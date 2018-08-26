@@ -87,16 +87,16 @@ pub fn interfaces() -> Result<Vec<Interface>> {
     let bs = system_table().BootServices;
 
     let mut no_of_handles = 0;
-    let handle_buf: *mut *const EFI_HANDLE = ptr::null_mut();
+    let mut handle_buf: *const EFI_HANDLE = ptr::null_mut();
     unsafe {
-      ret_on_err!(((*bs).LocateHandleBuffer)(EFI_LOCATE_SEARCH_TYPE::ByProtocol, &EFI_IP4_SERVICE_BINDING_PROTOCOL_GUID, ptr::null() as *const VOID, &mut no_of_handles, handle_buf));
+      ret_on_err!(((*bs).LocateHandleBuffer)(EFI_LOCATE_SEARCH_TYPE::ByProtocol, &EFI_IP4_SERVICE_BINDING_PROTOCOL_GUID, ptr::null() as *const VOID, &mut no_of_handles, &mut handle_buf));
     }
 
     if no_of_handles == 0 || handle_buf.is_null() {
         return Ok(Vec::new());
     }
 
-    let handle_buf = unsafe { EfiBox::from_raw(handle_buf) };  // Putting it in a box for proper cleanup on exit
+    let handle_buf = unsafe { EfiBox::from_raw(handle_buf as *mut EFI_HANDLE) };  // Putting it in a box for proper cleanup on exit
 
     let handles = unsafe { slice::from_raw_parts_mut(handle_buf.as_raw() as *mut EFI_HANDLE, no_of_handles) };
     
@@ -104,16 +104,18 @@ pub fn interfaces() -> Result<Vec<Interface>> {
     let mut interfaces = Vec::new();
     for handle in handles.iter() {
         // config protocol and service binding protocol are installed on the same handle.
-        let config_proto = ptr::null::<EFI_IP4_CONFIG_PROTOCOL>() as *mut EFI_IP4_CONFIG_PROTOCOL;
+        let config_proto = ptr::null::<EFI_IP4_CONFIG_PROTOCOL>() as *const EFI_IP4_CONFIG_PROTOCOL;
         unsafe {
         ret_on_err!(((*bs).OpenProtocol)(*handle,
                     &EFI_IP4_CONFIG_PROTOCOL_GUID,
                     mem::transmute(&config_proto),
                     image_handle(),
-                    ptr::null() as EFI_HANDLE,
+                    ptr::null(),
                     EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL));
         }
 
+        // TODO: add code to wait for IP protocol to initialize here.
+        // Otherwise we get a no mapping error
         let mut data_size = 0;
         let status = unsafe { ((*config_proto).GetData)(config_proto, &mut data_size, ptr::null_mut()) };
 
