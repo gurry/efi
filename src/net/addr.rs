@@ -14,6 +14,14 @@ impl Ipv4Addr {
         })
     }
 
+    pub fn localhost() -> Ipv4Addr {
+        Ipv4Addr::new(127, 0, 0, 1)
+    }
+
+    pub fn unspecified() -> Ipv4Addr {
+        Ipv4Addr::new(0, 0, 0, 0)
+    }
+
     pub fn octets(&self) -> [u8; 4] {
         self.0.Addr
     }
@@ -237,6 +245,14 @@ impl Ipv6Addr {
         Ipv6Addr(EFI_IPv6_ADDRESS {
             Addr: unsafe { mem::transmute([a, b, c, d, e, f, g, h]) } // Transmuting from an 8 elem array of u16 to 16 elem array of UINT8
         })
+    }
+
+    pub fn localhost() -> Ipv6Addr {
+        Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1)
+    }
+
+    pub fn unspecified() -> Ipv6Addr {
+        Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0)
     }
 
     pub fn segments(&self) -> [u16; 8] {
