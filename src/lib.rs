@@ -61,6 +61,7 @@ pub fn init_env(image_handle: EFI_HANDLE, system_table: *const EFI_SYSTEM_TABLE)
     }
 }
 
+#[inline]
 pub fn system_table() -> &'static EFI_SYSTEM_TABLE {
     unsafe {
         transmute(SYSTEM_TABLE.expect("lib uninitalized"))
@@ -68,6 +69,7 @@ pub fn system_table() -> &'static EFI_SYSTEM_TABLE {
 }
 
 // TODO: if a function (like this) returns an raw pointer, shouldn't it be marked unsafe?
+#[inline]
 pub fn image_handle() -> EFI_HANDLE {
     unsafe {
         IMAGE_HANDLE.expect("lib uninitalized")
