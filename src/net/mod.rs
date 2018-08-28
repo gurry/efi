@@ -517,12 +517,21 @@ impl Udp4Socket {
     }
 
     pub fn connect(&mut self, addr: SocketAddrV4) -> Result<()> {
+        let prev_remote_addr = self.current_config.RemoteAddress;
+        let prev_remote_port = self.current_config.RemotePort;
         self.current_config.RemoteAddress = (*addr.ip()).into();
         self.current_config.RemotePort = addr.port();
-        unsafe {
-            ret_on_err!(((*self.protocol).Configure)(self.protocol, &self.current_config));
+        let status = unsafe { ((*self.protocol).Configure)(self.protocol, &self.current_config) };
+
+        match status {
+            EFI_SUCCESS => Ok(()),
+            e => {
+                // Restore old values since we failed
+                self.current_config.RemoteAddress = prev_remote_addr;
+                self.current_config.RemotePort = prev_remote_port;
+                Err(e.into())
+            },
         }
-        Ok(())
     }
 
     unsafe fn wait_for_evt(&self, event: *const EFI_EVENT) -> Result<()> {
