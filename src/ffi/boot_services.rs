@@ -76,9 +76,7 @@ pub type EFI_RESTORE_TPL = *const NOT_DEFINED;
 pub type EFI_ALLOCATE_PAGES = *const NOT_DEFINED;
 pub type EFI_FREE_PAGES = *const NOT_DEFINED;
 pub type EFI_GET_MEMORY_MAP = *const NOT_DEFINED;
-pub type EFI_SET_TIMER = *const NOT_DEFINED;
-pub type EFI_SIGNAL_EVENT = *const NOT_DEFINED;
-pub type EFI_CHECK_EVENT = *const NOT_DEFINED;
+
 pub type EFI_REINSTALL_PROTOCOL_INTERFACE = *const NOT_DEFINED;
 pub type EFI_HANDLE_PROTOCOL = *const NOT_DEFINED;
 pub type EFI_REGISTER_PROTOCOL_NOTIFY = *const NOT_DEFINED;
@@ -137,10 +135,32 @@ pub type EFI_CLOSE_EVENT = extern "win64" fn(
     Event: EFI_EVENT 
 ) -> EFI_STATUS;
 
+pub type EFI_SIGNAL_EVENT = extern "win64" fn(
+    Event: EFI_EVENT
+) -> EFI_STATUS;
+
 pub type EFI_WAIT_FOR_EVENT = extern "win64" fn(
     NumberOfEvents: UINTN,
     Event: *const EFI_EVENT,
     Index: *mut UINTN
+) -> EFI_STATUS;
+
+pub type EFI_CHECK_EVENT = extern "win64" fn(
+    Event: EFI_EVENT
+) -> EFI_STATUS;
+
+#[derive(Debug)]
+#[repr(C)]
+pub enum EFI_TIMER_DELAY {
+    TimerCancel,
+    TimerPeriodic,
+    TimerRelative
+}
+
+pub type EFI_SET_TIMER = extern "win64" fn(
+    Event: EFI_EVENT,
+    Type: EFI_TIMER_DELAY,
+    TriggerTime: UINT64
 ) -> EFI_STATUS;
 
 #[derive(Debug)]

@@ -11,6 +11,7 @@
 #![recursion_limit="100"] // Needed for the dns module (because it does recursive name resolution)
 #![feature(exact_chunks)]
 #![feature(ptr_internals)]
+#![feature(duration_extras)]
 
 // #![warn(missing_debug_implementations)]
 
@@ -26,6 +27,7 @@ pub mod net;
 pub mod image;
 pub mod device_path;
 pub mod boxed;
+pub mod boot_services;
 mod allocator;
 
 // Hack: this std declartion is to work around a bug in failure crate
