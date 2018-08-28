@@ -12,6 +12,7 @@
 #![feature(exact_chunks)]
 #![feature(ptr_internals)]
 #![feature(duration_extras)]
+#![feature(duration_from_micros)]
 
 // #![warn(missing_debug_implementations)]
 

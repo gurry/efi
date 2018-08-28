@@ -44,6 +44,7 @@ pub type EFI_UDP4_GET_MODE_DATA = extern "win64" fn(
 ) -> EFI_STATUS;
 
 #[repr(C)]
+#[derive(Clone)]
 pub struct EFI_UDP4_CONFIG_DATA {
     //Receiving Filters
     pub AcceptBroadcast: BOOLEAN,

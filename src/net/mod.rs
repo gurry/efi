@@ -55,7 +55,7 @@ use ffi::{
     ip4::EFI_IP4_MODE_DATA,
 };
 
-use core::{ptr, mem, ops::Drop};
+use core::{ptr, mem, ops::Drop, time::Duration};
 pub use self::addr::*;
 
 pub mod addr;
@@ -423,6 +423,22 @@ impl UdpSocket {
 
         Err(last_error)
     }
+
+    pub fn set_read_timeout(&mut self, dur: Option<Duration>) -> Result<()> {
+        self.udp4_socket.set_read_timeout(dur)
+    }
+
+    pub fn set_write_timeout(&mut self, dur: Option<Duration>) -> Result<()> {
+        self.udp4_socket.set_write_timeout(dur)
+    }
+
+    pub fn read_timeout(&self) -> Result<Option<Duration>> {
+        self.udp4_socket.read_timeout()
+    }
+
+    pub fn write_timeout(&self) -> Result<Option<Duration>> {
+        self.udp4_socket.write_timeout()
+    }
 }
 
 
@@ -517,21 +533,10 @@ impl Udp4Socket {
     }
 
     pub fn connect(&mut self, addr: SocketAddrV4) -> Result<()> {
-        let prev_remote_addr = self.current_config.RemoteAddress;
-        let prev_remote_port = self.current_config.RemotePort;
-        self.current_config.RemoteAddress = (*addr.ip()).into();
-        self.current_config.RemotePort = addr.port();
-        let status = unsafe { ((*self.protocol).Configure)(self.protocol, &self.current_config) };
-
-        match status {
-            EFI_SUCCESS => Ok(()),
-            e => {
-                // Restore old values since we failed
-                self.current_config.RemoteAddress = prev_remote_addr;
-                self.current_config.RemotePort = prev_remote_port;
-                Err(e.into())
-            },
-        }
+        self.configure(&mut |config: &mut EFI_UDP4_CONFIG_DATA| {
+            config.RemoteAddress = (*addr.ip()).into();
+            config.RemotePort = addr.port();
+        })
     }
 
     unsafe fn wait_for_evt(&self, event: *const EFI_EVENT) -> Result<()> {
@@ -577,6 +582,56 @@ impl Udp4Socket {
 
         unsafe { self.wait_for_evt(&self.send_token.Event)? }; // TODO: Make sure we also check the status on the Event.Status field
         to_res(buf.len(), self.send_token.Status)
+    }
+
+    fn to_micros_timeout(dur: Option<Duration>) -> Result<u32> {
+        const MICROS_IN_A_SEC: u64 = 1000_000;
+        let timeout = if let Some(dur) = dur {
+            dur.as_secs() * MICROS_IN_A_SEC + dur.subsec_micros() as u64
+        } else {
+            0
+        };
+
+        if timeout > ::core::u32::MAX as u64 {
+            return Err(EfiErrorKind::InvalidParameter.into())
+        }
+
+        Ok(timeout as u32)
+    }
+
+    pub fn set_read_timeout(&mut self, dur: Option<Duration>) -> Result<()> {
+        let timeout = Self::to_micros_timeout(dur)?;
+        self.configure(&mut |config: &mut EFI_UDP4_CONFIG_DATA| config.ReceiveTimeout = timeout)
+    }
+
+    pub fn set_write_timeout(&mut self, dur: Option<Duration>) -> Result<()> {
+        let timeout = Self::to_micros_timeout(dur)?;
+        self.configure(&mut |config: &mut EFI_UDP4_CONFIG_DATA| config.TransmitTimeout = timeout)
+    }
+
+    pub fn read_timeout(&self) -> Result<Option<Duration>> {
+        Ok(Some(Duration::from_micros(self.current_config.ReceiveTimeout as u64)))
+    }
+
+    pub fn write_timeout(&self) -> Result<Option<Duration>> {
+        Ok(Some(Duration::from_micros(self.current_config.TransmitTimeout as u64)))
+    }
+
+    fn configure(&mut self, change_config: &mut FnMut(&mut EFI_UDP4_CONFIG_DATA)) -> Result<()> {
+        let prev_config = self.current_config.clone();
+
+        change_config(&mut self.current_config);
+
+        let status = unsafe { ((*self.protocol).Configure)(self.protocol, &self.current_config) };
+
+        match status {
+            EFI_SUCCESS => Ok(()),
+            e => {
+                // Restore old config since we failed
+                self.current_config = prev_config;
+                Err(e.into())
+            },
+        }
     }
 }
 
