@@ -211,11 +211,15 @@ impl TimerSchedule {
         }
     }
 }
+pub enum TimerState {
+    Active,
+    Inactive,
+}
 
 pub struct Timer(EFI_EVENT);
 
 impl Timer {
-    pub fn create(interval: Duration, schedule: TimerSchedule, tpl: EventTpl) -> Result<Self> {
+    pub fn create(interval: Duration, schedule: TimerSchedule, state: TimerState, tpl: EventTpl) -> Result<Self> {
         let bs = system_table().BootServices;
         let mut event: EFI_EVENT = ptr::null();
         unsafe {
@@ -223,7 +227,10 @@ impl Timer {
         }
 
         let mut timer = Timer(event);
-        timer.set(interval, schedule)?;
+        match state {
+            TimerState::Active => timer.set(interval, schedule)?,
+            _ => (),
+        };
 
         Ok(timer)
     }
