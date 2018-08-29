@@ -227,27 +227,26 @@ impl Tcp4Stream {
     }
 
     fn peer_addr(&self) -> Result<SocketAddrV4> {
-        let mut config_data = EFI_TCP4_CONFIG_DATA::default();
-        self.get_config_data(&mut config_data)?;
+        let config_data = self.get_config_data()?;
         Ok(SocketAddrV4::new(config_data.AccessPoint.RemoteAddress.into(), config_data.AccessPoint.RemotePort))
     }
 
     fn local_addr(&self) -> Result<SocketAddrV4> {
-        let mut config_data = EFI_TCP4_CONFIG_DATA::default();
-        self.get_config_data(&mut config_data)?;
+        let config_data = self.get_config_data()?;
         Ok(SocketAddrV4::new(config_data.AccessPoint.StationAddress.into(), config_data.AccessPoint.StationPort))
     }
 
-    fn get_config_data(&self, config_data: &mut EFI_TCP4_CONFIG_DATA) -> Result<()> {
+    fn get_config_data(&self) -> Result<EFI_TCP4_CONFIG_DATA> {
+        let mut config_data = EFI_TCP4_CONFIG_DATA::default();
         unsafe {
             ret_on_err!(((*self.protocol).GetModeData)(self.protocol, 
                 ptr::null_mut(),
-                config_data,
+                &mut config_data,
                 ptr::null_mut(),
                 ptr::null_mut(),
                 ptr::null_mut()));
         }
-        Ok(())
+        Ok(config_data)
     }
 
     unsafe fn wait_for_evt(&self, event: *const EFI_EVENT) -> Result<()> {
