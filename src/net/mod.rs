@@ -5,7 +5,8 @@ use ::{
     EfiError,
     EfiErrorKind,
     to_res,
-    io::{self, Read, Write}
+    io::{self, Read, Write},
+    boot_services::{self, TimerSchedule, TimerState, EventTpl, Wait},
 };
 use ffi::{
     TRUE,
@@ -14,6 +15,7 @@ use ffi::{
     EFI_HANDLE,
     EFI_STATUS,
     EFI_SUCCESS,
+    EFI_NOT_READY,
     EFI_IPv4_ADDRESS,
     UINTN,
     UINT32,
@@ -135,10 +137,18 @@ extern "win64" fn empty_cb(_event: EFI_EVENT, _context: *const VOID) -> EFI_STAT
     EFI_SUCCESS
 }
 
-static mut RECV_DONE: bool = false;
-extern "win64" fn recv_cb(_event: EFI_EVENT, _context: *const VOID) -> EFI_STATUS {
-    unsafe { RECV_DONE = true };
+static mut OP_DONE: bool = false;
+extern "win64" fn common_cb(_event: EFI_EVENT, _context: *const VOID) -> EFI_STATUS {
+    unsafe { OP_DONE = true };
     EFI_SUCCESS
+}
+
+fn reset_op_done() {
+    unsafe { OP_DONE = false }
+}
+
+fn op_done() -> bool {
+    unsafe { OP_DONE }
 }
 
 impl Tcp4Stream {
@@ -185,7 +195,7 @@ impl Tcp4Stream {
             // TODO: is there a better way than using a macro to return early? How about newtyping the usize return type of FFI calls and then working off that?
             ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_WAIT, TPL_CALLBACK, empty_cb, ptr::null(), &mut stream.connect_token.CompletionToken.Event));
             ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_WAIT, TPL_CALLBACK, empty_cb, ptr::null(), &mut stream.send_token.CompletionToken.Event));
-            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_SIGNAL, TPL_NOTIFY, recv_cb, ptr::null(), &mut stream.recv_token.CompletionToken.Event));
+            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_SIGNAL, TPL_NOTIFY, common_cb, ptr::null(), &mut stream.recv_token.CompletionToken.Event));
             ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_WAIT, TPL_CALLBACK, empty_cb, ptr::null(), &mut stream.close_token.CompletionToken.Event));
 
             ret_on_err!(((*stream.bs).LocateProtocol)(&EFI_TCP4_SERVICE_BINDING_PROTOCOL_GUID, ptr::null() as *const VOID, mem::transmute(&stream.binding_protocol)));
@@ -269,12 +279,12 @@ impl Tcp4Stream {
         };
 
 
-        unsafe { RECV_DONE = false };
+        reset_op_done();
         self.recv_token.Packet.RxData =  &recv_data;
         ret_on_err!(unsafe { ((*self.protocol).Receive)(self.protocol, &self.recv_token) });
 
         // TODO: add a read timeout. Can be done by setting a timer for the length of the timeout
-        while unsafe { !RECV_DONE } {
+        while !op_done() {
             ret_on_err!(unsafe { ((*self.protocol).Poll)(self.protocol) });
         }
 
@@ -387,7 +397,7 @@ impl UdpSocket {
         for_ip4_only(addr, |addr| self.udp4_socket.connect(addr))
     }
 
-    pub fn recv(&self, buf: &mut [u8]) -> Result<usize> {
+    pub fn recv(&mut self, buf: &mut [u8]) -> Result<usize> {
         self.udp4_socket.recv_buf(buf)
     }
 
@@ -445,6 +455,51 @@ impl UdpSocket {
 
 }
 
+struct Timer {
+    timeout: Option<Duration>,
+    timer: Option<boot_services::Timer>,
+}
+
+impl Timer {
+    fn infinite() -> Self {
+        Self { timeout: None, timer: None}
+    }
+
+    fn set_timeout(&mut self, timeout: Option<Duration>) -> Result<()> {
+        match timeout {
+            Some(timeout) => {
+                    self.timeout = Some(timeout);
+                    self.timer = Some(boot_services::Timer::create(timeout, TimerSchedule::Relative, TimerState::Inactive, EventTpl::Notify)?);
+            },
+            None => {
+                self.timeout = None;
+                self.timer = None;
+            },
+        };
+        Ok(())
+    }
+
+    fn start(&mut self) -> Result<()> {
+        if let Some(ref mut timer) = self.timer {
+            if let Some(timeout) = self.timeout {
+                timer.set(timeout, TimerSchedule::Relative)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn is_expired(&self) -> Result<bool> {
+        if let Some(ref timer) = self.timer {
+            timer.is_signaled()
+        } else {
+            Ok(false)
+        }
+    }
+
+    fn timeout(&self) -> Option<Duration> {
+        self.timeout
+    }
+}
 
 struct Udp4Socket {
     bs: *const EFI_BOOT_SERVICES,
@@ -453,6 +508,8 @@ struct Udp4Socket {
     device_handle: EFI_HANDLE,
     recv_token: EFI_UDP4_COMPLETION_TOKEN,
     send_token: EFI_UDP4_COMPLETION_TOKEN,
+    read_timer: Timer,
+    write_timer: Timer,
 }
 
 impl Udp4Socket {
@@ -497,11 +554,13 @@ impl Udp4Socket {
             device_handle: ptr::null() as EFI_HANDLE,
             recv_token: EFI_UDP4_COMPLETION_TOKEN::default(),
             send_token: EFI_UDP4_COMPLETION_TOKEN::default(),
+            read_timer: Timer::infinite(),
+            write_timer: Timer::infinite(),
         };
 
         unsafe {
             ret_on_err!(((*socket.bs).CreateEvent)(EVT_NOTIFY_WAIT, TPL_CALLBACK, empty_cb, ptr::null(), &mut socket.send_token.Event));
-            ret_on_err!(((*socket.bs).CreateEvent)(EVT_NOTIFY_WAIT, TPL_CALLBACK, empty_cb, ptr::null(), &mut socket.recv_token.Event));
+            ret_on_err!(((*socket.bs).CreateEvent)(EVT_NOTIFY_SIGNAL, TPL_NOTIFY, common_cb, ptr::null(), &mut socket.recv_token.Event));
 
             ret_on_err!(((*socket.bs).LocateProtocol)(&EFI_UDP4_SERVICE_BINDING_PROTOCOL_GUID, ptr::null() as *const VOID, mem::transmute(&socket.binding_protocol)));
             ret_on_err!(((*socket.binding_protocol).CreateChild)(socket.binding_protocol, &mut socket.device_handle));
@@ -547,22 +606,40 @@ impl Udp4Socket {
         to_res((), status)
     }
 
-    fn recv_buf(&self, buf: &mut [u8]) -> Result<usize> {
+    fn recv_buf(&mut self, buf: &mut [u8]) -> Result<usize> {
+        reset_op_done();
         ret_on_err!(unsafe { ((*self.protocol).Receive)(self.protocol, &self.recv_token) });
 
-        let buffer_length: usize;
-        unsafe {
-            self.wait_for_evt(&self.recv_token.Event)?;
-            let buffer = (*self.recv_token.Packet.RxData).FragmentTable[0].FragmentBuffer as *const u8;
-            buffer_length = (*self.recv_token.Packet.RxData).FragmentTable[0].FragmentLength as usize;
-            if buf.len() < buffer_length {
-                return Err(EfiError::from(::ffi::EFI_INVALID_PARAMETER));
+        self.read_timer.start()?;
+        let read_succeeded = loop {
+            let status = unsafe { ((*self.protocol).Poll)(self.protocol) };
+            if status != EFI_SUCCESS  && status != EFI_NOT_READY { // EFI_NOT_READY merely means there's not data received on the socket yet. It does not indicate any kind of failure.
+                return Err(status.into());
             }
-            //TODO:Get rid of this copy
-            ptr::copy(buffer, buf.as_mut_ptr(), buffer_length);
-        }
 
-        to_res(buffer_length, self.recv_token.Status)
+            if op_done() {
+                break true;
+            } else if self.read_timer.is_expired()? {
+                break false;
+            }
+        }; 
+
+        if read_succeeded {
+            let read_len: usize;
+            unsafe {
+                let read_data = (*self.recv_token.Packet.RxData).FragmentTable[0].FragmentBuffer as *const u8;
+                read_len = (*self.recv_token.Packet.RxData).FragmentTable[0].FragmentLength as usize;
+                if buf.len() < read_len {
+                    return Err(EfiError::from(::ffi::EFI_INVALID_PARAMETER));
+                }
+                //TODO:Get rid of this copy
+                ptr::copy(read_data, buf.as_mut_ptr(), read_len);
+            }
+            to_res(read_len, self.recv_token.Status)
+        } else {
+            ret_on_err!(unsafe { ((*self.protocol).Cancel)(self.protocol, &self.recv_token) }); // Must cancel the token. Otherwise the next read fails with ACCESS_DENIED
+            Err(::EfiErrorKind::Timeout.into()) // TODO: check whether the std::UdpSocket returns a timeout error in this case or just Ok(0) and mimic its behaviour.
+        }
     }
 
     fn send_buf(&mut self, buf: &[u8], session_data: Option<&EFI_UDP4_SESSION_DATA>) -> Result<usize> {
@@ -586,39 +663,20 @@ impl Udp4Socket {
         to_res(buf.len(), self.send_token.Status)
     }
 
-    fn to_micros_timeout(dur: Option<Duration>) -> Result<u32> {
-        const MICROS_IN_A_SEC: u64 = 1000_000;
-        let timeout = if let Some(dur) = dur {
-            dur.as_secs() * MICROS_IN_A_SEC + dur.subsec_micros() as u64
-        } else {
-            0
-        };
-
-        if timeout > ::core::u32::MAX as u64 {
-            return Err(EfiErrorKind::InvalidParameter.into())
-        }
-
-        Ok(timeout as u32)
-    }
-
     pub fn set_read_timeout(&mut self, dur: Option<Duration>) -> Result<()> {
-        let timeout = Self::to_micros_timeout(dur)?;
-        self.configure(&mut |config: &mut EFI_UDP4_CONFIG_DATA| config.ReceiveTimeout = timeout)
+        self.read_timer.set_timeout(dur)
     }
 
     pub fn set_write_timeout(&mut self, dur: Option<Duration>) -> Result<()> {
-        let timeout = Self::to_micros_timeout(dur)?;
-        self.configure(&mut |config: &mut EFI_UDP4_CONFIG_DATA| config.TransmitTimeout = timeout)
+        self.write_timer.set_timeout(dur)
     }
 
     pub fn read_timeout(&self) -> Result<Option<Duration>> {
-        let config = self.get_config_data()?;
-        Ok(Some(Duration::from_micros(config.ReceiveTimeout as u64)))
+        Ok(self.read_timer.timeout())
     }
 
     pub fn write_timeout(&self) -> Result<Option<Duration>> {
-        let config = self.get_config_data()?;
-        Ok(Some(Duration::from_micros(config.TransmitTimeout as u64)))
+        Ok(self.write_timer.timeout())
     }
 
     pub fn local_addr(&self) -> Result<SocketAddrV4> {
