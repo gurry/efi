@@ -632,6 +632,18 @@ impl Udp4Socket {
             },
         }
     }
+
+    fn get_config_data(&self) -> Result<EFI_UDP4_CONFIG_DATA> {
+        let mut config_data = EFI_UDP4_CONFIG_DATA::default();
+        unsafe {
+            ret_on_err!(((*self.protocol).GetModeData)(self.protocol, 
+                &mut config_data,
+                ptr::null_mut(),
+                ptr::null_mut(),
+                ptr::null_mut()));
+        }
+        Ok(config_data)
+    }
 }
 
 impl Drop for Udp4Socket {

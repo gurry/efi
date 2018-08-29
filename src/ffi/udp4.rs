@@ -10,6 +10,8 @@ use ffi::{
         UINT32,
         UINTN,
         BOOLEAN,
+        TRUE,
+        FALSE,
         VOID,
         EFI_TIME
     },
@@ -64,6 +66,28 @@ pub struct EFI_UDP4_CONFIG_DATA {
     pub StationPort: UINT16,
     pub RemoteAddress: EFI_IPv4_ADDRESS,
     pub RemotePort: UINT16,
+}
+
+impl Default for EFI_UDP4_CONFIG_DATA  {
+    fn default() -> Self {
+        Self {
+            AcceptBroadcast: FALSE,
+            AcceptPromiscuous: FALSE,
+            AcceptAnyPort: FALSE,
+            AllowDuplicatePort: FALSE,
+            TypeOfService: 0,
+            TimeToLive: 255,
+            DoNotFragment: TRUE,
+            ReceiveTimeout: 0,
+            TransmitTimeout: 0,
+            UseDefaultAddress: FALSE,
+            StationAddress: EFI_IPv4_ADDRESS::zero(),
+            SubnetMask: EFI_IPv4_ADDRESS::zero(),
+            StationPort: 0,
+            RemoteAddress:  EFI_IPv4_ADDRESS::zero(),
+            RemotePort: 0,
+        }
+    }
 }
 
 pub type EFI_UDP4_CONFIGURE = extern "win64" fn(
