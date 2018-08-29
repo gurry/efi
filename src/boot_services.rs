@@ -45,6 +45,19 @@ pub enum EventTpl {
     // HighLevel = TPL_HIGH_LEVEL, // TODo: Should we expose HighLevel or not? It can slow this system down if used irresponsibly.
 }
 
+// SOME COMMENTS ON DIFFERETNT EVENT TYPES (to help us with the design in future):
+// - EVT_NOTIFY_* means the event has an associated callback to call. If there's no EVT_NOTIFY_* attribute then it means there's no callback.
+// - Of the two EVT_NOTIFY_* attributes, EVT_NOTIFY_SIGNAL means the callback will be called only when the event is signaled.
+//      and EVT_NOTIFY_WAIT means the callback will be called repeatedly UNTIL the event is signaled.
+// - EVT_NOTIFY_SIGNAL also means you can't call CheckEvent() or WaitForEvent() on the event. 
+//      EVT_NOTIFY_WAIT means you can call CheckEvent() and WaitForEvent() on the event.
+// - The above differences between EVT_NOTIFY_SIGNAL and EVT_NOTIFY_WAIT are the reason why these attributes are mutually
+//      exclusive and hence can't be specified together.
+// - EVT_TIMER is an attribute that is orthogogal to the above two and can be specified in combination with them. What is means 
+//      basically is that the event is a timer and therefore you can call SetTimer() on this event. You can't call this function 
+//      on an event if EVT_TIMER attribute is not present.
+
+
 // TODO: Disabled until we figured out a better design. Enable them back
 // extern "win64" fn common_notify_func<F: FnMut()>(_event: EFI_EVENT, context: *const VOID) -> EFI_STATUS {
 //     if !context.is_null() {
