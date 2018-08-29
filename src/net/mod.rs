@@ -438,6 +438,11 @@ impl UdpSocket {
     pub fn write_timeout(&self) -> Result<Option<Duration>> {
         self.udp4_socket.write_timeout()
     }
+
+    pub fn local_addr(&self) -> Result<SocketAddr> {
+        self.udp4_socket.local_addr().map(|a| SocketAddr::V4(a))
+    }
+
 }
 
 
@@ -616,6 +621,10 @@ impl Udp4Socket {
         Ok(Some(Duration::from_micros(config.TransmitTimeout as u64)))
     }
 
+    pub fn local_addr(&self) -> Result<SocketAddrV4> {
+        let config = self.get_config_data()?;
+        Ok(SocketAddrV4::new(config.StationAddress.into(), config.StationPort))
+    }
 
     fn configure(&mut self, change_config: &mut FnMut(&mut EFI_UDP4_CONFIG_DATA)) -> Result<()> {
         let mut config = self.get_config_data()?;
