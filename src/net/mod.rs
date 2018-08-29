@@ -448,7 +448,6 @@ struct Udp4Socket {
     device_handle: EFI_HANDLE,
     recv_token: EFI_UDP4_COMPLETION_TOKEN,
     send_token: EFI_UDP4_COMPLETION_TOKEN,
-    current_config: EFI_UDP4_CONFIG_DATA,
 }
 
 impl Udp4Socket {
@@ -493,7 +492,6 @@ impl Udp4Socket {
             device_handle: ptr::null() as EFI_HANDLE,
             recv_token: EFI_UDP4_COMPLETION_TOKEN::default(),
             send_token: EFI_UDP4_COMPLETION_TOKEN::default(),
-            current_config: config,
         };
 
         unsafe {
@@ -508,7 +506,7 @@ impl Udp4Socket {
                 image_handle(),
                 ptr::null() as EFI_HANDLE,
                 EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL)); // TODO: BY_HANDLE is used for applications. Drivers should use GET. Will we ever support drivers?
-            let status = ((*socket.protocol).Configure)(socket.protocol, &socket.current_config);
+            let status = ((*socket.protocol).Configure)(socket.protocol, &config);
             if status == EFI_NO_MAPPING { // Wait until the IP configuration process (probably DHCP) has finished
                 let mut ip_mode_data = EFI_IP4_MODE_DATA::new();
                 loop {
@@ -518,7 +516,7 @@ impl Udp4Socket {
                     if ip_mode_data.IsConfigured == TRUE { break }
                 }
 
-                ret_on_err!(((*socket.protocol).Configure)(socket.protocol, &socket.current_config));
+                ret_on_err!(((*socket.protocol).Configure)(socket.protocol, &config));
             } else {
                 ret_on_err!(status);
             }
@@ -609,28 +607,21 @@ impl Udp4Socket {
     }
 
     pub fn read_timeout(&self) -> Result<Option<Duration>> {
-        Ok(Some(Duration::from_micros(self.current_config.ReceiveTimeout as u64)))
+        let config = self.get_config_data()?;
+        Ok(Some(Duration::from_micros(config.ReceiveTimeout as u64)))
     }
 
     pub fn write_timeout(&self) -> Result<Option<Duration>> {
-        Ok(Some(Duration::from_micros(self.current_config.TransmitTimeout as u64)))
+        let config = self.get_config_data()?;
+        Ok(Some(Duration::from_micros(config.TransmitTimeout as u64)))
     }
 
+
     fn configure(&mut self, change_config: &mut FnMut(&mut EFI_UDP4_CONFIG_DATA)) -> Result<()> {
-        let prev_config = self.current_config.clone();
-
-        change_config(&mut self.current_config);
-
-        let status = unsafe { ((*self.protocol).Configure)(self.protocol, &self.current_config) };
-
-        match status {
-            EFI_SUCCESS => Ok(()),
-            e => {
-                // Restore old config since we failed
-                self.current_config = prev_config;
-                Err(e.into())
-            },
-        }
+        let mut config = self.get_config_data()?;
+        change_config(&mut config);
+        unsafe { ret_on_err!(((*self.protocol).Configure)(self.protocol, &config)); }
+        Ok(())
     }
 
     fn get_config_data(&self) -> Result<EFI_UDP4_CONFIG_DATA> {
