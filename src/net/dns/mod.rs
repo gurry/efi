@@ -35,7 +35,7 @@ pub use self::header::{Header};
 pub use self::rdata::{RData};
 pub use self::builder::{Builder};
 
-use core;
+use core::{self, time::Duration};
 use super::{UdpSocket, SocketAddr, IpAddr, Ipv4Addr};
 use alloc::Vec;
 use net::dhcp;
@@ -44,6 +44,7 @@ struct DnsServer {
     addr: SocketAddr
 }
 
+const DNS_TIMEOUT: Duration = Duration::from_secs(30);
 // TODO: Swallowing/transmorgifying all errors. Fix this large scale shit wherever present
 impl DnsServer {
     fn query(&self, hostname: &str) -> ::Result<Vec<IpAddr>> {
@@ -54,7 +55,8 @@ impl DnsServer {
         let mut socket = UdpSocket::bind("0.0.0.0:0")?;
         socket.send_to(&packet, self.addr)?;
         let mut buf = [0u8; 4096];
-        socket.recv(&mut buf)?; // TODO: Add timeout to this call. Or it may be stuck forever.
+        socket.set_read_timeout(Some(DNS_TIMEOUT))?;
+        socket.recv(&mut buf)?;
         let pkt = Packet::parse(&buf).unwrap();
         if pkt.header.response_code != ResponseCode::NoError {
             // return Err(pkt.header.response_code.into());
