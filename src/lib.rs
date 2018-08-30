@@ -28,7 +28,7 @@ pub mod net;
 pub mod image;
 pub mod device_path;
 pub mod boxed;
-pub mod boot_services;
+pub mod events;
 mod allocator;
 
 // Hack: this std declartion is to work around a bug in failure crate

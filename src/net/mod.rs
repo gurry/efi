@@ -6,7 +6,7 @@ use ::{
     EfiErrorKind,
     to_res,
     io::{self, Read, Write},
-    boot_services::{self, TimerSchedule, TimerState, EventTpl, Wait},
+    events::{self, TimerSchedule, TimerState, EventTpl, Wait},
 };
 use ffi::{
     TRUE,
@@ -457,7 +457,7 @@ impl UdpSocket {
 
 struct Timer {
     timeout: Option<Duration>,
-    timer: Option<boot_services::Timer>,
+    timer: Option<events::Timer>,
 }
 
 impl Timer {
@@ -469,7 +469,7 @@ impl Timer {
         match timeout {
             Some(timeout) => {
                     self.timeout = Some(timeout);
-                    self.timer = Some(boot_services::Timer::create(timeout, TimerSchedule::Relative, TimerState::Inactive, EventTpl::Notify)?);
+                    self.timer = Some(events::Timer::create(timeout, TimerSchedule::Relative, TimerState::Inactive, EventTpl::Notify)?);
             },
             None => {
                 self.timeout = None;
