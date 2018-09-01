@@ -28,7 +28,7 @@ use alloc::Vec;
 /// A trait that provides the length of the object that implements it.
 /// An example can be a file implementing this interface to expose a way to get its length.
 pub trait Len { // TODO: Move this a more general module like 'io' or something.
-    fn len(&mut self) -> Result<u64>; // TODO: was forced to use &mut self because some reaers like HTTP reader mutated when the read lenght (e.g. do a PUT request on their underlying HTTP stream and thus mutating it). Is interior mutability the answer?
+    fn len(&mut self) -> Result<Option<u64>>; // TODO: was forced to use &mut self because some reaers like HTTP reader mutated when the read lenght (e.g. do a PUT request on their underlying HTTP stream and thus mutating it). Is interior mutability the answer?
 }
 
 // TODO: this whole shit about wrapping raw paths into DevicePath type is unsafe. Address this unsafety
@@ -146,7 +146,8 @@ extern "win64" fn load_file_callback<'a, R: 'a + Read + Len>(
     // E.g. in HTTP it will result in a HEAD call each time.
     if loader.cached_len.is_none() {
         loader.cached_len = match loader.reader.len() {
-            Ok(l) => Some(l),
+            Ok(Some(l)) => Some(l),
+            Ok(None) => return EfiErrorKind::DeviceError.into(),
             Err(e) => return e.into()
         }
     };
@@ -242,13 +243,13 @@ impl Drop for ExitData {
 }
 
 impl<'a> Len for &'a[u8] {
-    fn len(&mut self) -> Result<u64> {
-        Ok(<[u8]>::len(self) as u64)
+    fn len(&mut self) -> Result<Option<u64>> {
+        Ok(Some(<[u8]>::len(self) as u64))
     }
 }
 
 impl Len for io::Cursor<Vec<u8>> {
-    fn len(&mut self) -> Result<u64> {
-        Ok(self.get_ref().len() as u64)
+    fn len(&mut self) -> Result<Option<u64>> {
+        Ok(Some(self.get_ref().len() as u64))
     }
 }
