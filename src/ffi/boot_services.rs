@@ -86,7 +86,6 @@ pub type EFI_INSTALL_CONFIGURATION_TABLE = *const NOT_DEFINED;
 pub type EFI_EXIT = *const NOT_DEFINED;
 pub type EFI_IMAGE_UNLOAD = *const NOT_DEFINED;
 pub type EFI_EXIT_BOOT_SERVICES = *const NOT_DEFINED;
-pub type EFI_STALL = *const NOT_DEFINED;
 pub type EFI_SET_WATCHDOG_TIMER = *const NOT_DEFINED;
 pub type EFI_CONNECT_CONTROLLER = *const NOT_DEFINED;
 pub type EFI_DISCONNECT_CONTROLLER = *const NOT_DEFINED;
@@ -248,6 +247,10 @@ pub type EFI_IMAGE_START = extern "win64" fn(
     ImageHandle: EFI_HANDLE,
     ExitDataSize: *mut UINTN,
     ExitData: *mut *const CHAR16
+) -> EFI_STATUS;
+
+pub type EFI_STALL = extern "win64" fn(
+    Microseconds: UINTN
 ) -> EFI_STATUS;
 
 pub type EFI_GET_NEXT_MONOTONIC_COUNT = extern "win64" fn(
