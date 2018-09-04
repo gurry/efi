@@ -145,6 +145,7 @@ pub type EFI_TEXT_ENABLE_CURSOR = extern "win64" fn(
     Visible: BOOLEAN
 ) -> EFI_STATUS;
 
+#[derive(Debug, Clone)]
 #[repr(C)]
 pub struct EFI_SIMPLE_TEXT_OUTPUT_MODE {
   pub MaxMode: INT32,
@@ -153,6 +154,19 @@ pub struct EFI_SIMPLE_TEXT_OUTPUT_MODE {
   pub CursorColumn: INT32,
   pub CursorRow: INT32,
   pub CursorVisible: BOOLEAN,
+}
+
+impl Default for EFI_SIMPLE_TEXT_OUTPUT_MODE  {
+    fn default() -> Self { 
+        Self {
+            MaxMode: 0,
+            Mode: 0,
+            Attribute: 0,
+            CursorColumn: 0,
+            CursorRow: 0,
+            CursorVisible: FALSE,
+        }
+    }
 }
 
 #[repr(C)]
