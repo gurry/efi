@@ -33,6 +33,19 @@ impl Console {
         Self { input, output, utf8_buf: Cursor::new(Vec::new()) }
     }
 
+    pub fn cursor_pos(&self) -> Position {
+        let mode = unsafe { (*(*self).output).Mode };
+        Position { row: unsafe { (*mode).CursorRow }, col: unsafe { (*mode).CursorColumn } }
+    }
+
+    pub fn set_cursor_pos(&self, pos: Position) -> Result<()> {
+        unsafe {
+            ret_on_err!(((*(*self).output).SetCursorPosition)(self.output, pos.col as usize, pos.row as usize));
+        }
+
+        Ok(())
+    }
+
     fn write_to_efi(&self, buf: &[u16]) -> Result<()> {
         unsafe {
             let (ptr, _) = to_ptr(buf);
@@ -213,16 +226,25 @@ impl io::Write for StdOut {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
+pub struct Position {
+    pub row: i32,
+    pub col: i32
+}
+
+pub fn console() -> Console {
+    ::SystemTable::new(system_table())
+        .expect("failed to create system table").console()
+}
+
 // TODO: Remove this uncessary SystemTable::new() business
 // Do we need this SystemTable type?
 pub fn stdin() -> StdIn {
-    StdIn::new(::SystemTable::new(system_table())
-        .expect("failed to create system table").console())
+    StdIn::new(console())
 }
 
 pub fn stdout() -> StdOut {
-    StdOut::new(::SystemTable::new(system_table())
-        .expect("failed to create system table").console())
+    StdOut::new(console())
 }
 
 #[macro_export]
