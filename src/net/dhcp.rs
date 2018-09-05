@@ -643,6 +643,10 @@ impl Dhcpv4Packet {
     pub fn dhcp_options<'a>(&'a self) -> impl Iterator<Item=DhcpOption<'a>> { //&[u8; 56] {
         DhcpOptionIter { buf: &self.0.DhcpOptions }
     }
+
+    pub fn dhcp_option<'a>(&'a self, code: u8) -> Option<DhcpOption<'a>> {
+        self.dhcp_options().find(|o| o.code() == code)
+    }
 }
 
 #[derive(Debug)]

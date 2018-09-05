@@ -102,7 +102,7 @@ fn get_dns_servers() -> ::Result<Vec<DnsServer>> {
     let dhcp_config = dhcp::cached_dhcp_config()?
                 .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
     const DHCP_DNS_SERVERS_OPTION: u8 = 6;
-    let dns_servers_option = dhcp_config.dhcp_ack_packet().dhcp_options().find(|o| o.code() == DHCP_DNS_SERVERS_OPTION)
+    let dns_servers_option = dhcp_config.dhcp_ack_packet().dhcp_option(DHCP_DNS_SERVERS_OPTION)
                 .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
     let dns_servers_buf = dns_servers_option.value()
                 .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
