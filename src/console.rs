@@ -37,7 +37,7 @@ impl Console {
 
     pub fn cursor_pos(&self) -> Position {
         let mode = unsafe { (*(*self).output).Mode };
-        Position { row: unsafe { (*mode).CursorRow }, col: unsafe { (*mode).CursorColumn } }
+        Position { row: unsafe { (*mode).CursorRow } as u32, col: unsafe { (*mode).CursorColumn } as u32 } // To convert from i32 to u32 since screen coords can't be negative
     }
 
     pub fn set_cursor_pos(&self, pos: Position) -> Result<()> {
@@ -254,8 +254,8 @@ impl io::Write for StdOut {
 
 #[derive(Debug, Copy, Clone)]
 pub struct Position {
-    pub row: i32,
-    pub col: i32
+    pub row: u32,
+    pub col: u32
 }
 
 pub fn console() -> Console {
