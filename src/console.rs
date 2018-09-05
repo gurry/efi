@@ -9,6 +9,8 @@ use ffi::{
     }, 
     IsSuccess, 
     UINTN,
+    TRUE,
+    FALSE,
 };
 use core::cmp;
 use io::{self, Write, Cursor, BufRead, BufReader, LineWriter};
@@ -41,6 +43,30 @@ impl Console {
     pub fn set_cursor_pos(&self, pos: Position) -> Result<()> {
         unsafe {
             ret_on_err!(((*(*self).output).SetCursorPosition)(self.output, pos.col as usize, pos.row as usize));
+        }
+
+        Ok(())
+    }
+
+    pub fn enable_cursor(&mut self) -> Result<()> {
+        unsafe {
+            ret_on_err!(((*(*self).output).EnableCursor)(self.output, TRUE));
+        }
+
+        Ok(())
+    }
+
+    pub fn disable_cursor(&mut self) -> Result<()> {
+        unsafe {
+            ret_on_err!(((*(*self).output).EnableCursor)(self.output, FALSE));
+        }
+
+        Ok(())
+    }
+
+    pub fn clear_screen(&mut self) -> Result<()> {
+        unsafe {
+            ret_on_err!(((*(*self).output).ClearScreen)(self.output));
         }
 
         Ok(())
