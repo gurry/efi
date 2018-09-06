@@ -72,6 +72,21 @@ impl Console {
         Ok(())
     }
 
+    // TODO: instead of u32 use a strong type like 'ConsoleMode'
+    // It may simply be a newtype around u32 and have methods
+    // 'resolution()' which return something like 80x25, 80x50, Custom etc.
+    pub fn max_supported_mode(&mut self) -> u32 {
+        unsafe { (*(*(*self).output).Mode).MaxMode  as u32 } // Cast from i32 to u32 to is safe
+    }
+
+    pub fn set_mode(&mut self, mode_number: u32) -> Result<()> {
+        unsafe {
+            ret_on_err!(((*(*self).output).SetMode)(self.output, mode_number as usize)); // TODO: Cast should be safe on patforms with 32 and 64 ptr widths. Do we need to worry about other platforms?
+        }
+
+        Ok(())
+    }
+
     fn write_to_efi(&self, buf: &[u16]) -> Result<()> {
         unsafe {
             let (ptr, _) = to_ptr(buf);
