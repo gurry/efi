@@ -139,7 +139,7 @@ pub type EFI_TCP4_ROUTES = extern "win64" fn(
     SubnetAddress: *const EFI_IPv4_ADDRESS,
     SubnetMask: *const EFI_IPv4_ADDRESS,
     GatewayAddress: *const EFI_IPv4_ADDRESS
-);
+) -> EFI_STATUS;
 
 pub type EFI_TCP4_CONNECT = extern "win64" fn(
     This: *const EFI_TCP4_PROTOCOL,
