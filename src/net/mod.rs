@@ -193,10 +193,10 @@ impl Tcp4Stream {
         let mut stream = Self::new();
         unsafe {
             // TODO: is there a better way than using a macro to return early? How about newtyping the usize return type of FFI calls and then working off that?
-            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_WAIT, TPL_CALLBACK, empty_cb, ptr::null(), &mut stream.connect_token.CompletionToken.Event));
-            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_WAIT, TPL_CALLBACK, empty_cb, ptr::null(), &mut stream.send_token.CompletionToken.Event));
-            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_SIGNAL, TPL_NOTIFY, common_cb, ptr::null(), &mut stream.recv_token.CompletionToken.Event));
-            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_WAIT, TPL_CALLBACK, empty_cb, ptr::null(), &mut stream.close_token.CompletionToken.Event));
+            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_WAIT, TPL_CALLBACK, Some(empty_cb), ptr::null(), &mut stream.connect_token.CompletionToken.Event));
+            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_WAIT, TPL_CALLBACK, Some(empty_cb), ptr::null(), &mut stream.send_token.CompletionToken.Event));
+            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_SIGNAL, TPL_NOTIFY, Some(common_cb), ptr::null(), &mut stream.recv_token.CompletionToken.Event));
+            ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_WAIT, TPL_CALLBACK, Some(empty_cb), ptr::null(), &mut stream.close_token.CompletionToken.Event));
 
             ret_on_err!(((*stream.bs).LocateProtocol)(&EFI_TCP4_SERVICE_BINDING_PROTOCOL_GUID, ptr::null() as *const VOID, mem::transmute(&stream.binding_protocol)));
 
@@ -559,8 +559,8 @@ impl Udp4Socket {
         };
 
         unsafe {
-            ret_on_err!(((*socket.bs).CreateEvent)(EVT_NOTIFY_WAIT, TPL_CALLBACK, empty_cb, ptr::null(), &mut socket.send_token.Event));
-            ret_on_err!(((*socket.bs).CreateEvent)(EVT_NOTIFY_SIGNAL, TPL_NOTIFY, common_cb, ptr::null(), &mut socket.recv_token.Event));
+            ret_on_err!(((*socket.bs).CreateEvent)(EVT_NOTIFY_WAIT, TPL_CALLBACK, Some(empty_cb), ptr::null(), &mut socket.send_token.Event));
+            ret_on_err!(((*socket.bs).CreateEvent)(EVT_NOTIFY_SIGNAL, TPL_NOTIFY, Some(common_cb), ptr::null(), &mut socket.recv_token.Event));
 
             ret_on_err!(((*socket.bs).LocateProtocol)(&EFI_UDP4_SERVICE_BINDING_PROTOCOL_GUID, ptr::null() as *const VOID, mem::transmute(&socket.binding_protocol)));
             ret_on_err!(((*socket.binding_protocol).CreateChild)(socket.binding_protocol, &mut socket.device_handle));

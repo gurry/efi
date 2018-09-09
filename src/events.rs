@@ -1,5 +1,4 @@
 use ffi::{
-    VOID,
     UINT64,
     EFI_SUCCESS,
     EFI_NOT_READY,
@@ -16,7 +15,7 @@ use ffi::{
     },
 };
 
-use core::{mem, ptr, time::Duration};
+use core::{ptr, time::Duration};
 use {system_table, Result};
 
 pub trait Signal {
@@ -223,7 +222,7 @@ impl Timer {
         let bs = system_table().BootServices;
         let mut event: EFI_EVENT = ptr::null();
         unsafe {
-            ret_on_err!(((*bs).CreateEvent)(EVT_TIMER, tpl as EFI_TPL, mem::transmute::<*const VOID, _>(ptr::null()), ptr::null(), &mut event));
+            ret_on_err!(((*bs).CreateEvent)(EVT_TIMER, tpl as EFI_TPL, None, ptr::null(), &mut event));
         }
 
         let mut timer = Timer(event);

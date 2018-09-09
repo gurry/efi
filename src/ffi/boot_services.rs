@@ -125,7 +125,7 @@ pub const EVT_SIGNAL_VIRTUAL_ADDRESS_CHANGE: UINT32 = 0x60000202;
 pub type EFI_CREATE_EVENT = extern "win64" fn(
     Type: UINT32,
     NotifyTpl: EFI_TPL,
-    NotifyFunction: EFI_EVENT_NOTIFY,
+    NotifyFunction: Option<EFI_EVENT_NOTIFY>,
     NotifyContext: *const VOID,
     Event: *mut EFI_EVENT 
 ) -> EFI_STATUS;
