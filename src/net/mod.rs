@@ -14,6 +14,7 @@ use ::{
     io::{self, Read, Write},
     events::{self, TimerSchedule, TimerState, EventTpl, Wait},
 };
+use self::dhcp::DhcpConfig;
 use ffi::{
     TRUE,
     FALSE,
@@ -224,6 +225,14 @@ impl Tcp4Stream {
             } else {
                 ret_on_err!(status);
             }
+
+        }
+
+        // Copy in all routes from the DHCP config
+        // TODO: This is faulty. Get the dhcp config specifically of the interface we're binding on
+        let (subnet_addr, subnet_mask, gateway_addr) = form_default_route(&dhcp_config)?;
+        unsafe {
+            ret_on_err!(((*stream.protocol).Routes)(stream.protocol, FALSE, &subnet_addr, &subnet_mask, &gateway_addr));
 
             ret_on_err!(((*stream.protocol).Connect)(stream.protocol, &mut stream.connect_token));
             stream.wait_for_evt(&stream.connect_token.CompletionToken.Event)?;
@@ -521,6 +530,7 @@ impl Udp4Socket {
         } else {
             // If not station addr is not unspecified then we locate the interface associated with this IP
             // and get its subnet mask
+            // TODO: this shit doesn't work at all. Fix it.
             let matching_interface = ifconfig::interfaces()?.into_iter()
                                         .find(|i| i.station_address_ipv4() == station_addr)
                                         .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
@@ -584,9 +594,16 @@ impl Udp4Socket {
             } else {
                 ret_on_err!(status);
             }
-       }
+        }
 
-       // TODO: set up routes here as well. 
+        // Copy in all routes from the DHCP config
+        // TODO: This is faulty. Get the dhcp config specifically of the interface we're binding on
+        let dhcp_config = dhcp::cached_dhcp_config()?
+                .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
+        let (subnet_addr, subnet_mask, gateway_addr) = form_default_route(&dhcp_config)?;
+        unsafe {
+            ret_on_err!(((*socket.protocol).Routes)(socket.protocol, FALSE, &subnet_addr, &subnet_mask, &gateway_addr));
+        }
 
         // TODO: We should try to close all events that have been created if we're returning early
 
@@ -713,4 +730,26 @@ impl Drop for Udp4Socket {
             ((*self.binding_protocol).DestroyChild)(self.binding_protocol, &mut self.device_handle);
         }
     }
+}
+
+fn extract_router_opt(dhcp_config: &DhcpConfig) -> Result<Ipv4Addr> {
+    let ack_pkt = dhcp_config.dhcp_ack_packet();
+    let router_option = ack_pkt.dhcp_option(3)
+        .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
+    let router_ip_buf = router_option.value()
+        .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
+
+    let router_ip = Ipv4Addr::new(router_ip_buf[0], router_ip_buf[1], router_ip_buf[2], router_ip_buf[3]);
+    Ok(router_ip)
+}
+
+fn form_default_route(dhcp_config: &DhcpConfig) -> Result<(EFI_IPv4_ADDRESS, EFI_IPv4_ADDRESS, EFI_IPv4_ADDRESS)> {
+    let router_ip = extract_router_opt(&dhcp_config)?;
+
+    // Unspecified subnet and subnet mask means this is a default route.
+    let subnet_addr: EFI_IPv4_ADDRESS = Ipv4Addr::unspecified().into();
+    let subnet_mask: EFI_IPv4_ADDRESS = Ipv4Addr::unspecified().into();
+    let gateway_addr: EFI_IPv4_ADDRESS = router_ip.into();
+
+    Ok((subnet_addr, subnet_mask, gateway_addr))
 }
