@@ -6,6 +6,30 @@ use ffi::{
         EFI_SHIFT_STATE_VALID,
         EFI_LEFT_CONTROL_PRESSED,
         EFI_RIGHT_CONTROL_PRESSED,
+        EFI_BLACK,
+        EFI_BLUE,
+        EFI_GREEN,
+        EFI_CYAN,
+        EFI_RED,
+        EFI_MAGENTA,
+        EFI_BROWN,
+        EFI_LIGHTGRAY,
+        EFI_DARKGRAY,
+        EFI_LIGHTBLUE,
+        EFI_LIGHTGREEN,
+        EFI_LIGHTCYAN,
+        EFI_LIGHTRED,
+        EFI_LIGHTMAGENTA,
+        EFI_YELLOW,
+        EFI_WHITE,
+        EFI_BACKGROUND_BLACK,
+        EFI_BACKGROUND_BLUE,
+        EFI_BACKGROUND_GREEN,
+        EFI_BACKGROUND_CYAN,
+        EFI_BACKGROUND_RED,
+        EFI_BACKGROUND_MAGENTA,
+        EFI_BACKGROUND_BROWN,
+        EFI_BACKGROUND_LIGHTGRAY,
     }, 
     IsSuccess, 
     UINTN,
@@ -20,6 +44,71 @@ use alloc::{Vec, String, str, fmt};
 
 // TODO: This whole module has gotten ugly. Needs cleanup.
 // TODO: Should we replace Console with two structs, StdIn and StdOut, corresponding to input and output? This is more in line with Rust stdlib.
+
+#[derive(Debug, Copy, Clone)]
+#[repr(usize)]
+pub enum ForeColor {
+    Black = EFI_BLACK,
+    Blue = EFI_BLUE,
+    Green = EFI_GREEN,
+    Cyan = EFI_CYAN,
+    Red = EFI_RED,
+    Magenta = EFI_MAGENTA,
+    Brown = EFI_BROWN,
+    LightGray = EFI_LIGHTGRAY,
+    DarkGray = EFI_DARKGRAY,
+    LightBlue = EFI_LIGHTBLUE,
+    LightGreen = EFI_LIGHTGREEN,
+    LightCyan = EFI_LIGHTCYAN,
+    LightRed = EFI_LIGHTRED,
+    LightMagenta = EFI_LIGHTMAGENTA,
+    Yellow = EFI_YELLOW,
+    White = EFI_WHITE,
+}
+
+impl From<UINTN> for ForeColor {
+    fn from(color_num: UINTN) -> Self {
+        match color_num {
+            EFI_BLACK..=EFI_WHITE => unsafe { transmute(color_num) },
+            _ => panic!("Attempt to convert an out-of-range number to ForeColor")
+        }
+    }
+}
+
+impl From<ForeColor> for UINTN {
+    fn from(fore_color: ForeColor) -> UINTN {
+        fore_color as UINTN
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+#[repr(usize)]
+pub enum BackColor {
+    Black = EFI_BACKGROUND_BLACK,
+    Blue = EFI_BACKGROUND_BLUE,
+    Green = EFI_BACKGROUND_GREEN,
+    Cyan = EFI_BACKGROUND_CYAN,
+    Red = EFI_BACKGROUND_RED,
+    Magenta = EFI_BACKGROUND_MAGENTA,
+    Brown = EFI_BACKGROUND_BROWN,
+    LightGray = EFI_BACKGROUND_LIGHTGRAY,
+}
+
+impl From<UINTN> for BackColor {
+    fn from(color_num: UINTN) -> Self {
+        match color_num {
+            EFI_BACKGROUND_BLACK..=EFI_BACKGROUND_LIGHTGRAY => unsafe { transmute(color_num) },
+            _ => panic!("Attempt to convert an out-of-range number to BackColor")
+        }
+    }
+}
+
+impl From<BackColor> for UINTN {
+    fn from(back_color: BackColor) -> UINTN {
+        back_color as UINTN
+    }
+}
+
 pub struct Console {
     pub input: *const EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL,
     pub output: *const EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL,
@@ -82,6 +171,52 @@ impl Console {
     pub fn set_mode(&mut self, mode_number: u32) -> Result<()> {
         unsafe {
             ret_on_err!(((*(*self).output).SetMode)(self.output, mode_number as usize)); // TODO: Cast should be safe on patforms with 32 and 64 ptr widths. Do we need to worry about other platforms?
+        }
+
+        Ok(())
+    }
+
+    pub fn fore_color(&mut self) -> ForeColor {
+        let attribute = unsafe { (*(*(*self).output).Mode).Attribute } as UINTN; // TODO: Cast should be safe on patforms with 32 and 64 ptr widths. Do we need to worry about other platforms?
+        let fore_color_num = attribute & 0b1111; // Bits 0..3 are fore color, 4..6 are back color
+
+        fore_color_num.into()
+    }
+
+    pub fn set_fore_color(&mut self, fore_color: ForeColor) -> Result<()> {
+        let curr_attribute = unsafe { (*(*(*self).output).Mode).Attribute } as UINTN; // TODO: Cast should be safe on patforms with 32 and 64 ptr widths. Do we need to worry about other platforms?
+        let curr_back_color = curr_attribute & 0b1111_0000; // Bits 0..3 are fore color, 4..6 are back color
+        let new_attribute = usize::from(fore_color) | curr_back_color;
+
+        unsafe {
+            ret_on_err!(((*(*self).output).SetAttribute)(self.output, new_attribute));
+        }
+
+        Ok(())
+    }
+
+    pub fn back_color(&mut self) -> BackColor {
+        let attribute = unsafe { (*(*(*self).output).Mode).Attribute } as UINTN; // TODO: Cast should be safe on patforms with 32 and 64 ptr widths. Do we need to worry about other platforms?
+        let back_color_num = attribute & 0b1111_0000; // Bits 0..3 are fore color, 4..6 are back color
+
+        back_color_num.into()
+    }
+
+    pub fn set_back_color(&mut self, back_color: BackColor) -> Result<()> {
+        let curr_attribute = unsafe { (*(*(*self).output).Mode).Attribute } as UINTN; // TODO: Cast should be safe on patforms with 32 and 64 ptr widths. Do we need to worry about other platforms?
+        let curr_fore_color = curr_attribute & 0b1111; // Bits 0..3 are fore color, 4..6 are back color
+        let new_attribute = curr_fore_color | usize::from(back_color);
+
+        unsafe {
+            ret_on_err!(((*(*self).output).SetAttribute)(self.output, new_attribute));
+        }
+
+        Ok(())
+    }
+
+    pub fn reset(&mut self, extended_verification: bool) -> Result<()> {
+        unsafe {
+            ret_on_err!(((*(*self).output).Reset)(self.output, if extended_verification { TRUE } else { FALSE }));
         }
 
         Ok(())
