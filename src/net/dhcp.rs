@@ -58,15 +58,23 @@ pub struct DhcpConfig {
     ip: IpAddr,
     subnet_mask: IpAddr,
     dhcp_server_ip: Option<IpAddr>,
+    gateway_ip: Option<IpAddr>,
+    dns_server_ip: Option<IpAddr>,
     dhcp_ack_packet: Dhcpv4Packet,
     proxy_offer_packet: Option<Dhcpv4Packet>,
 }
+
+const DHCP_SERVER_IDENTIFIER_OPTION: u8 = 54;
+const ROUTER_OPTION: u8 = 3;
+const DOMAIN_NAME_SERVER_OPTION: u8 = 6;
 
 impl DhcpConfig {
     fn new(mode: &Mode) -> Self {
         let ip = IpAddr::V4(unsafe { mode.station_ip().v4 }.into());
         let subnet_mask = IpAddr::V4(unsafe { mode.subnet_mask().v4}.into());
-        let dhcp_server_ip = Self::extract_server_ip(mode);
+        let dhcp_server_ip = Self::extract_ip_from_option(mode, DHCP_SERVER_IDENTIFIER_OPTION);
+        let gateway_ip = Self::extract_ip_from_option(mode, ROUTER_OPTION);
+        let dns_server_ip = Self::extract_ip_from_option(mode, DOMAIN_NAME_SERVER_OPTION);
         let dhcp_ack_packet = mode.dhcp_ack().as_dhcpv4().clone();
         let proxy_offer_packet =  if mode.proxy_offer_received() {
             Some(mode.proxy_offer().as_dhcpv4().clone())
@@ -74,7 +82,7 @@ impl DhcpConfig {
             None
         };
 
-        Self { ip, subnet_mask, dhcp_server_ip, dhcp_ack_packet, proxy_offer_packet }
+        Self { ip, subnet_mask, dhcp_server_ip, gateway_ip, dns_server_ip, dhcp_ack_packet, proxy_offer_packet }
     }
 
     pub fn ip(&self) -> IpAddr {
@@ -89,6 +97,14 @@ impl DhcpConfig {
         self.dhcp_server_ip
     }
 
+    pub fn gateway_ip(&self) -> Option<IpAddr> {
+        self.gateway_ip
+    }
+
+    pub fn dns_server_ip(&self) -> Option<IpAddr> {
+        self.dns_server_ip
+    }
+ 
     pub fn dhcp_ack_packet(&self) -> &Dhcpv4Packet {
         &self.dhcp_ack_packet
     }
@@ -97,12 +113,9 @@ impl DhcpConfig {
         self.proxy_offer_packet.as_ref()
     }
 
-    fn extract_server_ip(mode: &Mode) -> Option<IpAddr> {
-        const DHCP_SERVER_IDENTFIER_OPTION: u8 = 54;
-        let server_id_option = mode.dhcp_ack().as_dhcpv4().dhcp_options()
-            .find(|o| o.code() == DHCP_SERVER_IDENTFIER_OPTION)?;
-
-        let val = server_id_option.value()?;
+    fn extract_ip_from_option(mode: &Mode, op_code: u8) -> Option<IpAddr> {
+        let option = mode.dhcp_ack().as_dhcpv4().dhcp_option(op_code)?;
+        let val = option.value()?;
         Some(Ipv4Addr::new(val[0], val[1], val[2], val[3]).into())
     }
 }
