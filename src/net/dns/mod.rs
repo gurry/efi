@@ -35,8 +35,8 @@ pub use self::header::{Header};
 pub use self::rdata::{RData};
 pub use self::builder::{Builder};
 
-use core::{self, time::Duration};
-use super::{UdpSocket, SocketAddr, IpAddr, Ipv4Addr};
+use core::{time::Duration};
+use super::{UdpSocket, SocketAddr, IpAddr};
 use alloc::Vec;
 use net::dhcp;
 
@@ -99,22 +99,12 @@ pub (crate) fn lookup_host(hostname: &str) -> ::Result<Vec<IpAddr>> {
 
 fn get_dns_servers() -> ::Result<Vec<DnsServer>> {
     // TODO: Assuming here that PXE has already happened. Should we kick it off here if it hasn't?
-    let dhcp_config = dhcp::cached_dhcp_config()?
-                .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
-    const DHCP_DNS_SERVERS_OPTION: u8 = 6;
-    let dns_servers_option = dhcp_config.dhcp_ack_packet().dhcp_option(DHCP_DNS_SERVERS_OPTION)
-                .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
-    let dns_servers_buf = dns_servers_option.value()
-                .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
-
-    // Using explicit invocation syntax for 'exact_chunks' because of a compiler bug which leads to 
-    // multiple candidates found for this method: https://github.com/rust-lang/rust/issues/51402.
-    // We actually don't even want to use the SliceExt trait but the method on the inherent impl, 
-    // but I couldn't find a way to do it.
-    let ip_addresses = core::slice::SliceExt::exact_chunks(dns_servers_buf, 4).map(|c| Ipv4Addr::new(c[0], c[1], c[2], c[3])); 
-
     const DNS_PORT: u16 = 53;
-    let dns_servers = ip_addresses.map(|ip| DnsServer { addr: (IpAddr::V4(ip), DNS_PORT).into() }).collect::<Vec<_>>();
+    let dns_servers = dhcp::cached_dhcp_config()?
+        .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?
+        .dns_server_addrs().iter()
+        .map(|ip| DnsServer { addr: (*ip, DNS_PORT).into() })
+        .collect::<Vec<_>>();
 
     Ok(dns_servers)
 }
