@@ -31,9 +31,9 @@ use {
     net::{IpAddr, Ipv4Addr},
 };
 
-use core::{mem, ptr, default::Default};
+use core::{slice, mem, ptr, default::Default};
 use utils::{to_ptr, Wrapper, to_opt};
-use alloc::String;
+use alloc::{String, Vec};
 
 // TODO: THIS WHOLE MODULE NEEDS A COMPLETE OVERHAUL. 
 // The API surface area needs to be complete redesigned including things like:
@@ -57,9 +57,9 @@ use alloc::String;
 pub struct DhcpConfig {
     ip: IpAddr,
     subnet_mask: IpAddr,
-    dhcp_server_ip: Option<IpAddr>,
-    gateway_ip: Option<IpAddr>,
-    dns_server_ip: Option<IpAddr>,
+    dhcp_server_addr: Option<IpAddr>,
+    gateway_addrs: Vec<IpAddr>,
+    dns_server_addrs: Vec<IpAddr>,
     dhcp_ack_packet: Dhcpv4Packet,
     proxy_offer_packet: Option<Dhcpv4Packet>,
 }
@@ -72,9 +72,13 @@ impl DhcpConfig {
     fn new(mode: &Mode) -> Self {
         let ip = IpAddr::V4(unsafe { mode.station_ip().v4 }.into());
         let subnet_mask = IpAddr::V4(unsafe { mode.subnet_mask().v4}.into());
-        let dhcp_server_ip = Self::extract_ip_from_option(mode, DHCP_SERVER_IDENTIFIER_OPTION);
-        let gateway_ip = Self::extract_ip_from_option(mode, ROUTER_OPTION);
-        let dns_server_ip = Self::extract_ip_from_option(mode, DOMAIN_NAME_SERVER_OPTION);
+        let dhcp_server_addr = Self::extract_ip_addrs(mode, DHCP_SERVER_IDENTIFIER_OPTION)
+            .and_then( |v| {
+                v.iter().nth(0) // There's only one DHCP server for a given DHCP msg
+                .map(|ip| *ip)
+            });
+        let gateway_addrs = Self::extract_ip_addrs(mode, ROUTER_OPTION).unwrap_or(Vec::new());
+        let dns_server_addrs = Self::extract_ip_addrs(mode, DOMAIN_NAME_SERVER_OPTION).unwrap_or(Vec::new());
         let dhcp_ack_packet = mode.dhcp_ack().as_dhcpv4().clone();
         let proxy_offer_packet =  if mode.proxy_offer_received() {
             Some(mode.proxy_offer().as_dhcpv4().clone())
@@ -82,7 +86,7 @@ impl DhcpConfig {
             None
         };
 
-        Self { ip, subnet_mask, dhcp_server_ip, gateway_ip, dns_server_ip, dhcp_ack_packet, proxy_offer_packet }
+        Self { ip, subnet_mask, dhcp_server_addr, gateway_addrs, dns_server_addrs, dhcp_ack_packet, proxy_offer_packet }
     }
 
     pub fn ip(&self) -> IpAddr {
@@ -93,16 +97,16 @@ impl DhcpConfig {
         self.subnet_mask
     }
 
-    pub fn dhcp_server_ip(&self) -> Option<IpAddr> {
-        self.dhcp_server_ip
+    pub fn dhcp_server_addr(&self) -> Option<IpAddr> {
+        self.dhcp_server_addr
     }
 
-    pub fn gateway_ip(&self) -> Option<IpAddr> {
-        self.gateway_ip
+    pub fn gateway_addrs(&self) -> &[IpAddr] {
+        self.gateway_addrs.as_slice()
     }
 
-    pub fn dns_server_ip(&self) -> Option<IpAddr> {
-        self.dns_server_ip
+    pub fn dns_server_addrs(&self) -> &[IpAddr] {
+        self.dns_server_addrs.as_slice()
     }
  
     pub fn dhcp_ack_packet(&self) -> &Dhcpv4Packet {
@@ -113,10 +117,18 @@ impl DhcpConfig {
         self.proxy_offer_packet.as_ref()
     }
 
-    fn extract_ip_from_option(mode: &Mode, op_code: u8) -> Option<IpAddr> {
+    fn extract_ip_addrs(mode: &Mode, op_code: u8) -> Option<Vec<IpAddr>> {
         let option = mode.dhcp_ack().as_dhcpv4().dhcp_option(op_code)?;
         let val = option.value()?;
-        Some(Ipv4Addr::new(val[0], val[1], val[2], val[3]).into())
+        // Using explicit invocation syntax for 'exact_chunks' because of a compiler bug which leads to 
+        // multiple candidates found for this method: https://github.com/rust-lang/rust/issues/51402.
+        // We actually don't even want to use the SliceExt trait but the method on the inherent impl, 
+        // but I couldn't find a way to do it. This shit has been fixed in latest Rust. So will address it when we upgrade
+        let addrs = slice::SliceExt::exact_chunks(val, 4)
+            .map(|c| IpAddr::V4(Ipv4Addr::new(c[0], c[1], c[2], c[3])))
+            .collect::<Vec<_>>();
+
+        Some(addrs)
     }
 }
 
