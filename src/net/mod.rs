@@ -402,8 +402,15 @@ impl UdpSocket {
         Ok(Self {udp4_socket: for_ip4_only(addr, |addr| Udp4Socket::bind(addr))? })
     }
 
+    // TODO: Fix this bullshit around how we're creating a new socket on every connect
+    // (we're doing this because UEFI doesn't allow us to change the address of an already created UDP protocol)
     pub fn connect<A: ToSocketAddrs>(&mut self, addr: A) -> Result<()> {
-        for_ip4_only(addr, |addr| self.udp4_socket.connect(addr))
+        for_ip4_only(addr, |addr| {
+            let bound_addr = self.udp4_socket.bound_addr;
+            self.udp4_socket = Udp4Socket::bind_and_connect(bound_addr, addr)?;
+            Ok(())
+        })?;
+        Ok(())
     }
 
     pub fn recv(&mut self, buf: &mut [u8]) -> Result<usize> {
@@ -519,11 +526,19 @@ struct Udp4Socket {
     send_token: EFI_UDP4_COMPLETION_TOKEN,
     read_timer: Timer,
     write_timer: Timer,
+    bound_addr: SocketAddrV4, // This is the address that was passed to us to bind to. It's different from local_addr() because the OS might choose arbitrary port if 0 is passed in bound_addr
 }
 
 impl Udp4Socket {
     pub fn bind(addr: SocketAddrV4) -> Result<Self> {
-        let station_addr = *addr.ip();
+        // Using unspecified remote IpAddr to indicate we're not connecting to any remote addr
+        // Using 0 remote port to indicate we're not connecting to any remote port
+        let remote_addr = SocketAddrV4::new(Ipv4Addr::unspecified(), 0);
+        Self::bind_and_connect(addr, remote_addr)
+    }
+
+    fn bind_and_connect(local_addr: SocketAddrV4, remote_addr: SocketAddrV4) -> Result<Self> {
+        let station_addr = *local_addr.ip();
         let subnet_mask = if station_addr.is_unspecified() {
             // If the station addr is unspecified then the subnet mask is unspecified as well
             Ipv4Addr::unspecified()
@@ -552,9 +567,9 @@ impl Udp4Socket {
             // configurable via some settings on this class similar to Rust std lib
             StationAddress: station_addr.into(),
             SubnetMask: subnet_mask.into(),
-            StationPort: addr.port(),
-            RemoteAddress: Ipv4Addr::unspecified().into(), // Unspecified means we're not connecting to any remote addr
-            RemotePort: 0, // 0 means we're not connecting to any remote port
+            StationPort: local_addr.port(),
+            RemoteAddress: (*remote_addr.ip()).into(),
+            RemotePort: remote_addr.port(),
         };
 
         let mut socket = Udp4Socket {
@@ -566,6 +581,7 @@ impl Udp4Socket {
             send_token: EFI_UDP4_COMPLETION_TOKEN::default(),
             read_timer: Timer::infinite(),
             write_timer: Timer::infinite(),
+            bound_addr: local_addr,
         };
 
         unsafe {
@@ -608,13 +624,6 @@ impl Udp4Socket {
         // TODO: We should try to close all events that have been created if we're returning early
 
         Ok(socket)
-    }
-
-    pub fn connect(&mut self, addr: SocketAddrV4) -> Result<()> {
-        self.configure(&mut |config: &mut EFI_UDP4_CONFIG_DATA| {
-            config.RemoteAddress = (*addr.ip()).into();
-            config.RemotePort = addr.port();
-        })
     }
 
     unsafe fn wait_for_evt(&self, event: *const EFI_EVENT) -> Result<()> {
@@ -699,13 +708,6 @@ impl Udp4Socket {
     pub fn local_addr(&self) -> Result<SocketAddrV4> {
         let config = self.get_config_data()?;
         Ok(SocketAddrV4::new(config.StationAddress.into(), config.StationPort))
-    }
-
-    fn configure(&mut self, change_config: &mut FnMut(&mut EFI_UDP4_CONFIG_DATA)) -> Result<()> {
-        let mut config = self.get_config_data()?;
-        change_config(&mut config);
-        unsafe { ret_on_err!(((*self.protocol).Configure)(self.protocol, &config)); }
-        Ok(())
     }
 
     fn get_config_data(&self) -> Result<EFI_UDP4_CONFIG_DATA> {
