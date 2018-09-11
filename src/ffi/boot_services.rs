@@ -209,6 +209,7 @@ pub type EFI_CLOSE_PROTOCOL = extern "win64" fn(
   ControllerHandle: EFI_HANDLE
 ) -> EFI_STATUS;
 
+#[derive(Debug)]
 #[repr(C)]
 pub enum EFI_LOCATE_SEARCH_TYPE {
   /// Retrieve all the handles in the handle database.

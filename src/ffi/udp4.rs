@@ -142,6 +142,7 @@ pub const EFI_HOST_UNREACHABLE: UINTN = with_high_bit_set!(101) ;
 pub const EFI_PROTOCOL_UNREACHABLE: UINTN = with_high_bit_set!(102);
 pub const EFI_PORT_UNREACHABLE: UINTN = with_high_bit_set!(103);
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct EFI_UDP4_RECEIVE_DATA {
     pub TimeStamp: EFI_TIME,
@@ -152,6 +153,7 @@ pub struct EFI_UDP4_RECEIVE_DATA {
     pub FragmentTable: [EFI_UDP4_FRAGMENT_DATA; 1],
 }
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct EFI_UDP4_SESSION_DATA {
     pub SourceAddress: EFI_IPv4_ADDRESS,
@@ -160,12 +162,14 @@ pub struct EFI_UDP4_SESSION_DATA {
     pub DestinationPort: UINT16,
 }
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct EFI_UDP4_FRAGMENT_DATA {
     pub FragmentLength: UINT32,
     pub FragmentBuffer: *const VOID,
 }
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct EFI_UDP4_TRANSMIT_DATA {
     pub UdpSessionData: *const EFI_UDP4_SESSION_DATA,

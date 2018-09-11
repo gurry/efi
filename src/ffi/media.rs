@@ -15,8 +15,8 @@ use super::device_path::EFI_DEVICE_PATH_PROTOCOL;
 
 pub const EFI_LOAD_FILE_PROTOCOL_GUID: EFI_GUID = EFI_GUID(0x56EC3091, 0x954C, 0x11d2, [0x8E, 0x3F, 0x00, 0xA0, 0xC9, 0x69, 0x72, 0x3B]);
 
-#[repr(C)]
 #[derive(Clone)]
+#[repr(C)]
 pub struct EFI_LOAD_FILE_PROTOCOL {
     pub LoadFile: EFI_LOAD_FILE
 }
@@ -33,8 +33,8 @@ pub const EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_GUID: EFI_GUID  = EFI_GUID(0x0964E5B22
 
 pub const EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_REVISION: UINT64 = 0x00010000;
 
-#[repr(C)]
 #[derive(Clone)]
+#[repr(C)]
 pub struct EFI_SIMPLE_FILE_SYSTEM_PROTOCOL {
     pub Revision: UINT64,
     pub OpenVolume: EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_OPEN_VOLUME,
@@ -49,8 +49,8 @@ pub const EFI_FILE_PROTOCOL_REVISION: UINT64 = 0x00010000;
 pub const EFI_FILE_PROTOCOL_REVISION2: UINT64 = 0x00020000;
 pub const EFI_FILE_PROTOCOL_LATEST_REVISION: UINT64 = EFI_FILE_PROTOCOL_REVISION2;
 
-#[repr(C)]
 #[derive(Clone)]
+#[repr(C)]
 pub struct EFI_FILE_PROTOCOL {
     pub Revision: UINT64,
     pub Open: EFI_FILE_OPEN,
@@ -149,6 +149,7 @@ pub type EFI_FILE_FLUSH_EX = extern "win64" fn(
     Token: *mut EFI_FILE_IO_TOKEN
 ) -> EFI_STATUS;
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct EFI_FILE_IO_TOKEN {
   //
@@ -186,8 +187,8 @@ pub struct EFI_FILE_IO_TOKEN {
 
 pub const EFI_FILE_INFO_ID: EFI_GUID = EFI_GUID(0x09576E92, 0x6D3F, 0x11D2, [0x8E, 0x39, 0x00, 0xA0, 0xC9, 0x69, 0x72, 0x3B]);
                                                 // 0x09576e92, 0x6d3f, 0x11d2,  0x8e39, 0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b
-#[repr(C)]
 #[derive(Debug)]
+#[repr(C)]
 pub struct EFI_FILE_INFO {
     pub Size: UINT64,
     pub FileSize: UINT64,
@@ -213,8 +214,8 @@ pub const EFI_FILE_VALID_ATTR: UINT64 = 0x0000000000000037;
 
 pub const EFI_FILE_SYSTEM_INFO_ID: EFI_GUID = EFI_GUID(0x09576E93, 0x6D3F, 0x11D2, [0x8E, 0x39, 0x00, 0xA0, 0xC9, 0x69, 0x72, 0x3B]);
 
-#[repr(C)]
 #[derive(Debug)]
+#[repr(C)]
 pub struct EFI_FILE_SYSTEM_INFO {
     pub Size: UINT64,
     pub ReadOnly: BOOLEAN,

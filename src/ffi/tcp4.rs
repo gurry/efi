@@ -50,6 +50,7 @@ pub type EFI_TCP4_GET_MODE_DATA = extern "win64" fn(
     SnpModeData: *mut EFI_SIMPLE_NETWORK_MODE 
 ) -> EFI_STATUS;
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct EFI_TCP4_ACCESS_POINT {
     pub UseDefaultAddress: BOOLEAN,
@@ -75,6 +76,7 @@ impl Default for EFI_TCP4_ACCESS_POINT {
     }
 }
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct EFI_TCP4_OPTION {
     pub ReceiveBufferSize: UINT32,
@@ -94,6 +96,7 @@ pub struct EFI_TCP4_OPTION {
     pub EnablePathMtuDiscovery: BOOLEAN,
 }
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct EFI_TCP4_CONFIG_DATA {
     pub TypeOfService: UINT8,
@@ -112,6 +115,8 @@ impl Default for EFI_TCP4_CONFIG_DATA {
         }
     }
 }
+
+#[derive(Debug)]
 #[repr(C)]
 pub enum EFI_TCP4_CONNECTION_STATE{
     Tcp4StateClosed = 0,
@@ -146,6 +151,7 @@ pub type EFI_TCP4_CONNECT = extern "win64" fn(
     ConnectionToken: *mut EFI_TCP4_CONNECTION_TOKEN
 ) -> EFI_STATUS;
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct EFI_TCP4_COMPLETION_TOKEN {
     pub Event: EFI_EVENT,
@@ -161,6 +167,7 @@ impl Default for EFI_TCP4_COMPLETION_TOKEN {
     }
 }
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct EFI_TCP4_CONNECTION_TOKEN {
     pub CompletionToken: EFI_TCP4_COMPLETION_TOKEN,
@@ -178,6 +185,7 @@ pub type EFI_TCP4_ACCEPT = extern "win64" fn(
     ListenToken: *const EFI_TCP4_LISTEN_TOKEN
 ) -> EFI_STATUS;
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct EFI_TCP4_LISTEN_TOKEN {
     pub CompletionToken: EFI_TCP4_COMPLETION_TOKEN,
@@ -193,6 +201,7 @@ impl Default for EFI_TCP4_LISTEN_TOKEN {
     }
 }
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct EFI_TCP4_TRANSMIT_DATA {
     pub Push: BOOLEAN,
@@ -244,6 +253,7 @@ pub struct EFI_TCP4_RECEIVE_DATA {
     pub FragmentTable: [EFI_TCP4_FRAGMENT_DATA; 1], 
 }
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct EFI_TCP4_FRAGMENT_DATA {
     pub FragmentLength: UINT32,
@@ -260,6 +270,7 @@ pub type EFI_TCP4_CLOSE = extern "win64" fn(
     CloseToken: *const EFI_TCP4_CLOSE_TOKEN
 ) -> EFI_STATUS;
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct EFI_TCP4_CLOSE_TOKEN {
     pub CompletionToken: EFI_TCP4_COMPLETION_TOKEN,

@@ -52,6 +52,7 @@ pub struct EFI_SYSTEM_TABLE {
 
 
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct EFI_CONFIGURATION_TABLE {
     pub VendorGuid : base::EFI_GUID,
