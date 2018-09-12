@@ -160,7 +160,6 @@ pub struct EFI_IP4_RECEIVE_DATA {
  // See these issues: https://github.com/rust-lang/rust/issues/46043, https://github.com/rust-lang/rust/issues/27060
  // When creating this struct, better to perhaps write directly to a raw buffer and then transmute into it
  // instead of assigning to individual fields. This is a protocol header anyway. So it should be kinda idiomatic to do raw writes like this.
-#[derive(Debug)]
 #[repr(packed)]
 pub struct EFI_IP4_HEADER {
     pub HeaderLengthAndVersion: UINT8, // This is actually two bit fields called "HeaderLength" and "Version" with 4 bits each. Rust doesn't support bitfields (yet)
