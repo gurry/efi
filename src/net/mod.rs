@@ -538,19 +538,29 @@ impl Udp4Socket {
     }
 
     fn bind_and_connect(local_addr: SocketAddrV4, remote_addr: SocketAddrV4) -> Result<Self> {
-        let station_addr = *local_addr.ip();
-        let subnet_mask = if station_addr.is_unspecified() {
-            // If the station addr is unspecified then the subnet mask is unspecified as well
-            Ipv4Addr::unspecified()
-        } else {
-            // If not station addr is not unspecified then we locate the interface associated with this IP
-            // and get its subnet mask
-            // TODO: this shit doesn't work at all. Fix it.
-            let matching_interface = ifconfig::interfaces()?.into_iter()
-                                        .find(|i| i.station_address_ipv4() == station_addr)
-                                        .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
-            matching_interface.subnet_mask_ipv4()
-        };
+        // TODO: THIS IS A TEMPORARY HACK. WE ACTUALLY WANT TO MAKE THE COMMENTED OUT CODE BELOW WORK.
+        let dhcp_config = dhcp::cached_dhcp_config()?
+                .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
+        let station_addr = if let IpAddr::V4(ip) = dhcp_config.ip() { ip.into() } else { EFI_IPv4_ADDRESS::zero() };
+        let subnet_mask = if let IpAddr::V4(ip) = dhcp_config.subnet_mask() { ip.into() } else { EFI_IPv4_ADDRESS::zero() };
+
+        // TODO this code is not working because:
+        // a. We want to use UseDefaultAddress when the ip to bound to is unspecified.
+        // b. However on hyper v using UseDefaultAddress leads to a never-terminating configure loop.
+        // So we have to fix the hyper v problem before we can make this code work
+        // let station_addr = *local_addr.ip();
+        // let (subnet_mask, use_default_addr) = if station_addr.is_unspecified() {
+        //     // If the station addr is unspecified then the subnet mask is unspecified as well
+        //     (Ipv4Addr::unspecified(), true)
+        // } else {
+        //     // If not station addr is not unspecified then we locate the interface associated with this IP
+        //     // and get its subnet mask
+        //     // TODO: this shit doesn't work at all. Fix it.
+        //     let matching_interface = ifconfig::interfaces()?.into_iter()
+        //                                 .find(|i| i.station_address_ipv4() == station_addr)
+        //                                 .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
+        //     (matching_interface.subnet_mask_ipv4(), false)
+        // };
 
         let config = EFI_UDP4_CONFIG_DATA {
             AcceptBroadcast: FALSE,
@@ -563,8 +573,6 @@ impl Udp4Socket {
             ReceiveTimeout: 0,
             TransmitTimeout: 0,
             UseDefaultAddress: FALSE,
-            // TODO: make the use of DefaultAddress here vs using the addr from the DHCP config 
-            // configurable via some settings on this class similar to Rust std lib
             StationAddress: station_addr.into(),
             SubnetMask: subnet_mask.into(),
             StationPort: local_addr.port(),
