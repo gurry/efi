@@ -37,8 +37,8 @@ pub use self::builder::{Builder};
 
 use core::{time::Duration};
 use super::{UdpSocket, SocketAddr, IpAddr};
-use alloc::Vec;
 use net::pxebc;
+use alloc::vec::Vec;
 
 struct DnsServer {
     addr: SocketAddr

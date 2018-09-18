@@ -279,7 +279,7 @@ use core::cmp;
 use core::str as core_str;
 use core::fmt;
 use core::result;
-use alloc::{String, Vec};
+use alloc::{string::String, vec::Vec};
 use core::str;
 use core::ptr;
 

@@ -17,7 +17,7 @@ use ffi::{
 use {EfiError, EfiErrorKind, Result, utils::as_slice};
 use core::{mem, ptr, fmt, slice};
 use system_table;
-use alloc::{String, boxed::Box, Vec};
+use alloc::{string::String, boxed::Box, vec::Vec};
 
 // TODO: the whole concept of wrapping device path pointers like
 // this is not safe. We need to analyze memory lifetimes etc.

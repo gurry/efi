@@ -1,5 +1,5 @@
 //use std::i32;
-use alloc::Vec;
+use alloc::vec::Vec;
 use byteorder::{BigEndian, ByteOrder};
 
 use super::{Header, Packet, Error, Question, Name, QueryType, QueryClass};

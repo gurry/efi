@@ -38,12 +38,12 @@ use ffi::{
     TRUE,
     FALSE,
 };
-use core::cmp;
+use core::{cmp, mem::transmute};
 use io::{self, Write, Cursor, BufRead, BufReader, LineWriter};
 use ::Result;
 use system_table;
-use alloc::{Vec, String, str, fmt};
 use TextInputProcolPtr;
+use alloc::{vec::Vec, string::String, str, fmt};
 
 // TODO: This whole module has gotten ugly. Needs cleanup.
 // TODO: Should we replace Console with two structs, StdIn and StdOut, corresponding to input and output? This is more in line with Rust stdlib.
@@ -512,9 +512,4 @@ fn to_ptr<T>(slice: &[T]) -> (*const T, usize) {
     unsafe {
         transmute(slice)
     }
-}
-
-// TODO is this really needed? Doesn't core expose mem::transmute?
-extern "rust-intrinsic" {
-    fn transmute<T,U>(val: T) -> U;
 }

@@ -8,7 +8,7 @@ use ffi::{
 };
 use ::{Result, system_table, boxed::EfiBox};
 use core::{ptr};
-use alloc::Vec;
+use alloc::vec::Vec;
 
 // TODO: this guy should return an iterator to avoid allocations
 pub (crate) fn locate_handles(protocol_guid: &EFI_GUID) -> Result<Vec<EFI_HANDLE>> {

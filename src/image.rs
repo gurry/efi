@@ -18,7 +18,7 @@ use ffi::{
 };
 use device_path::{DevicePath, create_file_path_node, append_path};
 use core::{self, ptr, mem, slice, cmp};
-use alloc::Vec;
+use alloc::vec::Vec;
 
 
 // TODO: we should create a virtualfs (filesystem) and put all our images there.

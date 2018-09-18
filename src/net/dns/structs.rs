@@ -1,6 +1,6 @@
 use super::{QueryType, QueryClass, Name, Class, Header, RData};
 use super::rdata::opt;
-use alloc::Vec;
+use alloc::vec::Vec;
 
 /// Parsed DNS packet
 //#[derive(Debug)]

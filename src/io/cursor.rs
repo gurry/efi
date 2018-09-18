@@ -13,7 +13,7 @@ use io::prelude::*;
 
 use core::cmp;
 use io::{self, Initializer, SeekFrom, Error, ErrorKind};
-use alloc::Vec;
+use alloc::vec::Vec;
 
 /// A `Cursor` wraps another type and provides it with a
 /// [`Seek`] implementation.

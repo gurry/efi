@@ -22,4 +22,4 @@ pub use super::{Read, Write, Seek};
 pub use super::BufRead;
 
 pub use alloc::boxed::Box;
-pub use alloc::Vec;
+pub use alloc::vec::Vec;

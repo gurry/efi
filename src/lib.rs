@@ -2,22 +2,17 @@
 // TODO: At many places in this crate we're not handling errors well. We're swalling inner errors such as EFI_STATUSes. Fix this situation.
 // TODO: can we use #![no_main] here and avoid having to write a main function
 #![no_std]
-#![feature(intrinsics)]
-#![feature(try_trait)]
+#![recursion_limit="100"] // Needed for the dns module (because it does recursive name resolution)
+
 #![feature(alloc)]
-#![feature(global_allocator)]
-#![feature(allocator_api)]
 #![feature(str_internals)] // TODO: this looks very new and unstable. Can we get rid of it?
 #![feature(align_offset)]
-#![recursion_limit="100"] // Needed for the dns module (because it does recursive name resolution)
 #![feature(exact_chunks)]
 #![feature(ptr_internals)]
-#![feature(duration_extras)]
-#![feature(duration_from_micros)]
 
 // #![warn(missing_debug_implementations)]
 
-#[macro_use] extern crate failure;
+extern crate failure;
 #[macro_use] extern crate alloc;
 extern crate byteorder;
 

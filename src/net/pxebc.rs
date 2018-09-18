@@ -38,9 +38,9 @@ use {
     boot_services::locate_handles,
 };
 
-use core::{self, slice, mem, ptr, default::Default};
+use core::{self, mem, ptr, default::Default};
 use utils::{to_ptr, Wrapper, to_opt};
-use alloc::{String, Vec};
+use alloc::{string::String, vec::Vec};
 
 // TODO: THIS WHOLE MODULE NEEDS A COMPLETE OVERHAUL. 
 // The API surface area needs to be complete redesigned including things like:
@@ -144,11 +144,7 @@ impl DhcpConfig {
     fn extract_ip_addrs(mode: &Mode, op_code: u8) -> Option<Vec<IpAddr>> {
         let option = mode.dhcp_ack().as_dhcpv4().dhcp_option(op_code)?;
         let val = option.value()?;
-        // Using explicit invocation syntax for 'exact_chunks' because of a compiler bug which leads to 
-        // multiple candidates found for this method: https://github.com/rust-lang/rust/issues/51402.
-        // We actually don't even want to use the SliceExt trait but the method on the inherent impl, 
-        // but I couldn't find a way to do it. This shit has been fixed in latest Rust. So will address it when we upgrade
-        let addrs = slice::SliceExt::exact_chunks(val, 4)
+        let addrs = val.exact_chunks(4)
             .map(|c| IpAddr::V4(Ipv4Addr::new(c[0], c[1], c[2], c[3])))
             .collect::<Vec<_>>();
 

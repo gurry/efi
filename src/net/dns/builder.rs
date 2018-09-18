@@ -1,4 +1,4 @@
-use alloc::Vec;
+use alloc::vec::Vec;
 use byteorder::{ByteOrder, BigEndian};
 
 use super::{Opcode, ResponseCode, Header, QueryType, QueryClass};

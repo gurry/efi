@@ -1,5 +1,5 @@
 use {Result, boxed::EfiBox, system_table, image_handle};
-use alloc::Vec;
+use alloc::vec::Vec;
 use core::{ptr, mem, slice};
 use ffi::{
     EFI_HANDLE,

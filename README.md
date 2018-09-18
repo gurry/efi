@@ -27,4 +27,4 @@ To see how to use take a look at the sample application [`efi_app`](https://gith
 
 ### Note on Building
 
-Use nightly Rust to build. Has been tested with `nightly-2018-03-30-x86_64-pc-windows-msvc`. May not work with latest nightlies, especially because the allocator API is in flux. We're using a `rust-toolchain` file to pin the rust version to `nightly-2018-03-30`. If this version isn't already installed, `cargo` will automatically download and install it before building.
+Use nightly Rust to build. Has been tested with `nightly-2018-09-16-x86_64-pc-windows-msvc`. May not work with latest nightlies. We're using a `rust-toolchain` file to pin the rust version to `nightly-2018-09-16`. If this version isn't already installed, `cargo` will automatically download and install it before building.
