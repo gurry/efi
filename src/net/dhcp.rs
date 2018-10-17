@@ -61,6 +61,7 @@ pub struct DhcpConfig {
     gateway_addrs: Vec<IpAddr>,
     dns_server_addrs: Vec<IpAddr>,
     dhcp_ack_packet: Dhcpv4Packet,
+    dhcp_discover_packet: Option<Dhcpv4Packet>,
     proxy_offer_packet: Option<Dhcpv4Packet>,
 }
 
@@ -86,7 +87,13 @@ impl DhcpConfig {
             None
         };
 
-        Self { ip, subnet_mask, dhcp_server_addr, gateway_addrs, dns_server_addrs, dhcp_ack_packet, proxy_offer_packet }
+        let dhcp_discover_packet = if mode.dhcp_discover_valid() {
+            Some(mode.dhcp_discover().as_dhcpv4().clone())
+        } else {
+            None
+        };
+
+        Self { ip, subnet_mask, dhcp_server_addr, gateway_addrs, dns_server_addrs, dhcp_ack_packet, dhcp_discover_packet, proxy_offer_packet }
     }
 
     pub fn ip(&self) -> IpAddr {
@@ -111,6 +118,10 @@ impl DhcpConfig {
  
     pub fn dhcp_ack_packet(&self) -> &Dhcpv4Packet {
         &self.dhcp_ack_packet
+    }
+
+    pub fn dhcp_discover_packet(&self) -> Option<&Dhcpv4Packet> {
+        self.dhcp_discover_packet.as_ref()
     }
 
     pub fn proxy_offer_packet(&self) -> Option<&Dhcpv4Packet> {
@@ -770,6 +781,10 @@ pub struct DhcpOption<'a> {
 }
 
 impl<'a> DhcpOption<'a> {
+    pub fn new(code: u8, val: Option<&[u8]>) -> DhcpOption {
+        DhcpOption { code: code, val: val }
+    }
+
     pub fn code(&self) -> u8 {
         self.code
     }
@@ -783,6 +798,7 @@ pub struct DhcpOptionIter<'a> {
     buf: &'a[u8],
 }
 
+//TODO:Doesn't parse Pad option (code 0)
 impl<'a> Iterator for DhcpOptionIter<'a> {
     type Item = DhcpOption<'a>;
     fn next(&mut self) -> Option<Self::Item> {
@@ -822,4 +838,83 @@ impl<'a> Iterator for DhcpOptionIter<'a> {
 
         Some(DhcpOption { code, val })
     }
+}
+
+pub struct DhcpPacketBuilder<'a, 'b, 'c> {
+    buf: Vec<u8>,
+    dhcpv4_packet: &'a Dhcpv4Packet,
+    options_to_replace: Vec<DhcpOption<'b>>,
+    ciaddr: &'c [u8; 4]
+}
+
+impl<'a, 'b, 'c> DhcpPacketBuilder<'a, 'b, 'c> {
+    pub fn from(dhcpv4_packet: &Dhcpv4Packet) -> DhcpPacketBuilder {
+        let buf = Vec::new();
+        let options_to_replace = Vec::new();
+        let ciaddr = dhcpv4_packet.bootp_ci_addr();
+        DhcpPacketBuilder { buf: buf, dhcpv4_packet: dhcpv4_packet, options_to_replace: options_to_replace, ciaddr: ciaddr }
+    }
+
+    pub fn replace_option(mut self, option: DhcpOption<'b>) -> DhcpPacketBuilder<'a, 'b, 'c> {
+        self.options_to_replace.push(option);
+        self
+    }
+
+    pub fn set_ciaddr(mut self, ciaddr: &'c [u8; 4]) -> DhcpPacketBuilder<'a, 'b, 'c> {
+        self.ciaddr = ciaddr;
+        self
+    }
+
+    pub fn build(mut self) -> Vec<u8> {
+        self.buf.push(self.dhcpv4_packet.bootp_opcode().to_be());
+        self.buf.push(self.dhcpv4_packet.bootp_hw_type().to_be());
+        self.buf.push(self.dhcpv4_packet.bootp_hw_addr_len().to_be());
+        self.buf.push(self.dhcpv4_packet.bootp_gate_hops().to_be());
+
+        self.buf.extend(u32_to_u8_array(self.dhcpv4_packet.bootp_ident().to_be()).iter());
+        self.buf.extend(u16_to_u8_array(self.dhcpv4_packet.bootp_seconds().to_be()).iter());
+        self.buf.extend(u16_to_u8_array(self.dhcpv4_packet.bootp_flags().to_be()).iter());
+
+        self.buf.extend(self.ciaddr.iter());
+        self.buf.extend(self.dhcpv4_packet.bootp_yi_addr().iter());
+        self.buf.extend(self.dhcpv4_packet.bootp_si_addr().iter());
+        self.buf.extend(self.dhcpv4_packet.bootp_gi_addr().iter());
+        self.buf.extend(self.dhcpv4_packet.bootp_hw_addr().iter());
+        self.buf.extend(self.dhcpv4_packet.bootp_srv_name().iter());
+        self.buf.extend(self.dhcpv4_packet.bootp_boot_file().iter());
+
+        self.buf.extend(u32_to_u8_array(self.dhcpv4_packet.dhcp_magik().to_be()).iter());
+
+        for option in self.dhcpv4_packet.dhcp_options() {
+            let use_option = match self.options_to_replace.iter().position(|ref op| op.code == option.code) {
+                Some(index) => &self.options_to_replace[index],
+                None => &option
+            };
+
+            self.buf.push(use_option.code);
+            match use_option.val {
+                None => (),
+                Some(buf) => {
+                    self.buf.push(buf.len() as u8);//TODO:what if buf.len() doesn't fit in a u8?
+                    self.buf.extend(buf.iter());
+                }
+            }
+        }
+        self.buf.push(255u8);//Option end
+        self.buf
+    }
+}
+
+fn u32_to_u8_array(x:u32) -> [u8;4] {
+    let b1 : u8 = ((x >> 24) & 0xff) as u8;
+    let b2 : u8 = ((x >> 16) & 0xff) as u8;
+    let b3 : u8 = ((x >> 8) & 0xff) as u8;
+    let b4 : u8 = (x & 0xff) as u8;
+    return [b1, b2, b3, b4]
+}
+
+fn u16_to_u8_array(x:u16) -> [u8;2] {
+    let b1 : u8 = ((x >> 8) & 0xff) as u8;
+    let b2 : u8 = (x & 0xff) as u8;
+    return [b1, b2]
 }

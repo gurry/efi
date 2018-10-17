@@ -104,7 +104,9 @@ pub struct EFI_PXE_BASE_CODE_DHCPV4_PACKET {
     pub BootpSrvName: [UINT8; 64],
     pub BootpBootFile: [UINT8; 128],
     pub DhcpMagik: UINT32,
-    pub DhcpOptions: [UINT8; 56],
+    //TODO:DhcpOptions is defined as [UINT8; 56] in the spec, but options don't fit in 56 bytes,
+    //setting it to EFI_PXE_BASE_CODE_PACKET raw size (1472) minus sum of other fields (240)
+    pub DhcpOptions: [UINT8; 1232],
 }
 
 impl fmt::Debug for EFI_PXE_BASE_CODE_DHCPV4_PACKET {
