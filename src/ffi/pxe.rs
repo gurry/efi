@@ -104,9 +104,24 @@ pub struct EFI_PXE_BASE_CODE_DHCPV4_PACKET {
     pub BootpSrvName: [UINT8; 64],
     pub BootpBootFile: [UINT8; 128],
     pub DhcpMagik: UINT32,
-    //TODO:DhcpOptions is defined as [UINT8; 56] in the spec, but options don't fit in 56 bytes,
-    //setting it to EFI_PXE_BASE_CODE_PACKET raw size (1472) minus sum of other fields (240)
-    pub DhcpOptions: [UINT8; 1232],
+    // UEFI spec defines DhcpOptions to have a size of 56 bytes, but this size is
+    // usually not enough to contain all the options. We are setting the size instead
+    // to 1020. This should be safe for the reason explained below.
+    //
+    // The vendor field of the bootph struct is defined as follows by the pxe spec:
+    // Union
+    // {
+    //      UINT8 d[BOOTP_DHCPVEND]; // BOOTP_DHCPVEND is defined as 1024
+    //      Struct
+    //      {
+    //          UINT8 magic[4];
+    //          UINT32 flags;
+    //          UINT8 pad[56];
+    //      } v;
+    // } vendor;
+    // This union contains memory area after the BootpBootFile field. Note that it contains the DhcpMagik field.
+    // Since we have a separate field for DhcpMagik (4 bytes), we'll set the DhcpOptions array to a size 1020 (BOOTP_DHCPVEND - sizeof(DhcpMagik))
+    pub DhcpOptions: [UINT8; 1020],
 }
 
 impl fmt::Debug for EFI_PXE_BASE_CODE_DHCPV4_PACKET {
