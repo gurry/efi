@@ -871,14 +871,14 @@ impl<'a, 'b, 'c> DhcpPacketBuilder<'a, 'b, 'c> {
     }
 
     pub fn build(mut self) -> Vec<u8> {
-        self.buf.push(self.dhcpv4_packet.bootp_opcode().to_be());
-        self.buf.push(self.dhcpv4_packet.bootp_hw_type().to_be());
-        self.buf.push(self.dhcpv4_packet.bootp_hw_addr_len().to_be());
-        self.buf.push(self.dhcpv4_packet.bootp_gate_hops().to_be());
+        self.buf.push(self.dhcpv4_packet.bootp_opcode());
+        self.buf.push(self.dhcpv4_packet.bootp_hw_type());
+        self.buf.push(self.dhcpv4_packet.bootp_hw_addr_len());
+        self.buf.push(self.dhcpv4_packet.bootp_gate_hops());
 
-        self.buf.extend(u32_to_u8_array(self.dhcpv4_packet.bootp_ident().to_be()).iter());
-        self.buf.extend(u16_to_u8_array(self.dhcpv4_packet.bootp_seconds().to_be()).iter());
-        self.buf.extend(u16_to_u8_array(self.dhcpv4_packet.bootp_flags().to_be()).iter());
+        self.buf.extend(u32_to_bytes(self.dhcpv4_packet.bootp_ident()).iter());
+        self.buf.extend(u16_to_bytes(self.dhcpv4_packet.bootp_seconds()).iter());
+        self.buf.extend(u16_to_bytes(self.dhcpv4_packet.bootp_flags()).iter());
 
         self.buf.extend(self.ciaddr.iter());
         self.buf.extend(self.dhcpv4_packet.bootp_yi_addr().iter());
@@ -888,7 +888,7 @@ impl<'a, 'b, 'c> DhcpPacketBuilder<'a, 'b, 'c> {
         self.buf.extend(self.dhcpv4_packet.bootp_srv_name().iter());
         self.buf.extend(self.dhcpv4_packet.bootp_boot_file().iter());
 
-        self.buf.extend(u32_to_u8_array(self.dhcpv4_packet.dhcp_magik().to_be()).iter());
+        self.buf.extend(u32_to_bytes(self.dhcpv4_packet.dhcp_magik()).iter());
 
         for option in self.dhcpv4_packet.dhcp_options() {
             let use_option = match self.options_to_replace.iter().position(|ref op| op.code == option.code) {
@@ -910,16 +910,25 @@ impl<'a, 'b, 'c> DhcpPacketBuilder<'a, 'b, 'c> {
     }
 }
 
-fn u32_to_u8_array(x:u32) -> [u8;4] {
-    let b1 : u8 = ((x >> 24) & 0xff) as u8;
-    let b2 : u8 = ((x >> 16) & 0xff) as u8;
-    let b3 : u8 = ((x >> 8) & 0xff) as u8;
-    let b4 : u8 = (x & 0xff) as u8;
-    return [b1, b2, b3, b4]
+pub fn u32_to_bytes(x: u32) -> [u8; 4] {
+    unsafe { mem::transmute(x) }
 }
 
-fn u16_to_u8_array(x:u16) -> [u8;2] {
-    let b1 : u8 = ((x >> 8) & 0xff) as u8;
-    let b2 : u8 = (x & 0xff) as u8;
-    return [b1, b2]
+pub fn u16_to_bytes(x: u16) -> [u8; 2] {
+    unsafe { mem::transmute(x) }
 }
+
+pub fn bytes_to_u32(buf: &[u8]) -> u32 {
+    assert!(4 <= buf.len());
+    unsafe {
+        mem::transmute(*(buf.as_ptr() as *const u32))
+    }
+}
+
+pub fn bytes_to_u16(buf: &[u8]) -> u16 {
+    assert!(2 <= buf.len());
+    unsafe {
+        mem::transmute(*(buf.as_ptr() as *const u16))
+    }
+}
+
