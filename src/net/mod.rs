@@ -743,7 +743,7 @@ impl Drop for Udp4Socket {
 }
 
 fn extract_router_opt(dhcp_config: &DhcpConfig) -> Result<Ipv4Addr> {
-    let ack_pkt = dhcp_config.dhcp_ack_packet();
+    let ack_pkt = dhcp_config.dhcp_ack_packet().ok_or_else(|| ::EfiError::from(::EfiErrorKind::NotFound))?;
     let router_option = ack_pkt.dhcp_option(3)
         .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
     let router_ip_buf = router_option.value()

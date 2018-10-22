@@ -60,7 +60,7 @@ pub struct DhcpConfig {
     dhcp_server_addr: Option<IpAddr>,
     gateway_addrs: Vec<IpAddr>,
     dns_server_addrs: Vec<IpAddr>,
-    dhcp_ack_packet: Dhcpv4Packet,
+    dhcp_ack_packet: Option<Dhcpv4Packet>,
     dhcp_discover_packet: Option<Dhcpv4Packet>,
     proxy_offer_packet: Option<Dhcpv4Packet>,
 }
@@ -80,7 +80,13 @@ impl DhcpConfig {
             });
         let gateway_addrs = Self::extract_ip_addrs(mode, ROUTER_OPTION).unwrap_or(Vec::new());
         let dns_server_addrs = Self::extract_ip_addrs(mode, DOMAIN_NAME_SERVER_OPTION).unwrap_or(Vec::new());
-        let dhcp_ack_packet = mode.dhcp_ack().as_dhcpv4().clone();
+
+        let dhcp_ack_packet = if mode.dhcp_ack_received() {
+            Some(mode.dhcp_ack().as_dhcpv4().clone())
+        } else {
+            None
+        };
+
         let proxy_offer_packet =  if mode.proxy_offer_received() {
             Some(mode.proxy_offer().as_dhcpv4().clone())
         } else {
@@ -116,8 +122,8 @@ impl DhcpConfig {
         self.dns_server_addrs.as_slice()
     }
  
-    pub fn dhcp_ack_packet(&self) -> &Dhcpv4Packet {
-        &self.dhcp_ack_packet
+    pub fn dhcp_ack_packet(&self) -> Option<&Dhcpv4Packet> {
+        self.dhcp_ack_packet.as_ref()
     }
 
     pub fn dhcp_discover_packet(&self) -> Option<&Dhcpv4Packet> {
