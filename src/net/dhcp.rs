@@ -804,7 +804,6 @@ pub struct DhcpOptionIter<'a> {
     buf: &'a[u8],
 }
 
-//TODO:Doesn't parse Pad option (code 0)
 impl<'a> Iterator for DhcpOptionIter<'a> {
     type Item = DhcpOption<'a>;
     fn next(&mut self) -> Option<Self::Item> {
