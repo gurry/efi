@@ -221,6 +221,34 @@ pub fn run_dhcp() -> Result<DhcpConfig> {
     Ok(config)
 }
 
+pub fn set_pxe_reply(pxe_reply_packet: &Dhcpv4Packet) -> Result<()> {
+    let pxe = locate_pxe_protocol()?;
+
+    let mode = pxe.mode().ok_or_else::<EfiError, _>(|| EfiErrorKind::ProtocolError.into())?;
+
+    if !mode.started(){
+        let use_ipv6 = false;
+        pxe.start(use_ipv6)?;
+    }
+
+    let inner = unsafe { EFI_PXE_BASE_CODE_PACKET { Dhcpv4: *pxe_reply_packet.inner_ptr() }};
+    let packet: &Packet = unsafe { mem::transmute(&inner) };
+    pxe.set_packets(None,
+        None,
+        None,
+        None,
+        Some(true),
+        None,
+        None,
+        None,
+        None,
+        None,
+        Some(packet),
+        None)?;
+
+    Ok(())
+}
+
 // TODO: allow user to specify discovery options such as whether to do unicast, broadcast or multicast 
 // and list of boot servers to use for unicast etc.
 pub fn run_boot_server_discovery(_dhcp_config: &DhcpConfig) -> Result<BootServerConfig> {
