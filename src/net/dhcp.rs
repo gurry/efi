@@ -689,6 +689,53 @@ impl Dhcpv4Packet {
     pub fn dhcp_option<'a>(&'a self, code: u8) -> Option<DhcpOption<'a>> {
         self.dhcp_options().find(|o| o.code() == code)
     }
+
+    pub fn parse(buf: &[u8]) -> Option<Dhcpv4Packet> {
+        if buf.len() < 240 { return None }
+
+        let mut ciaddr: [u8;4] = [0;4];
+        ciaddr.clone_from_slice(&buf[12..16]);
+
+        let mut yiaddr: [u8;4] = [0;4];
+        yiaddr.clone_from_slice(&buf[16..20]);
+
+        let mut siaddr: [u8;4] = [0;4];
+        siaddr.clone_from_slice(&buf[20..24]);
+
+        let mut giaddr: [u8;4] = [0;4];
+        giaddr.clone_from_slice(&buf[24..28]);
+
+        let mut hwaddr: [u8;16] = [0;16];
+        hwaddr.clone_from_slice(&buf[28..44]);
+
+        let mut srvname: [u8;64] = [0;64];
+        srvname.clone_from_slice(&buf[44..108]);
+
+        let mut bootfile: [u8;128] = [0;128];
+        bootfile.clone_from_slice(&buf[108..236]);
+
+        let mut options: [u8;1020] = [0;1020];
+        options.clone_from_slice(&buf[240..]);
+
+        Some(Dhcpv4Packet(EFI_PXE_BASE_CODE_DHCPV4_PACKET {
+            BootpOpcode: buf[0],
+            BootpHwType: buf[1],
+            BootpHwAddrLen: buf[2],
+            BootpGateHops: buf[3],
+            BootpIdent: bytes_to_u32(&buf[4..8]),
+            BootpSeconds: bytes_to_u16(&buf[8..10]),
+            BootpFlags: bytes_to_u16(&buf[10..12]),
+            BootpCiAddr: ciaddr,
+            BootpYiAddr: yiaddr,
+            BootpSiAddr: siaddr,
+            BootpGiAddr: giaddr,
+            BootpHwAddr: hwaddr,
+            BootpSrvName: srvname,
+            BootpBootFile: bootfile,
+            DhcpMagik: bytes_to_u32(&buf[236..240]),
+            DhcpOptions: options,
+        }))
+    }
 }
 
 #[derive(Debug)]
