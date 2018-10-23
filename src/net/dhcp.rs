@@ -34,7 +34,7 @@ use {
     NullTerminatedAsciiStr,
 };
 
-use core::{slice, mem, ptr, default::Default};
+use core::{self, slice, mem, ptr, default::Default};
 use utils::{to_ptr, Wrapper, to_opt};
 use alloc::{String, Vec};
 
@@ -268,6 +268,33 @@ pub fn mtftp_get_file_size(server_ip: &IpAddr, filename: &NullTerminatedAsciiStr
         server_ip_ptr, filename_ptr, ptr::null(), false)?;
 
     Ok(file_size)
+}
+
+pub fn mtftp_get_file(server_ip: &IpAddr, filename: &NullTerminatedAsciiStr) -> Result<Vec<u8>> {
+    let pxe = locate_pxe_protocol()?;
+
+    let mode = pxe.mode().ok_or_else::<EfiError, _>(|| EfiErrorKind::ProtocolError.into())?;
+
+    if !mode.started() {
+        return Err(EfiErrorKind::NotReady.into());
+    }
+
+    let file_size = mtftp_get_file_size(server_ip, filename)?;
+    if file_size > core::usize::MAX as u64 {
+        return Err(EfiErrorKind::BadBufferSize.into());
+    }
+
+    let filename_ptr: *const u8 = filename.as_ptr();
+    let server_ip_efi: EFI_IP_ADDRESS = (*server_ip).into();
+    let server_ip_ptr: *const EFI_IP_ADDRESS = &server_ip_efi as *const EFI_IP_ADDRESS;
+
+    let file = vec![0;file_size as usize];
+    let buffer_ptr = file.as_ptr() as *const VOID;
+
+    pxe.mtftp(EFI_PXE_BASE_CODE_TFTP_OPCODE::EFI_PXE_BASE_CODE_TFTP_READ_FILE, buffer_ptr, false, &file_size as *const u64, ptr::null(),
+        server_ip_ptr, filename_ptr, ptr::null(), false)?;
+
+    Ok(file)
 }
 
 // TODO: allow user to specify discovery options such as whether to do unicast, broadcast or multicast 
