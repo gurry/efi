@@ -54,7 +54,7 @@ use ffi::{
 use failure::{Context, Fail, Backtrace};
 use allocator::EfiAllocator;
 pub use console::{Console, stdin, stdout};
-
+pub use utils::NullTerminatedAsciiStr;
 
 static mut SYSTEM_TABLE: Option<*const EFI_SYSTEM_TABLE> = None;
 static mut IMAGE_HANDLE: Option<EFI_HANDLE> = None;
