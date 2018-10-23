@@ -719,7 +719,8 @@ impl Dhcpv4Packet {
     }
 
     pub fn parse(buf: &[u8]) -> Option<Dhcpv4Packet> {
-        if buf.len() < 240 { return None }
+        let size_of_fields_before_options = 240;
+        if buf.len() < size_of_fields_before_options { return None }
 
         let mut ciaddr: [u8;4] = [0;4];
         ciaddr.clone_from_slice(&buf[12..16]);
@@ -743,7 +744,14 @@ impl Dhcpv4Packet {
         bootfile.clone_from_slice(&buf[108..236]);
 
         let mut options: [u8;1020] = [0;1020];
-        options.clone_from_slice(&buf[240..]);
+
+        let options_len = options.len();
+        if buf.len() - size_of_fields_before_options >= options.len() {
+            options.clone_from_slice(&buf[size_of_fields_before_options..size_of_fields_before_options+options_len]);
+        } else {
+            let source = &buf[size_of_fields_before_options..];
+            options[..source.len()].clone_from_slice(source);
+        }
 
         Some(Dhcpv4Packet(EFI_PXE_BASE_CODE_DHCPV4_PACKET {
             BootpOpcode: buf[0],
@@ -1006,4 +1014,3 @@ pub fn bytes_to_u16(buf: &[u8]) -> u16 {
         mem::transmute(*(buf.as_ptr() as *const u16))
     }
 }
-
