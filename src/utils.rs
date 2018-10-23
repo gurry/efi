@@ -1,6 +1,7 @@
 // TODO: Write a proc macro called derive(TupleWrapper) which automaticlly impls Wrapper trait for any tuple struct wrapping types
 use ffi::CHAR16;
 use core::{self, mem, slice};
+use {EfiError, EfiErrorKind};
 
 pub trait Wrapper {
     type Inner;
@@ -56,10 +57,11 @@ pub struct NullTerminatedAsciiStr<'a> {
 }
 
 impl<'a> NullTerminatedAsciiStr<'a> {
-    pub fn new(buffer: &[u8]) -> NullTerminatedAsciiStr {
-        assert!(buffer.len() >= 1);
-        assert!(buffer[buffer.len() - 1] == 0);
-        NullTerminatedAsciiStr { buffer: buffer }
+    pub fn new(buffer: &[u8]) -> Result<NullTerminatedAsciiStr, EfiError> {
+        if buffer.len() < 1 || buffer[buffer.len() - 1] != 0 {
+            return Err(EfiErrorKind::InvalidParameter.into());
+        }
+        Ok(NullTerminatedAsciiStr { buffer: buffer })
     }
 
     pub fn as_ptr(&self) -> *const u8 {
