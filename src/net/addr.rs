@@ -1,4 +1,4 @@
-use ffi::{EFI_IPv4_ADDRESS, EFI_IPv6_ADDRESS};
+use ffi::{EFI_IPv4_ADDRESS, EFI_IPv6_ADDRESS, EFI_IP_ADDRESS};
 use core::{mem, fmt, iter, slice, option, cmp::Ordering};
 use io;
 use alloc::{String, vec, Vec};
@@ -654,6 +654,15 @@ impl fmt::Display for IpAddr {
         match self {
             IpAddr::V4(a) => a.fmt(fmt),
             IpAddr::V6(a) => a.fmt(fmt),
+        }
+    }
+}
+
+impl From<IpAddr> for EFI_IP_ADDRESS {
+    fn from(ip: IpAddr) -> EFI_IP_ADDRESS {
+        match ip {
+            IpAddr::V4(a) => EFI_IP_ADDRESS { v4: a.into() },
+            IpAddr::V6(a) => EFI_IP_ADDRESS { v6: a.into() },
         }
     }
 }

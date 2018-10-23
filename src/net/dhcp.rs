@@ -13,6 +13,8 @@ use ffi::{
         EFI_PXE_BASE_CODE_ROUTE_ENTRY,
         EFI_PXE_BASE_CODE_ICMP_ERROR,
         EFI_PXE_BASE_CODE_TFTP_ERROR,
+        EFI_PXE_BASE_CODE_TFTP_OPCODE,
+        EFI_PXE_BASE_CODE_MTFTP_INFO,
     },
     EFI_IP_ADDRESS,
     UINT16,
@@ -29,6 +31,7 @@ use {
     to_res,
     system_table,
     net::{IpAddr, Ipv4Addr},
+    NullTerminatedAsciiStr,
 };
 
 use core::{slice, mem, ptr, default::Default};
@@ -249,6 +252,26 @@ pub fn set_pxe_reply(pxe_reply_packet: &Dhcpv4Packet) -> Result<()> {
     Ok(())
 }
 
+pub fn get_file_size(server_ip: &IpAddr, filename: &NullTerminatedAsciiStr) -> Result<u64> {
+    let pxe = locate_pxe_protocol()?;
+
+    let mode = pxe.mode().ok_or_else::<EfiError, _>(|| EfiErrorKind::ProtocolError.into())?;
+
+    if !mode.started() {
+        let use_ipv6 = false;
+        pxe.start(use_ipv6)?;
+    }
+
+    let filename_ptr: *const u8 = filename.as_ptr();
+    let server_ip_efi: EFI_IP_ADDRESS = (*server_ip).into();
+    let server_ip_ptr: *const EFI_IP_ADDRESS = &server_ip_efi as *const EFI_IP_ADDRESS;
+    let file_size: u64 = 0;
+    pxe.mtftp(EFI_PXE_BASE_CODE_TFTP_OPCODE::EFI_PXE_BASE_CODE_TFTP_GET_FILE_SIZE, ptr::null(), false, &file_size as *const u64, ptr::null(),
+        server_ip_ptr, filename_ptr, ptr::null(), false)?;
+
+    Ok(file_size)
+}
+
 // TODO: allow user to specify discovery options such as whether to do unicast, broadcast or multicast 
 // and list of boot servers to use for unicast etc.
 pub fn run_boot_server_discovery(_dhcp_config: &DhcpConfig) -> Result<BootServerConfig> {
@@ -318,8 +341,11 @@ impl PxeBaseCodeProtocol {
         to_res(layer, status)
     }
 
-    pub fn mtftp() -> Result<()> {
-        unimplemented!()
+    pub fn mtftp(&self, operation: EFI_PXE_BASE_CODE_TFTP_OPCODE, buffer_ptr: *const VOID, overwrite: bool, buffer_size: *const u64,
+                block_size: *const usize, server_ip: *const EFI_IP_ADDRESS, filename: *const u8, info: *const EFI_PXE_BASE_CODE_MTFTP_INFO,
+                dont_use_buffer: bool,) -> Result<()> {
+        let status = (self.0.Mtftp)(&self.0, operation, buffer_ptr, to_boolean(overwrite), buffer_size, block_size, server_ip, filename, info, to_boolean(dont_use_buffer));
+        to_res((), status)
     }
 
     pub fn set_packets(&self, 

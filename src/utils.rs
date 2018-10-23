@@ -49,3 +49,20 @@ pub unsafe fn as_slice<'a>(s: *const CHAR16) -> &'a [CHAR16] {
 
     slice::from_raw_parts(s, len)
 }
+
+#[derive(Debug)]
+pub struct NullTerminatedAsciiStr<'a> {
+    buffer: &'a [u8]
+}
+
+impl<'a> NullTerminatedAsciiStr<'a> {
+    pub fn new(buffer: &[u8]) -> NullTerminatedAsciiStr {
+        assert!(buffer.len() >= 1);
+        assert!(buffer[buffer.len() - 1] == 0);
+        NullTerminatedAsciiStr { buffer: buffer }
+    }
+
+    pub fn as_ptr(&self) -> *const u8 {
+        self.buffer.as_ptr() as *const u8
+    }
+}
