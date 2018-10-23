@@ -230,8 +230,7 @@ pub fn set_pxe_reply(pxe_reply_packet: &Dhcpv4Packet) -> Result<()> {
     let mode = pxe.mode().ok_or_else::<EfiError, _>(|| EfiErrorKind::ProtocolError.into())?;
 
     if !mode.started(){
-        let use_ipv6 = false;
-        pxe.start(use_ipv6)?;
+        return Err(EfiErrorKind::NotReady.into());
     }
 
     let inner = unsafe { EFI_PXE_BASE_CODE_PACKET { Dhcpv4: *pxe_reply_packet.inner_ptr() }};
@@ -258,8 +257,7 @@ pub fn mtftp_get_file_size(server_ip: &IpAddr, filename: &NullTerminatedAsciiStr
     let mode = pxe.mode().ok_or_else::<EfiError, _>(|| EfiErrorKind::ProtocolError.into())?;
 
     if !mode.started() {
-        let use_ipv6 = false;
-        pxe.start(use_ipv6)?;
+        return Err(EfiErrorKind::NotReady.into());
     }
 
     let filename_ptr: *const u8 = filename.as_ptr();
