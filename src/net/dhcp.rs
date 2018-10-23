@@ -252,7 +252,7 @@ pub fn set_pxe_reply(pxe_reply_packet: &Dhcpv4Packet) -> Result<()> {
     Ok(())
 }
 
-pub fn get_file_size(server_ip: &IpAddr, filename: &NullTerminatedAsciiStr) -> Result<u64> {
+pub fn mtftp_get_file_size(server_ip: &IpAddr, filename: &NullTerminatedAsciiStr) -> Result<u64> {
     let pxe = locate_pxe_protocol()?;
 
     let mode = pxe.mode().ok_or_else::<EfiError, _>(|| EfiErrorKind::ProtocolError.into())?;
