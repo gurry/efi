@@ -237,8 +237,6 @@ pub fn set_pxe_reply(pxe_reply_packet: &Dhcpv4Packet) -> Result<()> {
     let packet: &Packet = unsafe { mem::transmute(&inner) };
     pxe.set_packets(None,
         None,
-        None,
-        None,
         Some(true),
         None,
         None,
@@ -246,6 +244,8 @@ pub fn set_pxe_reply(pxe_reply_packet: &Dhcpv4Packet) -> Result<()> {
         None,
         None,
         Some(packet),
+        None,
+        None,
         None)?;
 
     Ok(())
