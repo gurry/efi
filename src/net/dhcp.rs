@@ -224,7 +224,7 @@ pub fn run_dhcp() -> Result<DhcpConfig> {
     Ok(config)
 }
 
-pub fn set_pxe_reply(pxe_reply_packet: &Dhcpv4Packet) -> Result<()> {
+pub fn set_proxy_offer(pxe_reply_packet: &Dhcpv4Packet) -> Result<()> {
     let pxe = locate_pxe_protocol()?;
 
     let mode = pxe.mode().ok_or_else::<EfiError, _>(|| EfiErrorKind::ProtocolError.into())?;
