@@ -1,7 +1,8 @@
 // TODO: Write a proc macro called derive(TupleWrapper) which automaticlly impls Wrapper trait for any tuple struct wrapping types
 use ffi::CHAR16;
-use core::{self, mem, slice};
+use core::{self, mem, slice, fmt};
 use {EfiError, EfiErrorKind};
+use alloc::str;
 
 pub trait Wrapper {
     type Inner;
@@ -66,5 +67,13 @@ impl<'a> NullTerminatedAsciiStr<'a> {
 
     pub fn as_ptr(&self) -> *const u8 {
         self.buffer.as_ptr() as *const u8
+    }
+}
+
+impl<'a> fmt::Display for NullTerminatedAsciiStr<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let display = str::from_utf8(&self.buffer[..&self.buffer.len() - 1]).map_err(|_| fmt::Error)?;
+        write!(f, "{}", display)?;
+        Ok(())
     }
 }
