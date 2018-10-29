@@ -979,6 +979,24 @@ impl<'a> Iterator for DhcpOptionIter<'a> {
     }
 }
 
+#[repr(u8)]
+pub enum DhcpMessageType {
+    Discover = 1,
+    Offer = 2,
+    Request = 3,
+    Decline = 4,
+    Ack = 5,
+    Nak = 6,
+    Release = 7,
+    Inform = 8,
+}
+
+#[repr(u8)]
+pub enum DhcpOpCode {
+    Request = 1,
+    Reply = 2,
+}
+
 pub struct DhcpPacketBuilder<'a, 'b, 'c> {
     buf: Vec<u8>,
     dhcpv4_packet: &'a Dhcpv4Packet,
