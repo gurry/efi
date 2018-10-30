@@ -47,7 +47,7 @@ use ffi::{
     EFI_STATUS,
     EFI_SYSTEM_TABLE,
     EFI_HANDLE, 
-    console::{EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL, EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL_GUID},
+    console::{EFI_SIMPLE_TEXT_INPUT_PROTOCOL, EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL, EFI_SIMPLE_TEXT_INPUT_PROTOCOL_GUID, EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL_GUID},
     boot_services::EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL,
 };
 
@@ -144,7 +144,7 @@ impl Display for EfiError {
     }
 }
 
-#[derive(Debug, Fail, Copy, Clone)]
+#[derive(Debug, Fail, Copy, Clone, PartialEq)]
 #[repr(usize)]
 pub enum EfiErrorKind {
     #[fail(display = "The image failed to load")]
@@ -303,18 +303,30 @@ fn to_res<T>(value: T, status: ffi::EFI_STATUS) -> Result<T> {
 pub struct SystemTable { 
     table_ptr: *const EFI_SYSTEM_TABLE,
     con_in_ex: *mut EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL,
+    con_in: *mut EFI_SIMPLE_TEXT_INPUT_PROTOCOL,
 }
 
 impl SystemTable {
     pub fn new(table_ptr: *const EFI_SYSTEM_TABLE) -> Result<Self> {
-        Ok(Self { table_ptr, con_in_ex: get_simple_text_input_ex(table_ptr)? })
+        //We first try to get the EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL and if it is not supported then
+        //we fallback to EFI_SIMPLE_TEXT_INPUT_PROTOCOL. This is to workaround the behaviour in 
+        //HP EliteBook 840 G2 Notebook PC where calling the OpenProtocol for the INPUT_EX return EFI_UNSUPPORTED
+        match get_simple_text_input_ex(table_ptr) {
+            Ok(con_in_ex) => Ok(Self { table_ptr, con_in_ex: con_in_ex, con_in: ptr::null_mut() }),
+            Err(err) => { 
+                if err.kind() == EfiErrorKind::Unsupported {
+                    return Ok(Self { table_ptr, con_in_ex: ptr::null_mut(), con_in: get_simple_text_input(table_ptr)? }) 
+                }
+                Err(err)
+            }
+        }
     }
 
     // TODO: Split console into StdIn, StdOut and StdErr objects
     // TODO: return a reference to Console here. That will help enforce lifetimes
     pub fn console(&self) -> Console {
         unsafe {
-            Console::new(self.con_in_ex, (*self.table_ptr).ConOut)
+            Console::new(self.con_in, self.con_in_ex, (*self.table_ptr).ConOut)
         }
     }
 }
@@ -326,6 +338,22 @@ fn get_simple_text_input_ex(table_ptr: *const EFI_SYSTEM_TABLE) -> Result<*mut E
         ((*(*table_ptr).BootServices).OpenProtocol)(
             (*table_ptr).ConsoleInHandle, 
             &EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL_GUID, 
+            transmute(&mut protocol), 
+            image_handle(), 
+            ptr::null(), 
+            EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL)
+    };
+
+    to_res(protocol, status)
+}
+
+fn get_simple_text_input(table_ptr: *const EFI_SYSTEM_TABLE) -> Result<*mut EFI_SIMPLE_TEXT_INPUT_PROTOCOL> {
+    let mut protocol: *mut EFI_SIMPLE_TEXT_INPUT_PROTOCOL = ptr::null_mut();
+
+    let status = unsafe {
+        ((*(*table_ptr).BootServices).OpenProtocol)(
+            (*table_ptr).ConsoleInHandle, 
+            &EFI_SIMPLE_TEXT_INPUT_PROTOCOL_GUID, 
             transmute(&mut protocol), 
             image_handle(), 
             ptr::null(), 

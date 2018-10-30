@@ -1,8 +1,10 @@
 use ffi::{
     console::{
         EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL, 
+        EFI_SIMPLE_TEXT_INPUT_PROTOCOL,
         EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL, 
         EFI_KEY_DATA,
+        EFI_INPUT_KEY,
         EFI_SHIFT_STATE_VALID,
         EFI_LEFT_CONTROL_PRESSED,
         EFI_RIGHT_CONTROL_PRESSED,
@@ -110,7 +112,8 @@ impl From<BackColor> for UINTN {
 }
 
 pub struct Console {
-    pub input: *const EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL,
+    pub input_ex: *const EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL,
+    pub input: *const EFI_SIMPLE_TEXT_INPUT_PROTOCOL,
     pub output: *const EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL,
     utf8_buf: io::Cursor<Vec<u8>>
 }
@@ -120,8 +123,8 @@ const CR: u16 = 13;
 const BS: u16 = 8;
 
 impl Console {
-    pub fn new(input: *const EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL, output: *const EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL) -> Self {
-        Self { input, output, utf8_buf: Cursor::new(Vec::new()) }
+    pub fn new(input: *const EFI_SIMPLE_TEXT_INPUT_PROTOCOL, input_ex: *const EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL, output: *const EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL) -> Self {
+        Self { input, input_ex, output, utf8_buf: Cursor::new(Vec::new()) }
     }
 
     pub fn cursor_pos(&self) -> Position {
@@ -230,14 +233,22 @@ impl Console {
         }
     }
 
-    // TODO: code in this function is super ugly and prone to bugs. Clean it up.
     fn read_from_efi(&self, buf: &mut [u16]) -> Result<usize> {
+        if self.input_ex.is_null() {
+            self.read_from_efi_input(buf)
+        } else {
+            self.read_from_efi_input_ex(buf)
+        }
+    }
+
+    // TODO: code in this function is super ugly and prone to bugs. Clean it up.
+    fn read_from_efi_input_ex(&self, buf: &mut [u16]) -> Result<usize> {
         let mut bytes_read = 0;
 
-        let input = (*self).input as *mut EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL;
+        let input_ex = (*self).input_ex as *mut EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL;
         let mut evt_index: UINTN = 0;
         let mut key_data = EFI_KEY_DATA::default();
-        let mut evt_list = unsafe { [(*input).WaitForKeyEx; 1] };
+        let mut evt_list = unsafe { [(*input_ex).WaitForKeyEx; 1] };
 
         while bytes_read < buf.len() {
             // TODO: For some reason we can't use ret_on_err here. Why?
@@ -247,7 +258,7 @@ impl Console {
             }
 
             // TODO: For some reason we can't use ret_on_err here. Why?
-            let status = unsafe { ((*input).ReadKeyStrokeEx)(input, &mut key_data) };
+            let status = unsafe { ((*input_ex).ReadKeyStrokeEx)(input_ex, &mut key_data) };
             if !IsSuccess(status) {
                 return Err(status.into()); // TODO: Can we send some error text too with such errors
             }
@@ -295,6 +306,62 @@ impl Console {
 
         Ok(bytes_read)
     }
+
+    fn read_from_efi_input(&self, buf: &mut [u16]) -> Result<usize> {
+        let mut bytes_read = 0;
+
+        let input = (*self).input as *mut EFI_SIMPLE_TEXT_INPUT_PROTOCOL;
+        let mut evt_index: UINTN = 0;
+        let mut key_data = EFI_INPUT_KEY::default();
+        let mut evt_list = unsafe { [(*input).WaitForKey; 1] };
+
+        while bytes_read < buf.len() {
+            // TODO: For some reason we can't use ret_on_err here. Why?
+            let status = unsafe { ((*system_table().BootServices).WaitForEvent)(evt_list.len(), evt_list.as_mut_ptr(), &mut evt_index) };
+            if !IsSuccess(status) {
+                return Err(status.into()); // TODO: Can we send some error text too with such errors
+            }
+
+            // TODO: For some reason we can't use ret_on_err here. Why?
+            let status = unsafe { ((*input).ReadKeyStroke)(input, &mut key_data) };
+            if !IsSuccess(status) {
+                return Err(status.into()); // TODO: Can we send some error text too with such errors
+            }
+
+            if key_data.UnicodeChar != 0 { // != 0 means it's a printable unicode char
+                if key_data.UnicodeChar == CR { // Safe to check for CR only without waiting for LF because in my experience UEFI only ever inserts CR when you press the Enter key
+                    key_data.UnicodeChar = LF; // Always translate CR's to LF's to normalize line endings.
+                }
+
+                match key_data.UnicodeChar {
+                    BS => {
+                        if bytes_read > 0 {
+                            bytes_read -= 1;
+                            self.write_to_efi(&[BS, 0])?; // 0 is for null termination
+                        }
+                    },
+                    c => {
+                        buf[bytes_read] = c;
+                        bytes_read += 1;
+
+                        if c == LF {
+                            self.write_to_efi(&[CR, LF, 0])?; // Must echo both CR and LF because other wise it fucks up the cursor position.
+                            break;
+                        } else {
+                            self.write_to_efi(&[c, 0])?;
+                        }
+                    }
+                };
+            } else {
+                // TODO: handle scan codes here.
+            }
+
+            // TODO: should also support ctrl+z as a terminating sequence?
+        }
+
+        Ok(bytes_read)
+    }
+
 }
 
 // TODO: write! works but writeln! doesn't. It doesn't result in an carriage returns at the end even though we're normalizing line endings in write() below. Fix this.
