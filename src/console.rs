@@ -43,6 +43,7 @@ use io::{self, Write, Cursor, BufRead, BufReader, LineWriter};
 use ::Result;
 use system_table;
 use alloc::{Vec, String, str, fmt};
+use TextInputProcolPtr;
 
 // TODO: This whole module has gotten ugly. Needs cleanup.
 // TODO: Should we replace Console with two structs, StdIn and StdOut, corresponding to input and output? This is more in line with Rust stdlib.
@@ -112,8 +113,7 @@ impl From<BackColor> for UINTN {
 }
 
 pub struct Console {
-    pub input_ex: *const EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL,
-    pub input: *const EFI_SIMPLE_TEXT_INPUT_PROTOCOL,
+    pub input: TextInputProcolPtr,
     pub output: *const EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL,
     utf8_buf: io::Cursor<Vec<u8>>
 }
@@ -123,8 +123,8 @@ const CR: u16 = 13;
 const BS: u16 = 8;
 
 impl Console {
-    pub fn new(input: *const EFI_SIMPLE_TEXT_INPUT_PROTOCOL, input_ex: *const EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL, output: *const EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL) -> Self {
-        Self { input, input_ex, output, utf8_buf: Cursor::new(Vec::new()) }
+    pub fn new(input: TextInputProcolPtr, output: *const EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL) -> Self {
+        Self { input, output, utf8_buf: Cursor::new(Vec::new()) }
     }
 
     pub fn cursor_pos(&self) -> Position {
@@ -234,18 +234,16 @@ impl Console {
     }
 
     fn read_from_efi(&self, buf: &mut [u16]) -> Result<usize> {
-        if self.input_ex.is_null() {
-            self.read_from_efi_input(buf)
-        } else {
-            self.read_from_efi_input_ex(buf)
+        match self.input {
+            TextInputProcolPtr::Input(input) => self.read_from_efi_input(buf, input),
+            TextInputProcolPtr::InputEx(input_ex) => self.read_from_efi_input_ex(buf, input_ex),
         }
     }
 
     // TODO: code in this function is super ugly and prone to bugs. Clean it up.
-    fn read_from_efi_input_ex(&self, buf: &mut [u16]) -> Result<usize> {
+    fn read_from_efi_input_ex(&self, buf: &mut [u16], input_ex: *mut EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL) -> Result<usize> {
         let mut bytes_read = 0;
 
-        let input_ex = (*self).input_ex as *mut EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL;
         let mut evt_index: UINTN = 0;
         let mut key_data = EFI_KEY_DATA::default();
         let mut evt_list = unsafe { [(*input_ex).WaitForKeyEx; 1] };
@@ -307,10 +305,9 @@ impl Console {
         Ok(bytes_read)
     }
 
-    fn read_from_efi_input(&self, buf: &mut [u16]) -> Result<usize> {
+    fn read_from_efi_input(&self, buf: &mut [u16], input: *mut EFI_SIMPLE_TEXT_INPUT_PROTOCOL) -> Result<usize> {
         let mut bytes_read = 0;
 
-        let input = (*self).input as *mut EFI_SIMPLE_TEXT_INPUT_PROTOCOL;
         let mut evt_index: UINTN = 0;
         let mut key_data = EFI_INPUT_KEY::default();
         let mut evt_list = unsafe { [(*input).WaitForKey; 1] };

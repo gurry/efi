@@ -300,10 +300,14 @@ fn to_res<T>(value: T, status: ffi::EFI_STATUS) -> Result<T> {
 //     }
 // }
 
+pub enum TextInputProcolPtr {
+    Input(*mut EFI_SIMPLE_TEXT_INPUT_PROTOCOL),
+    InputEx(*mut EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL),
+}
+
 pub struct SystemTable { 
     table_ptr: *const EFI_SYSTEM_TABLE,
-    con_in_ex: *mut EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL,
-    con_in: *mut EFI_SIMPLE_TEXT_INPUT_PROTOCOL,
+    con_in: TextInputProcolPtr,
 }
 
 impl SystemTable {
@@ -312,10 +316,10 @@ impl SystemTable {
         //we fallback to EFI_SIMPLE_TEXT_INPUT_PROTOCOL. This is to workaround the behaviour in 
         //HP EliteBook 840 G2 Notebook PC where calling the OpenProtocol for the INPUT_EX return EFI_UNSUPPORTED
         match get_simple_text_input_ex(table_ptr) {
-            Ok(con_in_ex) => Ok(Self { table_ptr, con_in_ex: con_in_ex, con_in: ptr::null_mut() }),
+            Ok(con_in_ex) => Ok(Self { table_ptr, con_in: TextInputProcolPtr::InputEx(con_in_ex) }),
             Err(err) => { 
                 if err.kind() == EfiErrorKind::Unsupported {
-                    return Ok(Self { table_ptr, con_in_ex: ptr::null_mut(), con_in: get_simple_text_input(table_ptr)? }) 
+                    return Ok(Self { table_ptr, con_in: TextInputProcolPtr::Input(get_simple_text_input(table_ptr)?) }) 
                 }
                 Err(err)
             }
@@ -324,9 +328,9 @@ impl SystemTable {
 
     // TODO: Split console into StdIn, StdOut and StdErr objects
     // TODO: return a reference to Console here. That will help enforce lifetimes
-    pub fn console(&self) -> Console {
+    pub fn console(self) -> Console {
         unsafe {
-            Console::new(self.con_in, self.con_in_ex, (*self.table_ptr).ConOut)
+            Console::new(self.con_in, (*self.table_ptr).ConOut)
         }
     }
 }
