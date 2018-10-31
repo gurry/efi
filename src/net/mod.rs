@@ -735,6 +735,7 @@ impl Drop for Udp4Socket {
     fn drop(&mut self) {
         // TODO: add the code to panic when any of the below calls fail. (Could be difficult) but maybe we can trace something when we do that.
         unsafe {
+            ((*self.protocol).Configure)(self.protocol, ptr::null());
             ((*self.bs).CloseEvent)(self.send_token.Event);
             ((*self.bs).CloseEvent)(self.recv_token.Event);
             ((*self.binding_protocol).DestroyChild)(self.binding_protocol, &mut self.device_handle);
