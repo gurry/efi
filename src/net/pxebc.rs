@@ -343,22 +343,23 @@ impl From<EFI_PXE_BASE_CODE_PROTOCOL> for PxeBaseCodeProtocol {
 }
 
 impl PxeBaseCodeProtocol {
-    pub fn start(&self, use_ipv6: bool) -> Result<()> {
+    fn start(&self, use_ipv6: bool) -> Result<()> {
         let status = (self.0.Start)(&self.0, to_boolean(use_ipv6));
         to_res((), status)
     }
 
-    pub fn stop(&self) -> Result<()> {
-        let status = (self.0.Stop)(&self.0);
-        to_res((), status)
-    }
+    // Commented out 'cause we're not using it yet
+    // fn stop(&self) -> Result<()> {
+    //     let status = (self.0.Stop)(&self.0);
+    //     to_res((), status)
+    // }
 
-    pub fn dhcp(&self, sort_offers: bool) -> Result<()> {
+    fn dhcp(&self, sort_offers: bool) -> Result<()> {
         let status = (self.0.Dhcp)(&self.0, to_boolean(sort_offers));
         to_res((), status)
     }
 
-    pub fn discover(&self, boot_type: BootType, layer: u16, use_bis: bool, info: Option<&DiscoverInfo>) -> Result<u16> {
+    fn discover(&self, boot_type: BootType, layer: u16, use_bis: bool, info: Option<&DiscoverInfo>) -> Result<u16> {
         let layer_ptr = &layer as *const UINT16;
         let info_ptr = if let Some(info) = info { info.inner_ptr() } else { ptr::null() };
 
@@ -366,14 +367,14 @@ impl PxeBaseCodeProtocol {
         to_res(layer, status)
     }
 
-    pub fn mtftp(&self, operation: EFI_PXE_BASE_CODE_TFTP_OPCODE, buffer_ptr: *const VOID, overwrite: bool, buffer_size: *const u64,
+    fn mtftp(&self, operation: EFI_PXE_BASE_CODE_TFTP_OPCODE, buffer_ptr: *const VOID, overwrite: bool, buffer_size: *const u64,
                 block_size: *const usize, server_ip: *const EFI_IP_ADDRESS, filename: *const u8, info: *const EFI_PXE_BASE_CODE_MTFTP_INFO,
                 dont_use_buffer: bool,) -> Result<()> {
         let status = (self.0.Mtftp)(&self.0, operation, buffer_ptr, to_boolean(overwrite), buffer_size, block_size, server_ip, filename, info, to_boolean(dont_use_buffer));
         to_res((), status)
     }
 
-    pub fn set_packets(&self, 
+    fn set_packets(&self, 
         new_dhcp_discover_valid: Option<bool>, 
         new_dhcp_ack_received: Option<bool>, 
         new_proxy_offer_received: Option<bool>,
@@ -407,7 +408,7 @@ impl PxeBaseCodeProtocol {
         } 
 
     // TODO: some missing methods here
-    pub fn mode(&self) -> Option<&Mode> {
+    fn mode(&self) -> Option<&Mode> {
         to_opt(self.0.Mode)
     }
 }
