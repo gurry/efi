@@ -171,8 +171,10 @@ impl Tcp4Stream {
         // TODO: this function is too ugly right now. Refactor/clean it up.
         let ip: EFI_IPv4_ADDRESS = (*addr.ip()).into();
 
-        let dhcp_config = pxebc::cached_dhcp_config()?
-                .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
+        let dhcp_config = pxebc::PxeBaseCodeProtocol::get_any()?
+            .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?
+            .cached_dhcp_config()?
+            .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
 
         let station_ip = if let IpAddr::V4(ip) = dhcp_config.ip() { ip.into() } else { EFI_IPv4_ADDRESS::zero() };
         let subnet_mask = if let IpAddr::V4(ip) = dhcp_config.subnet_mask() { ip.into() } else { EFI_IPv4_ADDRESS::zero() };
@@ -539,7 +541,9 @@ impl Udp4Socket {
 
     fn bind_and_connect(local_addr: SocketAddrV4, remote_addr: SocketAddrV4) -> Result<Self> {
         // TODO: THIS IS A TEMPORARY HACK. WE ACTUALLY WANT TO MAKE THE COMMENTED OUT CODE BELOW WORK.
-        let dhcp_config = pxebc::cached_dhcp_config()?
+        let dhcp_config = pxebc::PxeBaseCodeProtocol::get_any()? // TODO: this is bullshit. We should use the PXE BC on the exact interface corresponding to supplied IP
+                .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?
+                .cached_dhcp_config()?
                 .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
         let station_addr = if let IpAddr::V4(ip) = dhcp_config.ip() { ip.into() } else { EFI_IPv4_ADDRESS::zero() };
         let subnet_mask = if let IpAddr::V4(ip) = dhcp_config.subnet_mask() { ip.into() } else { EFI_IPv4_ADDRESS::zero() };
@@ -622,7 +626,9 @@ impl Udp4Socket {
 
         // Copy in all routes from the DHCP config
         // TODO: This is faulty. Get the dhcp config specifically of the interface we're binding on
-        let dhcp_config = pxebc::cached_dhcp_config()?
+        let dhcp_config = pxebc::PxeBaseCodeProtocol::get_any()? // TODO: this is bullshit. We should use the PXE BC on the exact interface corresponding to supplied IP
+                .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?
+                .cached_dhcp_config()?
                 .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
         let (subnet_addr, subnet_mask, gateway_addr) = form_default_route(&dhcp_config)?;
         unsafe {

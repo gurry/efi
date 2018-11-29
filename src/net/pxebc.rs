@@ -16,10 +16,17 @@ use ffi::{
         EFI_PXE_BASE_CODE_TFTP_OPCODE,
         EFI_PXE_BASE_CODE_MTFTP_INFO,
     },
+    EFI_HANDLE,
     EFI_IP_ADDRESS,
+    EFI_NOT_FOUND,
     UINT16,
+    UINTN,
     BOOLEAN,
     VOID,
+    boot_services::{
+        EFI_LOCATE_SEARCH_TYPE,
+        EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL,
+    },
 };
 
 use {
@@ -30,8 +37,10 @@ use {
     from_boolean,
     to_res,
     system_table,
+    image_handle,
     net::{IpAddr, Ipv4Addr},
     NullTerminatedAsciiStr,
+    boxed::EfiBox,
 };
 
 use core::{self, slice, mem, ptr, default::Default};
@@ -181,153 +190,27 @@ impl BootServerConfig {
     }
 }
 
-// TODO expose public apis to check if DHCP has already happned or not.
-// Same for PXE
-// TODO: In case of multiple network cards we'll have to return
-// multiple configs. We can do that by locating _all_ pxe protocols 
-// and getting config from each.
-pub fn cached_dhcp_config() -> Result<Option<DhcpConfig>> {
-    let pxe = locate_pxe_protocol()?;
-    let mode = pxe.mode().ok_or_else::<EfiError, _>(|| EfiErrorKind::ProtocolError.into())?;
-
-    if !mode.dhcp_ack_received() {
-        return Ok(None)
-    }
-
-    Ok(Some(DhcpConfig::new(&mode)))
-}
-
-pub fn run_dhcp() -> Result<DhcpConfig> {
-    // TODO: see tianocore-edk2\NetworkPkg\UefiPxeBcDxe\PxeBcBoot.c file to know to implement PXE sequence especially the method PxeBcDiscoverBootFile
-
-    // TODO: we're using PxeBaseCodeProtocol for now for expediency,
-    // but we want to get rid of it and its associated types below
-    // and use raw ffi types here (except for packet wrapper types etc. we can keep thos)
-    // It's too much work to maintain a the set of thin wrappers like this.
-    let pxe = locate_pxe_protocol()?;
-
-    let mode = pxe.mode().ok_or_else::<EfiError, _>(|| EfiErrorKind::ProtocolError.into())?;
-
-    if !mode.started(){
-        let use_ipv6 = false;
-        pxe.start(use_ipv6)?;
-    }
-
-    let sort_offers = false; // TODO: may want to expose this out to the caller
-    pxe.dhcp(sort_offers)?;
-
-    // The above code will result in the config being cached.
-    // So return that
-    let config = cached_dhcp_config()?
-        .ok_or_else::<EfiError, _>(|| EfiErrorKind::ProtocolError.into())?;
-
-    Ok(config)
-}
-
-pub fn set_proxy_offer(pxe_reply_packet: &Dhcpv4Packet) -> Result<()> {
-    let pxe = locate_pxe_protocol()?;
-
-    let mode = pxe.mode().ok_or_else::<EfiError, _>(|| EfiErrorKind::ProtocolError.into())?;
-
-    if !mode.started(){
-        return Err(EfiErrorKind::NotReady.into());
-    }
-
-    let inner = unsafe { EFI_PXE_BASE_CODE_PACKET { Dhcpv4: *pxe_reply_packet.inner_ptr() }};
-    let packet: &Packet = unsafe { mem::transmute(&inner) };
-    pxe.set_packets(None,
-        None,
-        Some(true),
-        None,
-        None,
-        None,
-        None,
-        None,
-        Some(packet),
-        None,
-        None,
-        None)?;
-
-    Ok(())
-}
-
-pub fn mtftp_get_file_size(server_ip: &IpAddr, filename: &NullTerminatedAsciiStr) -> Result<u64> {
-    let pxe = locate_pxe_protocol()?;
-
-    let mode = pxe.mode().ok_or_else::<EfiError, _>(|| EfiErrorKind::ProtocolError.into())?;
-
-    if !mode.started() {
-        return Err(EfiErrorKind::NotReady.into());
-    }
-
-    let filename_ptr: *const u8 = filename.as_ptr();
-    let server_ip_efi: EFI_IP_ADDRESS = (*server_ip).into();
-    let server_ip_ptr: *const EFI_IP_ADDRESS = &server_ip_efi as *const EFI_IP_ADDRESS;
-    let file_size: u64 = 0;
-    pxe.mtftp(EFI_PXE_BASE_CODE_TFTP_OPCODE::EFI_PXE_BASE_CODE_TFTP_GET_FILE_SIZE, ptr::null(), false, &file_size as *const u64, ptr::null(),
-        server_ip_ptr, filename_ptr, ptr::null(), false)?;
-
-    Ok(file_size)
-}
-
-pub fn mtftp_get_file(server_ip: &IpAddr, filename: &NullTerminatedAsciiStr) -> Result<Vec<u8>> {
-    let pxe = locate_pxe_protocol()?;
-
-    let mode = pxe.mode().ok_or_else::<EfiError, _>(|| EfiErrorKind::ProtocolError.into())?;
-
-    if !mode.started() {
-        return Err(EfiErrorKind::NotReady.into());
-    }
-
-    let file_size = mtftp_get_file_size(server_ip, filename)?;
-    if file_size > core::usize::MAX as u64 {
-        return Err(EfiErrorKind::BadBufferSize.into());
-    }
-
-    let filename_ptr: *const u8 = filename.as_ptr();
-    let server_ip_efi: EFI_IP_ADDRESS = (*server_ip).into();
-    let server_ip_ptr: *const EFI_IP_ADDRESS = &server_ip_efi as *const EFI_IP_ADDRESS;
-
-    let file = vec![0;file_size as usize];
-    let buffer_ptr = file.as_ptr() as *const VOID;
-
-    pxe.mtftp(EFI_PXE_BASE_CODE_TFTP_OPCODE::EFI_PXE_BASE_CODE_TFTP_READ_FILE, buffer_ptr, false, &file_size as *const u64, ptr::null(),
-        server_ip_ptr, filename_ptr, ptr::null(), false)?;
-
-    Ok(file)
-}
-
-// TODO: allow user to specify discovery options such as whether to do unicast, broadcast or multicast 
-// and list of boot servers to use for unicast etc.
-pub fn run_boot_server_discovery(_dhcp_config: &DhcpConfig) -> Result<BootServerConfig> {
-    // We're requring the '_dhcp_config' argument above only to enforce the fact that user should've run DHCP first before calling this method.
-    let info = DiscoverInfo::default();
-
-    // TODO: we're using PxeBaseCodeProtocol for now for expediency,
-    // but we want to get rid of it and its associated types below
-    // and use raw ffi types here (except for packet wrapper types etc. we can keep thos)
-    // It's too much work to maintain a the set of thin wrappers like this.
-    let pxe = locate_pxe_protocol()?;
-    pxe.discover(BootType::Bootstrap, BOOT_LAYER_INITIAL, false, Some(&info))?; 
-
-    let mode = pxe.mode().ok_or_else::<EfiError, _>(|| EfiErrorKind::ProtocolError.into())?;
-    // TODO: Is it safe to rely on proxy_offer() for getting boot file? Some question:
-    // 1. If there are multiple proxy offers received, which one is recorded by UEFI in this field?
-    // 2. What if there are zero proxy offers received and the bootfile was sent in the DHCP offer?
-    if !mode.proxy_offer_received() {
-        return Err(EfiErrorKind::ProtocolError.into());
-    }
-
-    Ok(BootServerConfig::new(mode))
-}
-
-
-fn locate_pxe_protocol<'a>() -> Result<&'a PxeBaseCodeProtocol> {
+// TODO: this should return an iterator instead to avoid allocations
+fn locate_pxe_protocol_handles() -> Result<Vec<EFI_HANDLE>> {
     let bs = (*system_table()).BootServices;
-    let mut pxe_protocol: *const EFI_PXE_BASE_CODE_PROTOCOL = ptr::null_mut();
+    let mut handle_buf: *const EFI_HANDLE = ptr::null();
+    let mut no_of_handles: UINTN = 0;
     unsafe {
-        ret_on_err!(((*bs).LocateProtocol)(&EFI_PXE_BASE_CODE_PROTOCOL_GUID, ptr::null_mut() as *mut VOID, mem::transmute(&mut pxe_protocol)));
-        Ok(mem::transmute(pxe_protocol))
+        let status = ((*bs).LocateHandleBuffer)(EFI_LOCATE_SEARCH_TYPE::ByProtocol, &EFI_PXE_BASE_CODE_PROTOCOL_GUID, ptr::null() as *const VOID, &mut no_of_handles, &mut handle_buf);
+        if status == EFI_NOT_FOUND {
+            return Ok(Vec::new()); // returning empty
+        }
+
+        ret_on_err!(status);
+
+        let handle_box = EfiBox::from_raw(handle_buf as *mut EFI_HANDLE); // Just so that we deallocat this buffer when we go out of scope
+
+        let mut handles = Vec::with_capacity(no_of_handles);
+        for i in 0..no_of_handles {
+            handles.push(*(handle_box.as_raw().add(i)));
+        }
+
+        Ok(handles)
     }
 }
 
@@ -410,6 +293,174 @@ impl PxeBaseCodeProtocol {
     // TODO: some missing methods here
     fn mode(&self) -> Option<&Mode> {
         to_opt(self.0.Mode)
+    }
+
+    // TODO: all this shit may be unsafe. Audit it
+    pub fn get_any<'a>() -> Result<Option<&'a PxeBaseCodeProtocol>> {
+        Ok(Self::get_all()?.iter().next().map(|p| *p))
+    }
+
+    // TODO: this should return an iterator instead to avoid allocations
+    // TODO: all this shit may be unsafe. Audit it
+    pub fn get_all<'a>() -> Result<Vec<&'a PxeBaseCodeProtocol>> {
+        let handles = locate_pxe_protocol_handles()?;
+        let protocols = handles.iter().filter_map(|h| Self::open_on(*h).ok()).collect();
+        Ok(protocols)
+    }
+
+    // TODO: all this shit may be unsafe. Audit it
+    pub fn get_all_mut<'a>() -> Result<Vec<&'a mut PxeBaseCodeProtocol>> {
+        let handles = locate_pxe_protocol_handles()?;
+        let protocols = handles.iter().filter_map(|h| Self::open_on_mut(*h).ok()).collect();
+        Ok(protocols)
+    }
+
+    fn open_on<'a>(handle: EFI_HANDLE) -> Result<&'a PxeBaseCodeProtocol> {
+        unsafe { Self::open_proto(handle).map(|p| mem::transmute(p)) }
+    }
+
+    fn open_on_mut<'a>(handle: EFI_HANDLE) -> Result<&'a mut PxeBaseCodeProtocol> {
+        unsafe { Self::open_proto(handle).map(|p| mem::transmute(p)) }
+    }
+
+    fn open_proto<'a>(handle: EFI_HANDLE) -> Result<*const EFI_PXE_BASE_CODE_PROTOCOL> {
+        let bs = (*system_table()).BootServices;
+        let current_image_handle = image_handle();
+        let protocol: *const EFI_PXE_BASE_CODE_PROTOCOL = ptr::null();
+        unsafe {
+            ret_on_err!(((*bs).OpenProtocol)(handle, &EFI_PXE_BASE_CODE_PROTOCOL_GUID, mem::transmute(&protocol), current_image_handle, ptr::null(), EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL)); // TODO: should we use GET_PROTOCOL instead of BY_HANDLE_PROTOCOL? Not clear from UEFI documentation.
+            Ok(protocol)
+        }
+    }
+    
+    // TODO expose public apis to check if DHCP has already happned or not.
+    // Same for PXE
+    // TODO: In case of multiple network cards we'll have to return
+    // multiple configs. We can do that by locating _all_ pxe protocols 
+    // and getting config from each.
+    pub fn cached_dhcp_config(&self) -> Result<Option<DhcpConfig>> {
+        let mode = self.mode().ok_or_else::<EfiError, _>(|| EfiErrorKind::ProtocolError.into())?;
+
+        if !mode.dhcp_ack_received() {
+            return Ok(None)
+        }
+
+        Ok(Some(DhcpConfig::new(&mode)))
+    }
+
+    pub fn run_dhcp(&self) -> Result<DhcpConfig> {
+        // TODO: see tianocore-edk2\NetworkPkg\UefiPxeBcDxe\PxeBcBoot.c file to know to implement PXE sequence especially the method PxeBcDiscoverBootFile
+
+        // TODO: we're using PxeBaseCodeProtocol for now for expediency,
+        // but we want to get rid of it and its associated types below
+        // and use raw ffi types here (except for packet wrapper types etc. we can keep thos)
+        // It's too much work to maintain a the set of thin wrappers like this.
+        let mode = self.mode().ok_or_else::<EfiError, _>(|| EfiErrorKind::ProtocolError.into())?;
+
+        if !mode.started(){
+            let use_ipv6 = false;
+            self.start(use_ipv6)?;
+        }
+
+        let sort_offers = false; // TODO: may want to expose this out to the caller
+        self.dhcp(sort_offers)?;
+
+        // The above code will result in the config being cached.
+        // So return that
+        let config = self.cached_dhcp_config()?
+            .ok_or_else::<EfiError, _>(|| EfiErrorKind::ProtocolError.into())?;
+
+        Ok(config)
+    }
+
+    // TODO: allow user to specify discovery options such as whether to do unicast, broadcast or multicast 
+    // and list of boot servers to use for unicast etc.
+    pub fn run_boot_server_discovery(&self, _dhcp_config: &DhcpConfig) -> Result<BootServerConfig> {
+        // We're requring the '_dhcp_config' argument above only to enforce the fact that user should've run DHCP first before calling this method.
+        let info = DiscoverInfo::default();
+
+        // TODO: we're using PxeBaseCodeProtocol for now for expediency,
+        // but we want to get rid of it and its associated types below
+        // and use raw ffi types here (except for packet wrapper types etc. we can keep thos)
+        // It's too much work to maintain a the set of thin wrappers like this.
+        self.discover(BootType::Bootstrap, BOOT_LAYER_INITIAL, false, Some(&info))?; 
+
+        let mode = self.mode().ok_or_else::<EfiError, _>(|| EfiErrorKind::ProtocolError.into())?;
+        // TODO: Is it safe to rely on proxy_offer() for getting boot file? Some question:
+        // 1. If there are multiple proxy offers received, which one is recorded by UEFI in this field?
+        // 2. What if there are zero proxy offers received and the bootfile was sent in the DHCP offer?
+        if !mode.proxy_offer_received() {
+            return Err(EfiErrorKind::ProtocolError.into());
+        }
+
+        Ok(BootServerConfig::new(mode))
+    }
+
+    pub fn set_proxy_offer(&mut self, pxe_reply_packet: &Dhcpv4Packet) -> Result<()> {
+        let mode = self.mode().ok_or_else::<EfiError, _>(|| EfiErrorKind::ProtocolError.into())?;
+
+        if !mode.started(){
+            return Err(EfiErrorKind::NotReady.into());
+        }
+
+        let inner = unsafe { EFI_PXE_BASE_CODE_PACKET { Dhcpv4: *pxe_reply_packet.inner_ptr() }};
+        let packet: &Packet = unsafe { mem::transmute(&inner) };
+        self.set_packets(None,
+            None,
+            Some(true),
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(packet),
+            None,
+            None,
+            None)?;
+
+        Ok(())
+    }
+
+    pub fn mtftp_get_file_size(&self, server_ip: &IpAddr, filename: &NullTerminatedAsciiStr) -> Result<u64> {
+        let mode = self.mode().ok_or_else::<EfiError, _>(|| EfiErrorKind::ProtocolError.into())?;
+
+        if !mode.started() {
+            return Err(EfiErrorKind::NotReady.into());
+        }
+
+        let filename_ptr: *const u8 = filename.as_ptr();
+        let server_ip_efi: EFI_IP_ADDRESS = (*server_ip).into();
+        let server_ip_ptr: *const EFI_IP_ADDRESS = &server_ip_efi as *const EFI_IP_ADDRESS;
+        let file_size: u64 = 0;
+        self.mtftp(EFI_PXE_BASE_CODE_TFTP_OPCODE::EFI_PXE_BASE_CODE_TFTP_GET_FILE_SIZE, ptr::null(), false, &file_size as *const u64, ptr::null(),
+            server_ip_ptr, filename_ptr, ptr::null(), false)?;
+
+        Ok(file_size)
+    }
+
+    pub fn mtftp_get_file(&self, server_ip: &IpAddr, filename: &NullTerminatedAsciiStr) -> Result<Vec<u8>> {
+        let mode = self.mode().ok_or_else::<EfiError, _>(|| EfiErrorKind::ProtocolError.into())?;
+
+        if !mode.started() {
+            return Err(EfiErrorKind::NotReady.into());
+        }
+
+        let file_size = self.mtftp_get_file_size(server_ip, filename)?;
+        if file_size > core::usize::MAX as u64 {
+            return Err(EfiErrorKind::BadBufferSize.into());
+        }
+
+        let filename_ptr: *const u8 = filename.as_ptr();
+        let server_ip_efi: EFI_IP_ADDRESS = (*server_ip).into();
+        let server_ip_ptr: *const EFI_IP_ADDRESS = &server_ip_efi as *const EFI_IP_ADDRESS;
+
+        let file = vec![0;file_size as usize];
+        let buffer_ptr = file.as_ptr() as *const VOID;
+
+        self.mtftp(EFI_PXE_BASE_CODE_TFTP_OPCODE::EFI_PXE_BASE_CODE_TFTP_READ_FILE, buffer_ptr, false, &file_size as *const u64, ptr::null(),
+            server_ip_ptr, filename_ptr, ptr::null(), false)?;
+
+        Ok(file)
     }
 }
 

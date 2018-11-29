@@ -100,7 +100,9 @@ pub (crate) fn lookup_host(hostname: &str) -> ::Result<Vec<IpAddr>> {
 fn get_dns_servers() -> ::Result<Vec<DnsServer>> {
     // TODO: Assuming here that PXE has already happened. Should we kick it off here if it hasn't?
     const DNS_PORT: u16 = 53;
-    let dns_servers = pxebc::cached_dhcp_config()?
+    let dns_servers = pxebc::PxeBaseCodeProtocol::get_any()? // TODO: this is bullshit. We should use the PXE BC on a specific interface
+        .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?
+        .cached_dhcp_config()?
         .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?
         .dns_server_addrs().iter()
         .map(|ip| DnsServer { addr: (*ip, DNS_PORT).into() })
