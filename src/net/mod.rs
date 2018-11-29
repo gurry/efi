@@ -1,6 +1,6 @@
 pub mod addr;
 pub mod dns;
-pub mod dhcp;
+pub mod pxebc;
 pub mod ifconfig;
 mod parser;
 
@@ -14,7 +14,7 @@ use ::{
     io::{self, Read, Write},
     events::{self, TimerSchedule, TimerState, EventTpl, Wait},
 };
-use self::dhcp::DhcpConfig;
+use self::pxebc::DhcpConfig;
 use ffi::{
     TRUE,
     FALSE,
@@ -171,7 +171,7 @@ impl Tcp4Stream {
         // TODO: this function is too ugly right now. Refactor/clean it up.
         let ip: EFI_IPv4_ADDRESS = (*addr.ip()).into();
 
-        let dhcp_config = dhcp::cached_dhcp_config()?
+        let dhcp_config = pxebc::cached_dhcp_config()?
                 .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
 
         let station_ip = if let IpAddr::V4(ip) = dhcp_config.ip() { ip.into() } else { EFI_IPv4_ADDRESS::zero() };
@@ -539,7 +539,7 @@ impl Udp4Socket {
 
     fn bind_and_connect(local_addr: SocketAddrV4, remote_addr: SocketAddrV4) -> Result<Self> {
         // TODO: THIS IS A TEMPORARY HACK. WE ACTUALLY WANT TO MAKE THE COMMENTED OUT CODE BELOW WORK.
-        let dhcp_config = dhcp::cached_dhcp_config()?
+        let dhcp_config = pxebc::cached_dhcp_config()?
                 .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
         let station_addr = if let IpAddr::V4(ip) = dhcp_config.ip() { ip.into() } else { EFI_IPv4_ADDRESS::zero() };
         let subnet_mask = if let IpAddr::V4(ip) = dhcp_config.subnet_mask() { ip.into() } else { EFI_IPv4_ADDRESS::zero() };
@@ -622,7 +622,7 @@ impl Udp4Socket {
 
         // Copy in all routes from the DHCP config
         // TODO: This is faulty. Get the dhcp config specifically of the interface we're binding on
-        let dhcp_config = dhcp::cached_dhcp_config()?
+        let dhcp_config = pxebc::cached_dhcp_config()?
                 .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
         let (subnet_addr, subnet_mask, gateway_addr) = form_default_route(&dhcp_config)?;
         unsafe {

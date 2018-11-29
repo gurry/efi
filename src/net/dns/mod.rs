@@ -38,7 +38,7 @@ pub use self::builder::{Builder};
 use core::{time::Duration};
 use super::{UdpSocket, SocketAddr, IpAddr};
 use alloc::Vec;
-use net::dhcp;
+use net::pxebc;
 
 struct DnsServer {
     addr: SocketAddr
@@ -100,7 +100,7 @@ pub (crate) fn lookup_host(hostname: &str) -> ::Result<Vec<IpAddr>> {
 fn get_dns_servers() -> ::Result<Vec<DnsServer>> {
     // TODO: Assuming here that PXE has already happened. Should we kick it off here if it hasn't?
     const DNS_PORT: u16 = 53;
-    let dns_servers = dhcp::cached_dhcp_config()?
+    let dns_servers = pxebc::cached_dhcp_config()?
         .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?
         .dns_server_addrs().iter()
         .map(|ip| DnsServer { addr: (*ip, DNS_PORT).into() })

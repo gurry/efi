@@ -1,5 +1,5 @@
 use ffi::{
-    pxe::{
+    pxebc::{
         EFI_PXE_BASE_CODE_PROTOCOL_GUID,
         EFI_PXE_BASE_CODE_PROTOCOL,
         EFI_PXE_BASE_CODE_MODE,

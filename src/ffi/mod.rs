@@ -4,7 +4,7 @@
 #![allow(non_camel_case_types)]
 
 #[macro_use] mod base;
-pub mod pxe;
+pub mod pxebc;
 pub mod media;
 pub mod device_path;
 pub mod loaded_image;
