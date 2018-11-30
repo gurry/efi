@@ -192,12 +192,13 @@ extern "win64" fn load_file_callback<'a, R: 'a + Read + Len>(
 }
 
 
-
+#[derive(Debug)]
 pub struct LoadedImage(EFI_HANDLE);
 
 /// The data returned by a running image when it exits.
 /// Contains a UCS-2 string part followed by an optional binary data.
 /// The interpretation of the binary data part is up to the application
+#[derive(Debug)]
 pub struct ExitData {
     ptr: *const CHAR16,
     size_in_bytes: UINTN,
