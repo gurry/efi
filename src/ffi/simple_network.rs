@@ -18,22 +18,22 @@ pub const MAX_MCAST_FILTER_CNT: UINTN = 16;
 
 #[repr(C)]
 pub struct EFI_SIMPLE_NETWORK_PROTOCOL {
-    Revision: UINT64,
-    Start: EFI_SIMPLE_NETWORK_START,
-    Stop: EFI_SIMPLE_NETWORK_STOP,
-    Initialize: EFI_SIMPLE_NETWORK_INITIALIZE,
-    Reset: EFI_SIMPLE_NETWORK_RESET,
-    Shutdown: EFI_SIMPLE_NETWORK_SHUTDOWN,
-    ReceiveFilters: EFI_SIMPLE_NETWORK_RECEIVE_FILTERS,
-    StationAddress: EFI_SIMPLE_NETWORK_STATION_ADDRESS,
-    Statistics: EFI_SIMPLE_NETWORK_STATISTICS,
-    MCastIpToMac: EFI_SIMPLE_NETWORK_MCAST_IP_TO_MAC,
-    NvData: EFI_SIMPLE_NETWORK_NVDATA,
-    GetStatus: EFI_SIMPLE_NETWORK_GET_STATUS,
-    Transmit: EFI_SIMPLE_NETWORK_TRANSMIT,
-    Receive: EFI_SIMPLE_NETWORK_RECEIVE,
-    WaitForPacket: EFI_EVENT,
-    Mode: *mut EFI_SIMPLE_NETWORK_MODE,
+    pub Revision: UINT64,
+    pub Start: EFI_SIMPLE_NETWORK_START,
+    pub Stop: EFI_SIMPLE_NETWORK_STOP,
+    pub Initialize: EFI_SIMPLE_NETWORK_INITIALIZE,
+    pub Reset: EFI_SIMPLE_NETWORK_RESET,
+    pub Shutdown: EFI_SIMPLE_NETWORK_SHUTDOWN,
+    pub ReceiveFilters: EFI_SIMPLE_NETWORK_RECEIVE_FILTERS,
+    pub StationAddress: EFI_SIMPLE_NETWORK_STATION_ADDRESS,
+    pub Statistics: EFI_SIMPLE_NETWORK_STATISTICS,
+    pub MCastIpToMac: EFI_SIMPLE_NETWORK_MCAST_IP_TO_MAC,
+    pub NvData: EFI_SIMPLE_NETWORK_NVDATA,
+    pub GetStatus: EFI_SIMPLE_NETWORK_GET_STATUS,
+    pub Transmit: EFI_SIMPLE_NETWORK_TRANSMIT,
+    pub Receive: EFI_SIMPLE_NETWORK_RECEIVE,
+    pub WaitForPacket: EFI_EVENT,
+    pub Mode: *mut EFI_SIMPLE_NETWORK_MODE,
 }
 
 #[derive(Debug)]
@@ -76,6 +76,6 @@ pub type EFI_SIMPLE_NETWORK_TRANSMIT = *const NOT_DEFINED;
 
 pub type EFI_SIMPLE_NETWORK_GET_STATUS = extern "win64" fn(
     This: *const EFI_SIMPLE_NETWORK_PROTOCOL,
-    InterruptStatus: *const UINT32,
+    InterruptStatus: *mut UINT32,
     TxBuf: *mut *const VOID
 ) -> EFI_STATUS;
