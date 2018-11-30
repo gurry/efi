@@ -105,6 +105,18 @@ pub struct EFI_MAC_ADDRESS {
   pub Addr: [UINT8; 32],
 }
 
+impl EFI_MAC_ADDRESS  {
+    pub fn zero() -> Self {
+        Self { Addr: [0; 32] }
+    }
+}
+
+impl Default for EFI_MAC_ADDRESS {
+    fn default() -> Self {
+        Self::zero()
+    }
+}
+
 /// 16-byte buffer aligned on a 4-byte boundary.
 /// An IPv4 or IPv6 internet protocol address.
 #[derive(Copy, Clone)]
