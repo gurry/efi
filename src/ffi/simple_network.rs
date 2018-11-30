@@ -5,6 +5,7 @@ use ffi::base::{
     UINT64,
     UINTN,
     BOOLEAN,
+    FALSE,
     VOID,
     EFI_STATUS,
     EFI_EVENT,
@@ -58,6 +59,32 @@ pub struct EFI_SIMPLE_NETWORK_MODE {
     pub MultipleTxSupported: BOOLEAN,
     pub MediaPresentSupported: BOOLEAN,
     pub MediaPresent: BOOLEAN,
+}
+
+impl Default for EFI_SIMPLE_NETWORK_MODE  {
+    fn default() -> Self {
+        Self {
+            State: 0,
+            HwAddressSize: 0,
+            MediaHeaderSize: 0,
+            MaxPacketSize: 0,
+            NvRamSize: 0,
+            NvRamAccessSize: 0,
+            ReceiveFilterMask: 0,
+            ReceiveFilterSetting: 0,
+            MaxMCastFilterCount: 0,
+            MCastFilterCount: 0,
+            MCastFilter: Default::default(),
+            CurrentAddress: EFI_MAC_ADDRESS::default(),
+            BroadcastAddress: EFI_MAC_ADDRESS::default(),
+            PermanentAddress: EFI_MAC_ADDRESS::default(),
+            IfType: 0,
+            MacAddressChangeable: FALSE,
+            MultipleTxSupported: FALSE,
+            MediaPresentSupported: FALSE,
+            MediaPresent: FALSE,
+        }
+    }
 }
 
 pub type EFI_SIMPLE_NETWORK_START = *const NOT_DEFINED;
