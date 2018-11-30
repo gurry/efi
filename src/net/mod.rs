@@ -13,6 +13,7 @@ use ::{
     to_res,
     io::{self, Read, Write},
     events::{self, TimerSchedule, TimerState, EventTpl, Wait},
+    boot_services::locate_handles,
 };
 use self::pxebc::DhcpConfig;
 use ffi::{
@@ -24,6 +25,7 @@ use ffi::{
     EFI_SUCCESS,
     EFI_NOT_READY,
     EFI_IPv4_ADDRESS,
+    EFI_MAC_ADDRESS,
     UINTN,
     UINT32,
     VOID,
@@ -62,9 +64,10 @@ use ffi::{
         EFI_UDP4_SESSION_DATA
     },
     ip4::EFI_IP4_MODE_DATA,
+    simple_network::EFI_SIMPLE_NETWORK_MODE,
 };
 
-use core::{ptr, mem, ops::Drop, time::Duration};
+use core::{ptr, mem, cmp, ops::Drop, time::Duration};
 pub use self::addr::*;
 
 // TODO: There are no timeouts anywhere (e.g. connect, read, write etc.). Add timeouts at all those places
@@ -170,7 +173,7 @@ impl Tcp4Stream {
     fn connect(addr: SocketAddrV4) -> Result<Self> {
         // TODO: this function is too ugly right now. Refactor/clean it up.
         let ip: EFI_IPv4_ADDRESS = (*addr.ip()).into();
-
+        
         let dhcp_config = pxebc::PxeBaseCodeProtocol::get_any()?
             .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?
             .cached_dhcp_config()?
@@ -201,6 +204,8 @@ impl Tcp4Stream {
             ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_SIGNAL, TPL_NOTIFY, Some(common_cb), ptr::null(), &mut stream.recv_token.CompletionToken.Event));
             ret_on_err!(((*stream.bs).CreateEvent)(EVT_NOTIFY_WAIT, TPL_CALLBACK, Some(empty_cb), ptr::null(), &mut stream.close_token.CompletionToken.Event));
 
+            // TODO: This is broken. We take only the first available protocol. Instead find the right protocol matching the requested local IP (or mac addr) 
+            // just like we're doing in UDP below.
             ret_on_err!(((*stream.bs).LocateProtocol)(&EFI_TCP4_SERVICE_BINDING_PROTOCOL_GUID, ptr::null() as *const VOID, mem::transmute(&stream.binding_protocol)));
 
             ret_on_err!(((*stream.binding_protocol).CreateChild)(stream.binding_protocol, &mut stream.device_handle));
@@ -519,6 +524,8 @@ impl Timer {
     }
 }
 
+const ETHERNET_MAC_ADDR_LEN: u8 = 6;
+
 struct Udp4Socket {
     bs: *const EFI_BOOT_SERVICES,
     binding_protocol: *const EFI_SERVICE_BINDING_PROTOCOL,
@@ -541,10 +548,7 @@ impl Udp4Socket {
 
     fn bind_and_connect(local_addr: SocketAddrV4, remote_addr: SocketAddrV4) -> Result<Self> {
         // TODO: THIS IS A TEMPORARY HACK. WE ACTUALLY WANT TO MAKE THE COMMENTED OUT CODE BELOW WORK.
-        let dhcp_config = pxebc::PxeBaseCodeProtocol::get_any()? // TODO: this is bullshit. We should use the PXE BC on the exact interface corresponding to supplied IP
-                .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?
-                .cached_dhcp_config()?
-                .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
+        let dhcp_config = get_dhcp_config_with_ip(&local_addr.ip())?;
         let station_addr = if let IpAddr::V4(ip) = dhcp_config.ip() { ip.into() } else { EFI_IPv4_ADDRESS::zero() };
         let subnet_mask = if let IpAddr::V4(ip) = dhcp_config.subnet_mask() { ip.into() } else { EFI_IPv4_ADDRESS::zero() };
 
@@ -599,15 +603,69 @@ impl Udp4Socket {
         unsafe {
             ret_on_err!(((*socket.bs).CreateEvent)(EVT_NOTIFY_WAIT, TPL_CALLBACK, Some(empty_cb), ptr::null(), &mut socket.send_token.Event));
             ret_on_err!(((*socket.bs).CreateEvent)(EVT_NOTIFY_SIGNAL, TPL_NOTIFY, Some(common_cb), ptr::null(), &mut socket.recv_token.Event));
+        }
 
-            ret_on_err!(((*socket.bs).LocateProtocol)(&EFI_UDP4_SERVICE_BINDING_PROTOCOL_GUID, ptr::null() as *const VOID, mem::transmute(&socket.binding_protocol)));
-            ret_on_err!(((*socket.binding_protocol).CreateChild)(socket.binding_protocol, &mut socket.device_handle));
-            ret_on_err!(((*socket.bs).OpenProtocol)(socket.device_handle,
-                &EFI_UDP4_PROTOCOL_GUID,
-                mem::transmute(&socket.protocol),
-                image_handle(),
-                ptr::null() as EFI_HANDLE,
-                EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL)); // TODO: BY_HANDLE is used for applications. Drivers should use GET. Will we ever support drivers?
+        let service_binding_handles = locate_handles(&EFI_UDP4_SERVICE_BINDING_PROTOCOL_GUID)?;
+        if service_binding_handles.is_empty() {
+            return Err(EfiErrorKind::DeviceError.into());
+        }
+
+
+        // Here we try to find the UDP protocol on an interface which has the same MAC address as that used in DHCP config
+        // TODO: clean this godawful mess up.
+
+        // TODO: we can't possibly depend on DHCP config like discover packet etc. 
+        // Find a better way to specify things like which interface we bind to
+        let cached_discover_packet = dhcp_config.dhcp_discover_packet()
+            .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
+        let expected_hw_addr = cached_discover_packet.bootp_hw_addr();
+        let hw_addr_len = cached_discover_packet.bootp_hw_addr_len() as usize;
+        let valid_addr_len = if hw_addr_len != 0 { cmp::min(hw_addr_len, expected_hw_addr.len()) } else { ETHERNET_MAC_ADDR_LEN as usize };
+        let expected_mac_addr = to_mac_addr(&expected_hw_addr[..], valid_addr_len);
+
+        // Iterate through all UDP protocols and find the one that's on an interface with the expected mac address
+        socket.binding_protocol = ptr::null();
+        socket.protocol = ptr::null();
+        for handle in service_binding_handles {
+            unsafe {
+                let mut binding_protocol = ptr::null::<EFI_SERVICE_BINDING_PROTOCOL>();
+                let open_binding_status = ((*socket.bs).OpenProtocol)(handle, &EFI_UDP4_SERVICE_BINDING_PROTOCOL_GUID, mem::transmute(&binding_protocol), image_handle(), ptr::null() as EFI_HANDLE, EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
+                if open_binding_status != EFI_SUCCESS {
+                    continue;
+                }
+
+                let mut device_handle = ptr::null() as EFI_HANDLE;
+                let create_child_status = ((*binding_protocol).CreateChild)(binding_protocol, &mut device_handle);
+                if create_child_status != EFI_SUCCESS {
+                    continue;
+                }
+
+                let protocol = ptr::null::<EFI_UDP4_PROTOCOL>();
+                let open_udp_status = ((*socket.bs).OpenProtocol)(device_handle, &EFI_UDP4_PROTOCOL_GUID, mem::transmute(&protocol), image_handle(), ptr::null() as EFI_HANDLE, EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL); // TODO: BY_HANDLE is used for applications. Drivers should use GET. Will we ever support drivers?
+                if open_udp_status != EFI_SUCCESS {
+                    continue;
+                }
+
+                let mut snp_mode = EFI_SIMPLE_NETWORK_MODE::default();
+                let get_mode_status = ((*protocol).GetModeData)(protocol, ptr::null_mut(), ptr::null_mut(), ptr::null_mut(), &mut snp_mode);
+                if get_mode_status != EFI_SUCCESS {
+                    continue;
+                }
+
+                if expected_mac_addr == snp_mode.CurrentAddress {
+                    socket.binding_protocol = binding_protocol;
+                    socket.protocol = protocol;
+                    break;
+                }
+            }
+        }
+
+        // Error out if we failed to find a protocol matching the expected mac address
+        if socket.binding_protocol.is_null() || socket.protocol.is_null() {
+            return Err(EfiErrorKind::DeviceError.into());
+        }
+
+        unsafe {
             let status = ((*socket.protocol).Configure)(socket.protocol, &config);
             if status == EFI_NO_MAPPING { // Wait until the IP configuration process (probably DHCP) has finished
                 let mut ip_mode_data = EFI_IP4_MODE_DATA::new();
@@ -626,10 +684,6 @@ impl Udp4Socket {
 
         // Copy in all routes from the DHCP config
         // TODO: This is faulty. Get the dhcp config specifically of the interface we're binding on
-        let dhcp_config = pxebc::PxeBaseCodeProtocol::get_any()? // TODO: this is bullshit. We should use the PXE BC on the exact interface corresponding to supplied IP
-                .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?
-                .cached_dhcp_config()?
-                .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
         let (subnet_addr, subnet_mask, gateway_addr) = form_default_route(&dhcp_config)?;
         unsafe {
             ret_on_err!(((*socket.protocol).Routes)(socket.protocol, FALSE, &subnet_addr, &subnet_mask, &gateway_addr));
@@ -770,3 +824,37 @@ fn form_default_route(dhcp_config: &DhcpConfig) -> Result<(EFI_IPv4_ADDRESS, EFI
 
     Ok((subnet_addr, subnet_mask, gateway_addr))
 }
+
+fn get_dhcp_config_with_ip(ip: &Ipv4Addr) -> Result<DhcpConfig> {
+    let config = if *ip == Ipv4Addr::new(0, 0, 0, 0) { // If the caller didn't specify an IP we just return the first config we find. TODO: this is completely wrong. We need to bind on all IPs in case of 0.0.0.0 not the first IP we find
+        pxebc::PxeBaseCodeProtocol::get_any()? // TODO: this is bullshit. We should use the PXE BC on the exact interface corresponding to supplied IP
+            .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?
+            .cached_dhcp_config()?
+            .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?
+    } else {
+        pxebc::PxeBaseCodeProtocol::get_all()
+            .map_err(|_| ::EfiError::from(::EfiErrorKind::DeviceError))?
+            .iter()
+            .filter_map(|p| {
+                match p.cached_dhcp_config() {
+                    Ok(Some(config)) => Some(config),
+                    _ => None
+                }
+            })
+            .filter(|p| p.ip() == *ip)
+            .nth(0)
+            .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?
+    };
+
+    Ok(config)
+}
+
+fn to_mac_addr(hw_addr: &[u8], valid_len: usize) -> EFI_MAC_ADDRESS {
+    let mut mac_addr = EFI_MAC_ADDRESS::default();
+    let mac_addr_len = mac_addr.Addr.len();
+    let hw_addr_len = hw_addr.len();
+    let len_to_copy = cmp::min(valid_len, cmp::min(mac_addr_len, hw_addr_len));
+    &mac_addr.Addr[..len_to_copy].copy_from_slice(hw_addr);
+    mac_addr
+}
+
