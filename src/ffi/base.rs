@@ -99,7 +99,7 @@ impl EFI_IPv6_ADDRESS {
 }
 
 /// 32-byte buffer containing a network Media Access Control address.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(PartialEq, Eq)]
 #[repr(C)]
 pub struct EFI_MAC_ADDRESS {
   pub Addr: [UINT8; 32],
@@ -116,6 +116,16 @@ impl Default for EFI_MAC_ADDRESS {
         Self::zero()
     }
 }
+
+// Had to implement by hand 'cause Debug derive not allowed for unions
+impl fmt::Debug for EFI_MAC_ADDRESS {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("EFI_MAC_ADDRESS ")
+            .field("Addr", &format_args!("{:x?}", self.Addr))
+            .finish()
+    }
+}
+
 
 /// 16-byte buffer aligned on a 4-byte boundary.
 /// An IPv4 or IPv6 internet protocol address.
