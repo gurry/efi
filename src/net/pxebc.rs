@@ -18,15 +18,10 @@ use ffi::{
     },
     EFI_HANDLE,
     EFI_IP_ADDRESS,
-    EFI_NOT_FOUND,
     UINT16,
-    UINTN,
     BOOLEAN,
     VOID,
-    boot_services::{
-        EFI_LOCATE_SEARCH_TYPE,
-        EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL,
-    },
+    boot_services::EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL,
 };
 
 use {
@@ -40,7 +35,7 @@ use {
     image_handle,
     net::{IpAddr, Ipv4Addr},
     NullTerminatedAsciiStr,
-    boxed::EfiBox,
+    boot_services::locate_handles,
 };
 
 use core::{self, slice, mem, ptr, default::Default};
@@ -190,30 +185,6 @@ impl BootServerConfig {
     }
 }
 
-// TODO: this should return an iterator instead to avoid allocations
-fn locate_pxe_protocol_handles() -> Result<Vec<EFI_HANDLE>> {
-    let bs = (*system_table()).BootServices;
-    let mut handle_buf: *const EFI_HANDLE = ptr::null();
-    let mut no_of_handles: UINTN = 0;
-    unsafe {
-        let status = ((*bs).LocateHandleBuffer)(EFI_LOCATE_SEARCH_TYPE::ByProtocol, &EFI_PXE_BASE_CODE_PROTOCOL_GUID, ptr::null() as *const VOID, &mut no_of_handles, &mut handle_buf);
-        if status == EFI_NOT_FOUND {
-            return Ok(Vec::new()); // returning empty
-        }
-
-        ret_on_err!(status);
-
-        let handle_box = EfiBox::from_raw(handle_buf as *mut EFI_HANDLE); // Just so that we deallocat this buffer when we go out of scope
-
-        let mut handles = Vec::with_capacity(no_of_handles);
-        for i in 0..no_of_handles {
-            handles.push(*(handle_box.as_raw().add(i)));
-        }
-
-        Ok(handles)
-    }
-}
-
 // TODO: This is a lot of boilerplate. Can we find a way to generate this code?
 #[repr(C)]
 pub struct PxeBaseCodeProtocol(EFI_PXE_BASE_CODE_PROTOCOL);
@@ -303,14 +274,14 @@ impl PxeBaseCodeProtocol {
     // TODO: this should return an iterator instead to avoid allocations
     // TODO: all this shit may be unsafe. Audit it
     pub fn get_all<'a>() -> Result<Vec<&'a PxeBaseCodeProtocol>> {
-        let handles = locate_pxe_protocol_handles()?;
+        let handles = locate_handles(&EFI_PXE_BASE_CODE_PROTOCOL_GUID)?;
         let protocols = handles.iter().filter_map(|h| Self::open_on(*h).ok()).collect();
         Ok(protocols)
     }
 
     // TODO: all this shit may be unsafe. Audit it
     pub fn get_all_mut<'a>() -> Result<Vec<&'a mut PxeBaseCodeProtocol>> {
-        let handles = locate_pxe_protocol_handles()?;
+        let handles = locate_handles(&EFI_PXE_BASE_CODE_PROTOCOL_GUID)?;
         let protocols = handles.iter().filter_map(|h| Self::open_on_mut(*h).ok()).collect();
         Ok(protocols)
     }

@@ -32,6 +32,7 @@ pub mod boxed;
 pub mod events;
 pub mod time;
 mod allocator;
+mod boot_services;
 
 // Hack: this std declartion is to work around a bug in failure crate
 // wherein it looks for std even in no_std crates. Will remove it when
