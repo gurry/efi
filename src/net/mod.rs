@@ -571,13 +571,13 @@ impl Udp4Socket {
         // };
 
         let config = EFI_UDP4_CONFIG_DATA {
-            AcceptBroadcast: FALSE,
+            AcceptBroadcast: TRUE,
             AcceptPromiscuous: FALSE,
             AcceptAnyPort: FALSE,
             AllowDuplicatePort: FALSE,
             TypeOfService: 0,
             TimeToLive: 255,
-            DoNotFragment: TRUE,
+            DoNotFragment: FALSE,
             ReceiveTimeout: 0,
             TransmitTimeout: 0,
             UseDefaultAddress: FALSE,
