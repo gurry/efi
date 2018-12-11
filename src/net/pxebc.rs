@@ -144,7 +144,7 @@ impl DhcpConfig {
     fn extract_ip_addrs(mode: &Mode, op_code: u8) -> Option<Vec<IpAddr>> {
         let option = mode.dhcp_ack().as_dhcpv4().dhcp_option(op_code)?;
         let val = option.value()?;
-        let addrs = val.exact_chunks(4)
+        let addrs = val.chunks_exact(4)
             .map(|c| IpAddr::V4(Ipv4Addr::new(c[0], c[1], c[2], c[3])))
             .collect::<Vec<_>>();
 

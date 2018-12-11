@@ -7,7 +7,6 @@
 #![feature(alloc)]
 #![feature(str_internals)] // TODO: this looks very new and unstable. Can we get rid of it?
 #![feature(align_offset)]
-#![feature(exact_chunks)]
 #![feature(ptr_internals)]
 
 // #![warn(missing_debug_implementations)]
