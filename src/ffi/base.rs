@@ -257,7 +257,8 @@ pub type UINTN = usize;
 pub const TRUE: BOOLEAN = 1;
 pub const FALSE: BOOLEAN = 0;
 
-pub type VOID = ();
+#[derive(Copy, Clone)]
+pub enum VOID { }
 pub type EFI_HANDLE = *const VOID;
 pub type EFI_EVENT = *const VOID;
 
