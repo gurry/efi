@@ -4,9 +4,7 @@
 #![no_std]
 #![recursion_limit="100"] // Needed for the dns module (because it does recursive name resolution)
 
-#![feature(alloc)]
 #![feature(str_internals)] // TODO: this looks very new and unstable. Can we get rid of it?
-#![feature(align_offset)]
 #![feature(ptr_internals)]
 
 // #![warn(missing_debug_implementations)]
@@ -118,7 +116,7 @@ impl From<EfiError> for EFI_STATUS {
 }
 
 impl Fail for EfiError {
-    fn cause(&self) -> Option<&Fail> {
+    fn cause(&self) -> Option<&dyn Fail> {
         self.inner.cause()
     }
 

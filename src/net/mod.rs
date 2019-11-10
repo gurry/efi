@@ -276,7 +276,7 @@ impl Tcp4Stream {
     }
 
     unsafe fn wait_for_evt(&self, event: *const EFI_EVENT) -> Result<()> {
-        let mut _index: UINTN = 0;;
+        let mut _index: UINTN = 0;
         let status = ((*self.bs).WaitForEvent)(1, event, &mut _index);
         to_res((), status)
     }
@@ -628,7 +628,7 @@ impl Udp4Socket {
         socket.protocol = ptr::null();
         for handle in service_binding_handles {
             unsafe {
-                let mut binding_protocol = ptr::null::<EFI_SERVICE_BINDING_PROTOCOL>();
+                let binding_protocol = ptr::null::<EFI_SERVICE_BINDING_PROTOCOL>();
                 let open_binding_status = ((*socket.bs).OpenProtocol)(handle, &EFI_UDP4_SERVICE_BINDING_PROTOCOL_GUID, mem::transmute(&binding_protocol), image_handle(), ptr::null() as EFI_HANDLE, EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
                 if open_binding_status != EFI_SUCCESS {
                     continue;
@@ -695,7 +695,7 @@ impl Udp4Socket {
     }
 
     unsafe fn wait_for_evt(&self, event: *const EFI_EVENT) -> Result<()> {
-        let mut _index: UINTN = 0;;
+        let mut _index: UINTN = 0;
         let status = ((*self.bs).WaitForEvent)(1, event, &mut _index);
         to_res((), status)
     }
