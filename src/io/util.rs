@@ -50,9 +50,9 @@ pub fn copy<R: ?Sized, W: ?Sized>(reader: &mut R, writer: &mut W) -> io::Result<
     where R: Read, W: Write
 {
     let mut buf = unsafe {
-        let mut buf: [u8; super::DEFAULT_BUF_SIZE] = mem::uninitialized();
-        reader.initializer().initialize(&mut buf);
-        buf
+        let mut buf = mem::MaybeUninit::<[u8; super::DEFAULT_BUF_SIZE]>::uninit();
+        reader.initializer().initialize(&mut *buf.as_mut_ptr());
+        buf.assume_init()
     };
 
     let mut written = 0;
