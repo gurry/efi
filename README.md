@@ -23,9 +23,12 @@ WARNING: this crate is still a work in progress and the API surface can change w
 
 ## How to Use
 
-To see how to use take a look at the sample application [`efi_app`](https://github.com/gurry/efi_app) which is built using `efi`.
+To see how to use take a look at the sample application  `examples/sample_efi_app.rs` created using this library.
 
-### Building
+To build `sample_efi_app.rs`:
 
-1. Install `cargo-xbuild` if not already installed
-2. Use nightly Rust and the command line `cargo xbuild --target x86_64-unknown-uefi` to build.
+1. Unless already installed, install `cargo-xbuild` by running `cargo install cargo-xbuild`.
+2. Switch to nightly Rust.
+3. Execute the build by running `cargo xbuild --target x86_64-unknown-uefi --example sample_efi_app`
+
+When the build complete the resulting EFI application `sample_efi_app.efi` will be found in `target\x86_64-unknown-uefi\examples\`. Load this up in qemu and run it via EFI shell. You will need the OVMF firmware for this. Google for `using ovmf in qemu`for details.
