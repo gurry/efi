@@ -5,15 +5,14 @@
 #[macro_use] extern crate efi;
 #[macro_use] extern crate alloc;
 
-use efi::ffi;
 use efi::{
+    ffi,
     SystemTable,
     net,
     init_env,
     io::{self, Read, BufRead},
     EfiErrorKind,
 };
-
 use alloc::string::String;
 use core::{panic::PanicInfo, alloc::Layout};
 
