@@ -1,5 +1,7 @@
 # efi
 
+[![Crates.io](https://img.shields.io/crates/v/efi)](https://crates.io/crates/efi)
+
 A framework for writing UEFI applications in Rust. It is intended to act like the Rust standard library on the UEFI platform with support for things like:
 
 - Console I/O
