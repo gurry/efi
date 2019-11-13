@@ -28,7 +28,7 @@ To write a UEFI application using this framework follow the below steps:
 1. Install `cargo-xbuild` by running `cargo install cargo-xbuild`
 2. Switch to nightly Rust by running `rustup default nightly`
 3. Create a new crate for your application by running `cargo new my_efi_app`, where "my_efi_app" is the name of the application
-4. Add `efi = { git = "https://github.com/gurry/efi.git" }` under `[dependencies]` in `Cargo.toml`
+4. Add `efi = "0.2"` under `[dependencies]` in `Cargo.toml`
 5. Add the below code in `my_efi_app/src/main.rs`. Comments in the code explain each part:
 
 ```rust
