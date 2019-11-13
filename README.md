@@ -23,7 +23,7 @@ WARNING: this crate is still a work in progress and the API surface can change w
 
 ## How to Use
 
-To see how to use take a look at the sample application  `[examples/sample_efi_app.rs](examples/sample_efi_app.rs)` created using this library.
+To see how to use take a look at the sample application  [`examples/sample_efi_app.rs`](examples/sample_efi_app.rs) created using this library.
 
 To build `sample_efi_app.rs`:
 
