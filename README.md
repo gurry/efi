@@ -31,4 +31,4 @@ To build `sample_efi_app.rs`:
 2. Switch to nightly Rust.
 3. Execute the build by running `cargo xbuild --target x86_64-unknown-uefi --example sample_efi_app`
 
-When the build complete the resulting EFI application `sample_efi_app.efi` will be found in `target\x86_64-unknown-uefi\examples\`. Load this up in qemu and run it via EFI shell. You will need the OVMF firmware for this. Google `using ovmf in qemu`for details.
+When the build complete the resulting EFI application `sample_efi_app.efi` will be found in `target\x86_64-unknown-uefi\debug\examples\`. Load this up in qemu and run it via EFI shell. You will need the OVMF firmware for this. Google `using ovmf in qemu`for details.
