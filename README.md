@@ -2,7 +2,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/efi)](https://crates.io/crates/efi)
 
-A framework for writing UEFI applications in Rust. It is intended to act like the Rust standard library on the UEFI platform with support for things like:
+A framework for writing UEFI applications in Rust. Acts like Rust standard library on the UEFI platform with support for things like:
 
 - Console I/O
 - Containers such as `Vec` and `String` via a custom allocator
@@ -12,16 +12,19 @@ A framework for writing UEFI applications in Rust. It is intended to act like th
 - Implementation of `IpAddr` and its supporting types
 - Domain name resolution so that you can connect sockets using a hostname
 
-In addition, it offers an ergonomic API for UEFI-specific functionality such as:
+Also offers an ergonomic API for UEFI-specific functionality such as:
 
 - Loading and starting images
 - DHCP
 - PXE
 - Device paths
 
-Thirdly it exposes an API for doing raw FFI with the UEFI platform. It's the same FFI API that is used to implement the above functionality.
+Lastly, also exposes the raw underlying API to do FFI with the UEFI platform. Itself uses the same FFI API to implement above functionality.
 
-WARNING: this crate is still a work in progress and the API surface can change without notice. Currently only `x64` architecture is supported
+## Limitations
+
+- Is a work in progress. API surface can change without notice.
+- Currently only `x64` architecture is supported.
 
 ## Writing a UEFI Application
 
@@ -69,11 +72,14 @@ fn alloc_error(_: core::alloc::Layout) -> ! {
 }
 ```
 
-6. Build the application by running `cargo xbuild --target x86_64-unknown-uefi`
-7. When the build complete the resulting EFI application `my_efi_app.efi` will be found in `target\x86_64-unknown-uefi\debug\`
+### Building
 
-Load the applicationin qemu and run it via EFI shell. You will need the OVMF firmware for this. Google `using ovmf in qemu`for details.
+Build the application by running `cargo xbuild --target x86_64-unknown-uefi`. When the build complete the resulting EFI application `my_efi_app.efi` will be found in `target\x86_64-unknown-uefi\debug\`
 
-### Example
+### Running
+
+To run the application load it in qemu and run it via EFI shell. You will need the OVMF firmware for this. Google `using ovmf in qemu`for details.
+
+### Example Application
 
 For a sample application see [`examples/sample_efi_app.rs`](examples/sample_efi_app.rs). Build it by running `cargo xbuild --target x86_64-unknown-uefi --example sample_efi_app`. The resulting binary `sample_efi_app.efi` will be found in `target\x86_64-unknown-uefi\debug\examples\`.
