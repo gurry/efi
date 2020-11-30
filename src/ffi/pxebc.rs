@@ -173,7 +173,7 @@ impl EFI_PXE_BASE_CODE_DHCPV6_PACKET {
     }
 
     pub fn TransactionId(&self) -> UINT32 {
-        (self.BitField >> 8)
+        self.BitField >> 8
     }
 }
 
