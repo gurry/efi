@@ -25,16 +25,16 @@ Lastly, also exposes the raw underlying API to do FFI with the UEFI platform. It
 
 - Is a work in progress. API surface can change without notice.
 - Currently only `x64` architecture is supported.
+- Tested to compile only withRust nightly version `nightly-2020-10-30`. May not compile with other versions. You must force this nightly version using a `rust-toolchain` file (as shown in the following section)
 
 ## Writing a UEFI Application
 
 To write a UEFI application using this framework follow the below steps:
 
-1. Install `cargo-xbuild` by running `cargo install cargo-xbuild`
-2. Switch to nightly Rust by running `rustup default nightly`
-3. Create a new crate for your application by running `cargo new my_efi_app`, where "my_efi_app" is the name of the application
-4. Add `efi = "0.2"` under `[dependencies]` in `Cargo.toml`
-5. Add the below code in `my_efi_app/src/main.rs`. Comments in the code explain each part:
+1. Create a new crate for your application by running `cargo new my_efi_app`, where "my_efi_app" is the name of the application
+2. Add `efi = "0.2"` under `[dependencies]` in `Cargo.toml`
+3. Add a file named `rust-toolchain` containing the text `nightly-2020-10-30` at the root of the crate. This file will ensure that the crate is always built with the `nightly-2020-10-30` version of the Rust compiler.
+4. Add the below code in `my_efi_app/src/main.rs`. Comments in the code explain each part:
 
 ```rust
 #![no_std] // Indicates to the Rust compiler that the app does not depend on the standard library but is a 'standalone' application.
@@ -74,12 +74,12 @@ fn alloc_error(_: core::alloc::Layout) -> ! {
 
 ### Building
 
-Build the application by running `cargo xbuild --target x86_64-unknown-uefi`. When the build complete the resulting EFI application `my_efi_app.efi` will be found in `target\x86_64-unknown-uefi\debug\`
+Build the application by running `cargo build -Z build-std=core,alloc --target x86_64-unknown-uefi`. When the build complete the resulting EFI application `my_efi_app.efi` will be found in `target\x86_64-unknown-uefi\debug\`
 
 ### Running
 
-To run the application load it in qemu and run it via EFI shell. You will need the OVMF firmware for this. Google `using ovmf in qemu`for details.
+To run the application load it in qemu and run it via EFI shell. You will need the OVMF firmware for this. Google `using ovmf in qemu` for details.
 
 ### Example Application
 
-For a sample application see [`examples/sample_efi_app.rs`](examples/sample_efi_app.rs). Build it by running `cargo xbuild --target x86_64-unknown-uefi --example sample_efi_app`. The resulting binary `sample_efi_app.efi` will be found in `target\x86_64-unknown-uefi\debug\examples\`.
+For a sample application see [`examples/sample_efi_app.rs`](examples/sample_efi_app.rs). Build it by running `cargo build -Z build-std=core,alloc --target x86_64-unknown-uefi --example sample_efi_app`. The resulting binary `sample_efi_app.efi` will be found in `target\x86_64-unknown-uefi\debug\examples\`.

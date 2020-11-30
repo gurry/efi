@@ -276,12 +276,12 @@
 //! [`.unwrap()`]: ../result/enum.Result.html#method.unwrap
 
 use core::cmp;
-use core::str as core_str;
 use core::fmt;
 use core::result;
 use alloc::{string::String, vec::Vec};
 use core::str;
 use core::ptr;
+use utf8_width;
 
 pub use self::buffered::{BufReader, BufWriter, LineWriter};
 pub use self::buffered::IntoInnerError;
@@ -1957,7 +1957,8 @@ impl<R: Read> Iterator for Chars<R> {
             Ok(b) => b,
             Err(e) => return Some(Err(CharsError::Other(e))),
         };
-        let width = core_str::utf8_char_width(first_byte);
+
+        let width = utf8_width::get_width(first_byte);
         if width == 1 { return Some(Ok(first_byte as char)) }
         if width == 0 { return Some(Err(CharsError::NotUtf8)) }
         let mut buf = [first_byte, 0, 0, 0];

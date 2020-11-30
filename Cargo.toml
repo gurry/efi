@@ -12,6 +12,8 @@ license = "MIT"
 
 [dependencies]
 byteorder = { version = "1", default-features = false }
+rlibc = "1.0.0"
+utf8-width = "0.1.4"
 
 [dependencies.failure]
 version = "0.1.1"
