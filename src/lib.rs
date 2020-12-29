@@ -47,6 +47,7 @@ use ffi::{
 };
 
 use failure::{Context, Fail, Backtrace};
+#[cfg(allocator)]
 use allocator::EfiAllocator;
 pub use console::{Console, stdin, stdout};
 pub use utils::NullTerminatedAsciiStr;
@@ -76,9 +77,9 @@ pub fn image_handle() -> EFI_HANDLE {
     }
 }
 
-
- #[global_allocator]
- static ALLOCATOR: EfiAllocator = EfiAllocator;
+#[cfg(allocator)]
+#[global_allocator]
+static ALLOCATOR: EfiAllocator = EfiAllocator;
 
 
 // TODO: instead of calling them errors we should change the name to status and remove Fail etc. from them.
