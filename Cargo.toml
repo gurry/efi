@@ -9,6 +9,9 @@ keywords = ["bindings", "uefi", "efi", "boot-loader", "os-loader"]
 categories = ["api-bindings", "no-std", "os"]
 license = "MIT"
 
+[features]
+default = ["allocator"]
+allocator = []
 
 [dependencies]
 byteorder = { version = "1", default-features = false }
