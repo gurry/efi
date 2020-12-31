@@ -47,7 +47,7 @@ use ffi::{
 };
 
 use failure::{Context, Fail, Backtrace};
-#[cfg(allocator)]
+#[cfg(feature = "allocator")]
 use allocator::EfiAllocator;
 pub use console::{Console, stdin, stdout};
 pub use utils::NullTerminatedAsciiStr;
@@ -77,7 +77,7 @@ pub fn image_handle() -> EFI_HANDLE {
     }
 }
 
-#[cfg(allocator)]
+#[cfg(feature = "allocator")]
 #[global_allocator]
 static ALLOCATOR: EfiAllocator = EfiAllocator;
 
