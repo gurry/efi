@@ -89,7 +89,7 @@ Run the UEFI appliction in a qemu virtual machine by following the below steps:
 
 ### Example Application
 
-For a sample application see [`examples/sample_efi_app.rs`](examples/sample_efi_app.rs). Build it by running `cargo build -Z build-std=core,alloc --target x86_64-unknown-uefi --example sample_efi_app`. The resulting binary `sample_efi_app.efi` will be found in `target\x86_64-unknown-uefi\debug\examples\`. You can run it in qemu the same way as above, but it performs some network communication. Therefore you have to start qemu with network support. To do that:
+For a sample application see [`examples/sample_efi_app.rs`](examples/sample_efi_app.rs). Build it by running `cargo build -Z build-std=core,alloc --target x86_64-unknown-uefi --example sample_efi_app`. The resulting binary `sample_efi_app.efi` will be found in `target/x86_64-unknown-uefi/debug/examples`. You can run it in qemu the same way as above, but it performs some network communication. Therefore you have to start qemu with network support. To do that:
 
 1. Install a TAP adapter of your choice. Note the name of the newly-created TAP adapter
-2. In the qemu commandline include the `-tap` option to add the TAP adapter to the qemu virtual machine. The full commandline would be something like this: `<path where qemu is installed>/qemu-system-x86_64 -pflash <path where you downloaded ovmf.fd>/ovmf.fd -hda fat:rw:<path to your uefi application crate>/target/x86_64-unknown-efi/debug -net tap,ifname=<name of your TAP adapter> -net nic`
+2. In the qemu commandline include the `-tap` option to add the TAP adapter to the qemu virtual machine. The full commandline would be something like this: `<path where qemu is installed>/qemu-system-x86_64 -pflash <path where you downloaded ovmf.fd>/ovmf.fd -hda fat:rw:<path to your uefi application crate>/target/x86_64-unknown-efi/debug/examples -net tap,ifname=<name of your TAP adapter> -net nic`
