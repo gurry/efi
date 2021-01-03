@@ -38,7 +38,13 @@ fn run(_sys_table: &mut SystemTable) -> Result<(), String> {
 
     let pxe_protocols = net::pxebc::PxeBaseCodeProtocol::get_all_mut()
             .map_err(|_| "error while locating PXE protocols")?;
-    
+
+    if pxe_protocols.len() == 0 {
+        return Err(String::from("No PXE protocols found"));
+    }
+
+    println!("Found {0} PXE protocols", pxe_protocols.len());
+
     let pxe_protocol = &pxe_protocols[0];
     
     if pxe_protocol.cached_dhcp_config().unwrap_or(None).is_none() { // If there's cached config then DHCP has already happend. Otherwise we start it.
