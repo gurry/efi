@@ -8,7 +8,7 @@ use ffi::{
     EFI_SUCCESS,
     VOID,
 };
-use {system_table, Result};
+use crate::{system_table, Result};
 
 pub struct EfiBox<T>(Unique<T>);
 

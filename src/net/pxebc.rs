@@ -24,7 +24,7 @@ use ffi::{
     boot_services::EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL,
 };
 
-use {
+use crate::{
     EfiError,
     EfiErrorKind,
     Result,
@@ -39,7 +39,7 @@ use {
 };
 
 use core::{self, mem, ptr, default::Default};
-use utils::{to_ptr, Wrapper, to_opt};
+use crate::utils::{to_ptr, Wrapper, to_opt};
 use alloc::{string::String, vec::Vec};
 
 // TODO: THIS WHOLE MODULE NEEDS A COMPLETE OVERHAUL. 

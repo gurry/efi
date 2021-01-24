@@ -1,7 +1,7 @@
 // TODO: Write a proc macro called derive(TupleWrapper) which automaticlly impls Wrapper trait for any tuple struct wrapping types
 use ffi::CHAR16;
 use core::{self, mem, slice, fmt};
-use {EfiError, EfiErrorKind};
+use crate::{EfiError, EfiErrorKind};
 use alloc::str;
 
 pub trait Wrapper {
@@ -22,7 +22,7 @@ pub fn to_opt<'a, P, R>(ptr: *const P) -> Option<&'a R> {
 
 macro_rules! impl_wrapper {
     ($wrapper: ty, $inner: ty) => {
-        impl ::utils::Wrapper for $wrapper {
+        impl crate::utils::Wrapper for $wrapper {
             type Inner = $inner;
             fn inner_ptr(&self) -> *const Self::Inner {
                 use core::mem::transmute;
@@ -35,7 +35,7 @@ macro_rules! impl_wrapper {
 macro_rules! ret_on_err {
     ($e:expr) => {
         let status: ::ffi::EFI_STATUS = $e;
-        if !$crate::ffi::IsSuccess(status) {
+        if !($crates::ffi::IsSuccess(status) {
             return Err($crate::EfiError::from(status));
         }
     }

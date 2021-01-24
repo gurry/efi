@@ -1,4 +1,4 @@
-use {Result, io::{self, Read}, system_table, image_handle, EfiErrorKind};
+use crate::{Result, io::{self, Read}, system_table, image_handle, EfiErrorKind};
 use ffi::{
     media::{EFI_LOAD_FILE_PROTOCOL, EFI_LOAD_FILE_PROTOCOL_GUID}, 
     loaded_image::{EFI_LOADED_IMAGE_PROTOCOL, EFI_LOADED_IMAGE_PROTOCOL_GUID},
@@ -16,7 +16,7 @@ use ffi::{
     VOID,
     FALSE,
 };
-use device_path::{DevicePath, create_file_path_node, append_path};
+use crate::device_path::{DevicePath, create_file_path_node, append_path};
 use core::{self, ptr, mem, slice, cmp};
 use alloc::vec::Vec;
 

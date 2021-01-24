@@ -1,5 +1,5 @@
 //use std::net::Ipv6Addr;
-use ::net::Ipv6Addr;
+use crate::net::Ipv6Addr;
 
 use super::Error;
 use byteorder::{BigEndian, ByteOrder};

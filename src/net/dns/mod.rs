@@ -37,7 +37,7 @@ pub use self::builder::{Builder};
 
 use core::{time::Duration};
 use super::{UdpSocket, SocketAddr, IpAddr};
-use net::pxebc;
+use crate::net::pxebc;
 use alloc::vec::Vec;
 
 struct DnsServer {
@@ -48,7 +48,7 @@ const DNS_TIMEOUT: Duration = Duration::from_secs(30);
 // TODO: Swallowing/transmorgifying all errors. Fix this large scale shit wherever present
 impl DnsServer {
     fn query(&self, hostname: &str) -> ::Result<Vec<IpAddr>> {
-        use net::dns::rdata::a::Record;
+        use crate::net::dns::rdata::a::Record;
         let mut builder = Builder::new_query(1, true);
         builder.add_question(hostname, false, QueryType::A, QueryClass::IN);
         let packet = builder.build().map_err(|_| ::EfiErrorKind::DeviceError)?; 

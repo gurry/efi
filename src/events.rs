@@ -16,7 +16,7 @@ use ffi::{
 };
 
 use core::{ptr, time::Duration};
-use {system_table, Result};
+use crate::{system_table, Result};
 
 pub trait Signal {
     fn signal(&mut self) -> Result<()>;

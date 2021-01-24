@@ -10,8 +10,8 @@
 
 use alloc::boxed::Box;
 use core::cmp;
-use io::{self, SeekFrom, Read, Initializer, Write, Seek, Error, ErrorKind};
-use io::BufRead;
+use crate::io::{self, SeekFrom, Read, Initializer, Write, Seek, Error, ErrorKind};
+use crate::io::BufRead;
 use core::fmt;
 use core::mem;
 use alloc::{string::String, vec::Vec};

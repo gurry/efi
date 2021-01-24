@@ -1,5 +1,5 @@
 
-use system_table;
+use crate::system_table;
 use ffi::{EFI_SUCCESS, VOID, boot_services::EFI_MEMORY_TYPE};
 use core::{
     ptr,

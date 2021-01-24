@@ -9,15 +9,10 @@
 
 // #![warn(missing_debug_implementations)]
 
-extern crate failure;
 #[macro_use] extern crate alloc;
-extern crate byteorder;
-extern crate rlibc;
-extern crate utf8_width;
 
 #[macro_use] mod utils;
 #[macro_use] pub mod console;
-pub mod ffi;
 pub mod io;
 pub mod net;
 pub mod image;

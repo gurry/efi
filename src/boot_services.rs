@@ -6,7 +6,7 @@ use ffi::{
     VOID,
     UINTN,
 };
-use ::{Result, system_table, boxed::EfiBox};
+use crate::{Result, system_table, boxed::EfiBox};
 use core::{ptr};
 use alloc::vec::Vec;
 

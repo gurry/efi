@@ -4,7 +4,7 @@ pub mod pxebc;
 pub mod ifconfig;
 mod parser;
 
-use ::{
+use crate::{
     Result,
     system_table,
     image_handle,

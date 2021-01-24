@@ -6,7 +6,6 @@
 #[macro_use] extern crate alloc;
 
 use efi::{
-    ffi,
     SystemTable,
     net,
     init_env,

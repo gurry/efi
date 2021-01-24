@@ -1,4 +1,4 @@
-use {Result, boxed::EfiBox, system_table, image_handle};
+use crate::{Result, boxed::EfiBox, system_table, image_handle};
 use alloc::vec::Vec;
 use core::{ptr, mem, slice};
 use ffi::{
@@ -14,7 +14,7 @@ use ffi::{
     },
     boot_services::{EFI_LOCATE_SEARCH_TYPE, EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL},
 };
-use net::addr::Ipv4Addr;
+use crate::net::addr::Ipv4Addr;
 
 pub struct Interface {
     ipv4_config: EfiBox<EFI_IP4_IPCONFIG_DATA>,

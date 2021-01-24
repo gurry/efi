@@ -2,6 +2,7 @@
 name = "efi"
 version = "0.2.1"
 authors = ["Gurinder Singh <frederick.the.fool@gmail.com>"]
+edition = "2018"
 description = "Ergonomic Rust bindings for writing UEFI applications"
 repository = "https://github.com/gurry/efi"
 readme = "README.md"
@@ -14,6 +15,7 @@ default = ["allocator"]
 allocator = []
 
 [dependencies]
+ffi = { package = "efi_ffi", version = "0.1.0" }
 byteorder = { version = "1", default-features = false }
 rlibc = "1.0.0"
 utf8-width = "0.1.4"

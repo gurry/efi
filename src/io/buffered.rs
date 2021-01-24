@@ -11,12 +11,12 @@
 //! Buffering wrappers for I/O traits
 
 use core::prelude::v1::*;
-use io::prelude::*;
+use crate::io::prelude::*;
 
 use core::cmp;
 use core::fmt;
-use io::{self, Initializer, DEFAULT_BUF_SIZE, Error, ErrorKind, SeekFrom};
-use io::memchr;
+use crate::io::{self, Initializer, DEFAULT_BUF_SIZE, Error, ErrorKind, SeekFrom};
+use crate::io::memchr;
 
 /// The `BufReader` struct adds buffering to any reader.
 ///

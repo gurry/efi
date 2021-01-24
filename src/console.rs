@@ -39,10 +39,10 @@ use ffi::{
     FALSE,
 };
 use core::{cmp, mem::transmute};
-use io::{self, Write, Cursor, BufRead, BufReader, LineWriter};
-use ::Result;
-use system_table;
-use TextInputProcolPtr;
+use crate::io::{self, Write, Cursor, BufRead, BufReader, LineWriter};
+use crate::Result;
+use crate::system_table;
+use crate::TextInputProcolPtr;
 use alloc::{vec::Vec, string::String, str, fmt};
 
 // TODO: This whole module has gotten ugly. Needs cleanup.

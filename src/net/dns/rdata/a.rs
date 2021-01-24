@@ -1,5 +1,5 @@
 //use std::net::Ipv4Addr;
-use ::net::Ipv4Addr;
+use crate::net::Ipv4Addr;
 
 use super::Error;
 use byteorder::{BigEndian, ByteOrder};

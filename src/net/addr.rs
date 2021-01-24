@@ -1,6 +1,6 @@
 use ffi::{EFI_IPv4_ADDRESS, EFI_IPv6_ADDRESS, EFI_IP_ADDRESS};
 use core::{mem, fmt, iter, slice, option, cmp::Ordering};
-use io;
+use crate::io;
 use alloc::{string::String, vec::{self, Vec}};
 use super::dns::lookup_host;
 

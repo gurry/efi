@@ -11,9 +11,9 @@
 #![allow(missing_copy_implementations)]
 
 use core::fmt;
-use io::{self, Read, Initializer, Write, ErrorKind};
+use crate::io::{self, Read, Initializer, Write, ErrorKind};
 use core::mem;
-use io::BufRead;
+use crate::io::BufRead;
 
 /// Copies the entire contents of a reader into a writer.
 ///

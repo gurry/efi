@@ -14,9 +14,9 @@ use ffi::{
     UINT16,
 };
 
-use {EfiError, EfiErrorKind, Result, utils::as_slice};
+use crate::{EfiError, EfiErrorKind, Result, utils::as_slice};
 use core::{mem, ptr, fmt, slice};
-use system_table;
+use crate::system_table;
 use alloc::{string::String, boxed::Box, vec::Vec};
 
 // TODO: the whole concept of wrapping device path pointers like

@@ -1,6 +1,6 @@
 use ffi::UINTN;
 use core::time::Duration;
-use {system_table, Result};
+use crate::{system_table, Result};
 
 pub fn sleep(dur: Duration) -> Result<()> {
     let bs = system_table().BootServices;

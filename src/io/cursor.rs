@@ -9,10 +9,10 @@
 // except according to those terms.
 
 use core::prelude::v1::*;
-use io::prelude::*;
+use crate::io::prelude::*;
 
 use core::cmp;
-use io::{self, Initializer, SeekFrom, Error, ErrorKind};
+use crate::io::{self, Initializer, SeekFrom, Error, ErrorKind};
 use alloc::vec::Vec;
 
 /// A `Cursor` wraps another type and provides it with a
