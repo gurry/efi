@@ -35,8 +35,8 @@ macro_rules! impl_wrapper {
 macro_rules! ret_on_err {
     ($e:expr) => {
         let status: ::ffi::EFI_STATUS = $e;
-        if !($crates::ffi::IsSuccess(status) {
-            return Err($crate::EfiError::from(status));
+        if !ffi::IsSuccess(status) {
+            return Err(crate::EfiError::from(status));
         }
     }
 }

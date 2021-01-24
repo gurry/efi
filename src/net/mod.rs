@@ -76,7 +76,7 @@ pub struct TcpStream {
 }
 
 fn for_ip4_only<A: ToSocketAddrs, F: FnMut(SocketAddrV4) -> Result<S>, S>(addr: A, mut callback: F) -> Result<S> {
-    let socket_addrs = addr.to_socket_addrs().map_err(|_| ::EfiError::from(::EfiErrorKind::DeviceError))?; // Not just doing into() on EfiErrKind because compiler wants type annotations
+    let socket_addrs = addr.to_socket_addrs().map_err(|_| EfiError::from(EfiErrorKind::DeviceError))?; // Not just doing into() on EfiErrKind because compiler wants type annotations
 
     for addr in socket_addrs {
         match addr {
@@ -175,9 +175,9 @@ impl Tcp4Stream {
         let ip: EFI_IPv4_ADDRESS = (*addr.ip()).into();
         
         let dhcp_config = pxebc::PxeBaseCodeProtocol::get_any()?
-            .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?
+            .ok_or_else(|| EfiError::from(EfiErrorKind::DeviceError))?
             .cached_dhcp_config()?
-            .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
+            .ok_or_else(|| EfiError::from(EfiErrorKind::DeviceError))?;
 
         let station_ip = if let IpAddr::V4(ip) = dhcp_config.ip() { ip.into() } else { EFI_IPv4_ADDRESS::zero() };
         let subnet_mask = if let IpAddr::V4(ip) = dhcp_config.subnet_mask() { ip.into() } else { EFI_IPv4_ADDRESS::zero() };
@@ -434,7 +434,7 @@ impl UdpSocket {
     // TODO: need to make self non-mut just like in the std lib
     pub fn send_to<A: ToSocketAddrs>(&mut self, buf: &[u8], addr: A) -> Result<usize> {
         let mut last_error = EfiError::from(EfiErrorKind::InvalidParameter);
-        let socket_addrs = addr.to_socket_addrs().map_err(|_| ::EfiError::from(::EfiErrorKind::DeviceError))?; // Not just doing into() on EfiErrKind because compiler wants type annotations
+        let socket_addrs = addr.to_socket_addrs().map_err(|_| EfiError::from(EfiErrorKind::DeviceError))?; // Not just doing into() on EfiErrKind because compiler wants type annotations
         for addr in socket_addrs {
             if let SocketAddr::V4(addr) = addr {
                 let session_data = EFI_UDP4_SESSION_DATA{
@@ -566,7 +566,7 @@ impl Udp4Socket {
         //     // TODO: this shit doesn't work at all. Fix it.
         //     let matching_interface = ifconfig::interfaces()?.into_iter()
         //                                 .find(|i| i.station_address_ipv4() == station_addr)
-        //                                 .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
+        //                                 .ok_or_else(|| EfiError::from(EfiErrorKind::DeviceError))?;
         //     (matching_interface.subnet_mask_ipv4(), false)
         // };
 
@@ -617,7 +617,7 @@ impl Udp4Socket {
         // TODO: we can't possibly depend on DHCP config like discover packet etc. 
         // Find a better way to specify things like which interface we bind to
         let cached_discover_packet = dhcp_config.dhcp_discover_packet()
-            .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
+            .ok_or_else(|| EfiError::from(EfiErrorKind::DeviceError))?;
         let expected_hw_addr = cached_discover_packet.bootp_hw_addr();
         let hw_addr_len = cached_discover_packet.bootp_hw_addr_len() as usize;
         let valid_addr_len = if hw_addr_len != 0 { cmp::min(hw_addr_len, expected_hw_addr.len()) } else { ETHERNET_MAC_ADDR_LEN as usize };
@@ -732,7 +732,7 @@ impl Udp4Socket {
             to_res(read_len, self.recv_token.Status)
         } else {
             ret_on_err!(unsafe { ((*self.protocol).Cancel)(self.protocol, &self.recv_token) }); // Must cancel the token. Otherwise the next read fails with ACCESS_DENIED
-            Err(::EfiErrorKind::Timeout.into()) // TODO: check whether the std::UdpSocket returns a timeout error in this case or just Ok(0) and mimic its behaviour.
+            Err(EfiErrorKind::Timeout.into()) // TODO: check whether the std::UdpSocket returns a timeout error in this case or just Ok(0) and mimic its behaviour.
         }
     }
 
@@ -804,11 +804,11 @@ impl Drop for Udp4Socket {
 }
 
 fn extract_router_opt(dhcp_config: &DhcpConfig) -> Result<Ipv4Addr> {
-    let ack_pkt = dhcp_config.dhcp_ack_packet().ok_or_else(|| ::EfiError::from(::EfiErrorKind::NotFound))?;
+    let ack_pkt = dhcp_config.dhcp_ack_packet().ok_or_else(|| EfiError::from(EfiErrorKind::NotFound))?;
     let router_option = ack_pkt.dhcp_option(3)
-        .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
+        .ok_or_else(|| EfiError::from(EfiErrorKind::DeviceError))?;
     let router_ip_buf = router_option.value()
-        .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?;
+        .ok_or_else(|| EfiError::from(EfiErrorKind::DeviceError))?;
 
     let router_ip = Ipv4Addr::new(router_ip_buf[0], router_ip_buf[1], router_ip_buf[2], router_ip_buf[3]);
     Ok(router_ip)
@@ -828,12 +828,12 @@ fn form_default_route(dhcp_config: &DhcpConfig) -> Result<(EFI_IPv4_ADDRESS, EFI
 fn get_dhcp_config_with_ip(ip: &Ipv4Addr) -> Result<DhcpConfig> {
     let config = if *ip == Ipv4Addr::new(0, 0, 0, 0) { // If the caller didn't specify an IP we just return the first config we find. TODO: this is completely wrong. We need to bind on all IPs in case of 0.0.0.0 not the first IP we find
         pxebc::PxeBaseCodeProtocol::get_any()? // TODO: this is bullshit. We should use the PXE BC on the exact interface corresponding to supplied IP
-            .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?
+            .ok_or_else(|| EfiError::from(EfiErrorKind::DeviceError))?
             .cached_dhcp_config()?
-            .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?
+            .ok_or_else(|| EfiError::from(EfiErrorKind::DeviceError))?
     } else {
         pxebc::PxeBaseCodeProtocol::get_all()
-            .map_err(|_| ::EfiError::from(::EfiErrorKind::DeviceError))?
+            .map_err(|_| EfiError::from(EfiErrorKind::DeviceError))?
             .iter()
             .filter_map(|p| {
                 match p.cached_dhcp_config() {
@@ -843,7 +843,7 @@ fn get_dhcp_config_with_ip(ip: &Ipv4Addr) -> Result<DhcpConfig> {
             })
             .filter(|p| p.ip() == *ip)
             .nth(0)
-            .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?
+            .ok_or_else(|| EfiError::from(EfiErrorKind::DeviceError))?
     };
 
     Ok(config)

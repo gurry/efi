@@ -15,7 +15,7 @@ default = ["allocator"]
 allocator = []
 
 [dependencies]
-ffi = { package = "efi_ffi", version = "0.1.0" }
+ffi = { package = "efi_ffi", version = "0.1.1" }
 byteorder = { version = "1", default-features = false }
 rlibc = "1.0.0"
 utf8-width = "0.1.4"

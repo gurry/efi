@@ -39,7 +39,7 @@ use ffi::{
     FALSE,
 };
 use core::{cmp, mem::transmute};
-use crate::io::{self, Write, Cursor, BufRead, BufReader, LineWriter};
+use crate::{SystemTable, io::{self, Write, Cursor, BufRead, BufReader, LineWriter}};
 use crate::Result;
 use crate::system_table;
 use crate::TextInputProcolPtr;
@@ -473,7 +473,7 @@ pub struct Position {
 }
 
 pub fn console() -> Console {
-    ::SystemTable::new(system_table())
+    SystemTable::new(system_table())
         .expect("failed to create system table").console()
 }
 

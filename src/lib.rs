@@ -11,6 +11,8 @@
 
 #[macro_use] extern crate alloc;
 
+pub use ffi;
+
 #[macro_use] mod utils;
 #[macro_use] pub mod console;
 pub mod io;

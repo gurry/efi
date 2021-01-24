@@ -38,6 +38,7 @@ pub use self::builder::{Builder};
 use core::{time::Duration};
 use super::{UdpSocket, SocketAddr, IpAddr};
 use crate::net::pxebc;
+use crate::{EfiError, EfiErrorKind, Result};
 use alloc::vec::Vec;
 
 struct DnsServer {
@@ -47,11 +48,11 @@ struct DnsServer {
 const DNS_TIMEOUT: Duration = Duration::from_secs(30);
 // TODO: Swallowing/transmorgifying all errors. Fix this large scale shit wherever present
 impl DnsServer {
-    fn query(&self, hostname: &str) -> ::Result<Vec<IpAddr>> {
+    fn query(&self, hostname: &str) -> Result<Vec<IpAddr>> {
         use crate::net::dns::rdata::a::Record;
         let mut builder = Builder::new_query(1, true);
         builder.add_question(hostname, false, QueryType::A, QueryClass::IN);
-        let packet = builder.build().map_err(|_| ::EfiErrorKind::DeviceError)?; 
+        let packet = builder.build().map_err(|_| EfiErrorKind::DeviceError)?; 
         let mut socket = UdpSocket::bind("0.0.0.0:0")?;
         socket.send_to(&packet, self.addr)?;
         let mut buf = [0u8; 4096];
@@ -60,11 +61,11 @@ impl DnsServer {
         let pkt = Packet::parse(&buf).unwrap();
         if pkt.header.response_code != ResponseCode::NoError {
             // return Err(pkt.header.response_code.into());
-            return Err(::EfiErrorKind::DeviceError.into());
+            return Err(EfiErrorKind::DeviceError.into());
         }
 
         if pkt.answers.len() == 0 {
-            return Err(::EfiErrorKind::DeviceError.into());
+            return Err(EfiErrorKind::DeviceError.into());
         }
 
         let addrs = pkt.answers.iter()
@@ -78,10 +79,10 @@ impl DnsServer {
     }
 }
 
-pub (crate) fn lookup_host(hostname: &str) -> ::Result<Vec<IpAddr>> {
+pub (crate) fn lookup_host(hostname: &str) -> Result<Vec<IpAddr>> {
     let dns_servers = get_dns_servers()?;
     if dns_servers.is_empty() {
-        return Err(::EfiErrorKind::DeviceError.into());
+        return Err(EfiErrorKind::DeviceError.into());
     }
 
     for dns_server in dns_servers {
@@ -97,13 +98,13 @@ pub (crate) fn lookup_host(hostname: &str) -> ::Result<Vec<IpAddr>> {
     Ok(Vec::new())
 }
 
-fn get_dns_servers() -> ::Result<Vec<DnsServer>> {
+fn get_dns_servers() -> Result<Vec<DnsServer>> {
     // TODO: Assuming here that PXE has already happened. Should we kick it off here if it hasn't?
     const DNS_PORT: u16 = 53;
     let dns_servers = pxebc::PxeBaseCodeProtocol::get_any()? // TODO: this is bullshit. We should use the PXE BC on a specific interface
-        .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?
+        .ok_or_else(|| EfiError::from(EfiErrorKind::DeviceError))?
         .cached_dhcp_config()?
-        .ok_or_else(|| ::EfiError::from(::EfiErrorKind::DeviceError))?
+        .ok_or_else(|| EfiError::from(EfiErrorKind::DeviceError))?
         .dns_server_addrs().iter()
         .map(|ip| DnsServer { addr: (*ip, DNS_PORT).into() })
         .collect::<Vec<_>>();
