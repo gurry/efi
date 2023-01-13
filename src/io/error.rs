@@ -508,12 +508,12 @@ mod test {
         let msg = error_string(code);
         let kind = decode_error_kind(code);
         let err = Error {
-            repr: Repr::Custom(box Custom {
+            repr: Repr::Custom(Box::new(Custom {
                 kind: ErrorKind::InvalidInput,
-                error: box Error {
+                error: Box::new(Error {
                     repr: super::Repr::Os(code)
-                },
-            })
+                }),
+            }))
         };
         let expected = format!(
             "Custom {{ \
