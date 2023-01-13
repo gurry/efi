@@ -854,7 +854,7 @@ fn to_mac_addr(hw_addr: &[u8], valid_len: usize) -> EFI_MAC_ADDRESS {
     let mac_addr_len = mac_addr.Addr.len();
     let hw_addr_len = hw_addr.len();
     let len_to_copy = cmp::min(valid_len, cmp::min(mac_addr_len, hw_addr_len));
-    &mac_addr.Addr[..len_to_copy].copy_from_slice(hw_addr);
+    mac_addr.Addr[..len_to_copy].copy_from_slice(hw_addr);
     mac_addr
 }
 
