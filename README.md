@@ -2,7 +2,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/efi)](https://crates.io/crates/efi)
 
-A framework for writing UEFI applications in Rust. Acts like Rust standard library on the UEFI platform with support for things like:
+A framework for writing UEFI applications in Rust. Acts like the Rust standard library on the UEFI platform with support for things like:
 
 - Console I/O
 - Containers such as `Vec` and `String` via a custom allocator
