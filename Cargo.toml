@@ -1,6 +1,6 @@
 [package]
 name = "efi"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["Gurinder Singh <frederick.the.fool@gmail.com>"]
 edition = "2018"
 description = "Ergonomic Rust bindings for writing UEFI applications"
