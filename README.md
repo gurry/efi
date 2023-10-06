@@ -73,8 +73,9 @@ fn alloc_error(_: core::alloc::Layout) -> ! {
 ```
 
 ### Building
+Building the application requires the target `x86_64-unknown-uefi` to be installed on your machine. Install it by running the command `rustup target add x86_64-unknown-uefi`.
 
-Build the application by running `cargo build -Z build-std=core,alloc --target x86_64-unknown-uefi`. When the build completes the resulting EFI application `my_efi_app.efi` will be found in `target\x86_64-unknown-uefi\debug\`
+After the target is installed, build the application with the command `cargo build --target x86_64-unknown-uefi`. When the build completes the resulting EFI application `my_efi_app.efi` will be found in `target\x86_64-unknown-uefi\debug\`
 
 ### Running
 
@@ -89,7 +90,7 @@ Run the UEFI appliction in a qemu virtual machine by following the below steps:
 
 ### Example Application
 
-For a sample application see [`examples/sample_efi_app.rs`](examples/sample_efi_app.rs). Build it by running `cargo build -Z build-std=core,alloc --target x86_64-unknown-uefi --example sample_efi_app`. The resulting binary `sample_efi_app.efi` will be found in `target/x86_64-unknown-uefi/debug/examples`. 
+For a sample application see [`examples/sample_efi_app.rs`](examples/sample_efi_app.rs). Build it by running `cargo build --target x86_64-unknown-uefi --example sample_efi_app`. The resulting binary `sample_efi_app.efi` will be found in `target/x86_64-unknown-uefi/debug/examples`. 
 
 The application performs DHCP at the start to obtain an IP address and then makes an HTTP request to a specified server. So to run it you need to follow the below steps:
 
