@@ -43,7 +43,7 @@ To write a UEFI application using this framework follow the below steps:
 
 // Externs for efi and alloc crates (alloc crate is the one that contains definitions of String and Vec etc.)
 #[macro_use] extern crate efi;
-#[macro_use] extern crate alloc;
+extern crate alloc;
 
 
 // EFI entrypoint or main function. UEFI firmware will call this function to start the application.
