@@ -82,7 +82,7 @@ Run the UEFI appliction in a qemu virtual machine by following the below steps:
 
 1. Download and install qemu
 2. Google for `ovmf.fd` and download that binary (This is the OVMF firmware under which we will run the application)
-3. Start qemu by running this commandline: `<path where qemu is installed>/qemu-system-x86_64 -pflash <path where you downloaded ovmf.fd>/ovmf.fd -hda fat:rw:<path to your uefi application crate>/target/x86_64-unknown-efi/debug`
+3. Start qemu by running this commandline: `<path where qemu is installed>/qemu-system-x86_64 -pflash <path where you downloaded ovmf.fd>/ovmf.fd -hda fat:rw:<path to your uefi application crate>/target/x86_64-unknown-uefi/debug`
 4. Qemu will boot into `ovmf.fd` firmware and start the EFI shell
 5. Wait for EFI shell command prompt. When it appears enter the application's name `my_efi_app.efi` and press `ENTER`
 6. The application will run and print "Welcome to UEFI" on the qemu screen
@@ -96,6 +96,6 @@ The application performs DHCP at the start to obtain an IP address and then make
 1. Ensure that a DHCP server is running in your network and can give out IP addresses. 
 2. On the machine on which you will run the application, install a TAP adapter of your choice and note its name.
 3. Connect the TAP adapter to the same LAN as the DHCP server above. If they are not on the same LAN the application will not receive an IP address.
-4. Run qemu with the following commandline: `<path where qemu is installed>/qemu-system-x86_64 -pflash <path where you downloaded ovmf.fd>/ovmf.fd -hda fat:rw:<path to your uefi application crate>/target/x86_64-unknown-efi/debug/examples -net tap,ifname=<name of your TAP adapter> -net nic`. With the two `-net` options at the end this commandline tells qemu to use the TAP adapter you installed above. Ensure that the name you specify after `ifname=` is that of the TAP adapter which you noted above. 
+4. Run qemu with the following commandline: `<path where qemu is installed>/qemu-system-x86_64 -pflash <path where you downloaded ovmf.fd>/ovmf.fd -hda fat:rw:<path to your uefi application crate>/target/x86_64-unknown-uefi/debug/examples -net tap,ifname=<name of your TAP adapter> -net nic`. With the two `-net` options at the end this commandline tells qemu to use the TAP adapter you installed above. Ensure that the name you specify after `ifname=` is that of the TAP adapter which you noted above. 
 
 The application will start, perform DHCP, get an IP address, prompt you for the name of an HTTP server and then make a GET request to that server.
