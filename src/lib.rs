@@ -3,7 +3,6 @@
 #![no_std]
 #![recursion_limit="100"] // Needed for the dns module (because it does recursive name resolution)
 
-#![feature(str_internals)] // TODO: this looks very new and unstable. Can we get rid of it?
 #![feature(ptr_internals)]
 
 // #![warn(missing_debug_implementations)]
