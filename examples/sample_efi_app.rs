@@ -1,6 +1,5 @@
 #![no_std]
 #![no_main]
-#![feature(alloc_error_handler)]
 
 #[macro_use] extern crate efi;
 #[macro_use] extern crate alloc;
@@ -13,7 +12,7 @@ use efi::{
     EfiErrorKind,
 };
 use alloc::string::String;
-use core::{panic::PanicInfo, alloc::Layout};
+use core::{panic::PanicInfo};
 
 
 // EFI entry point. This function is the one that the UEFI platform calls when this image is loaded.
@@ -107,10 +106,5 @@ fn run(_sys_table: &mut SystemTable) -> Result<(), String> {
 // But if you want you can use these functions to handle panics and allocation failures.
 #[panic_handler]
 fn panic(_: &PanicInfo) -> ! {
-    loop {}
-}
-
-#[alloc_error_handler]
-fn alloc_error(_: Layout) -> ! {
     loop {}
 }
