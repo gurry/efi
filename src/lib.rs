@@ -3,8 +3,6 @@
 #![no_std]
 #![recursion_limit="100"] // Needed for the dns module (because it does recursive name resolution)
 
-#![feature(ptr_internals)]
-
 // #![warn(missing_debug_implementations)]
 
 #[macro_use] extern crate alloc;
@@ -17,7 +15,6 @@ pub mod io;
 pub mod net;
 pub mod image;
 pub mod device_path;
-pub mod boxed;
 pub mod events;
 pub mod time;
 mod allocator;

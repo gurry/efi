@@ -1,6 +1,6 @@
-use crate::{Result, boxed::EfiBox, system_table, image_handle};
-use alloc::vec::Vec;
-use core::{ptr, mem, slice};
+use crate::{Result, system_table, image_handle};
+use alloc::{vec::Vec, boxed::Box, alloc::alloc};
+use core::{ptr, mem, slice, alloc::Layout};
 use ffi::{
     EFI_HANDLE,
     VOID,
@@ -17,7 +17,7 @@ use ffi::{
 use crate::net::addr::Ipv4Addr;
 
 pub struct Interface {
-    ipv4_config: EfiBox<EFI_IP4_IPCONFIG_DATA>,
+    ipv4_config: Box<EFI_IP4_IPCONFIG_DATA>,
     // TODO: add IPv6 config too
 }
 
@@ -96,9 +96,9 @@ pub fn interfaces() -> Result<Vec<Interface>> {
         return Ok(Vec::new());
     }
 
-    let handle_buf = unsafe { EfiBox::from_raw(handle_buf as *mut EFI_HANDLE) };  // Putting it in a box for proper cleanup on exit
+    let mut handle_buf = unsafe { Box::from_raw(handle_buf as *mut EFI_HANDLE) };  // Putting it in a box for proper cleanup on exit
 
-    let handles = unsafe { slice::from_raw_parts_mut(handle_buf.as_raw() as *mut EFI_HANDLE, no_of_handles) };
+    let handles = unsafe { slice::from_raw_parts_mut(handle_buf.as_mut() as *mut EFI_HANDLE, no_of_handles) };
     
     // Enumerate all handles that installed with ip service binding protocol.
     let mut interfaces = Vec::new();
@@ -116,17 +116,20 @@ pub fn interfaces() -> Result<Vec<Interface>> {
 
         // TODO: add code to wait for IP protocol to initialize here.
         // Otherwise we get a no mapping error
-        let mut data_size = 0;
-        let status = unsafe { ((*config_proto).GetData)(config_proto, &mut data_size, ptr::null_mut()) };
+        let mut config_size = 0;
+        let status = unsafe { ((*config_proto).GetData)(config_proto, &mut config_size, ptr::null_mut()) };
 
         if status != EFI_BUFFER_TOO_SMALL {
             return Err(status.into());
         }
 
-        let config_data = unsafe { EfiBox::<EFI_IP4_IPCONFIG_DATA>::allocate(data_size)? };
-        unsafe { ret_on_err!(((*config_proto).GetData)(config_proto, &mut data_size, config_data.as_raw())); }
+        let layout = Layout::from_size_align(config_size, 8).or(Result::Err(crate::EfiErrorKind::BadBufferSize.into()))?;
+        let config_buffer = unsafe { alloc(layout) } as *mut EFI_IP4_IPCONFIG_DATA;
 
-        interfaces.push(Interface { ipv4_config: config_data });
+        unsafe { ret_on_err!(((*config_proto).GetData)(config_proto, &mut config_size, config_buffer)); }
+
+        let ipv4_config = unsafe { Box::<EFI_IP4_IPCONFIG_DATA>::from_raw(config_buffer) };
+        interfaces.push(Interface { ipv4_config });
     }
 
     Ok(interfaces)

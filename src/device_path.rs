@@ -163,7 +163,7 @@ fn to_string(path: *const EFI_DEVICE_PATH_PROTOCOL, is_single_node: bool) -> Res
     // will release this ptr, but we hope it'll call our allocator 
     // which in turn will call UEFI's heap free routine.
     // Secondly, won't the compiler optimize this statement away?
-    unsafe { Box::from_raw(text_ptr) };
+    unsafe { drop(Box::from_raw(text_ptr)) };
 
     Ok(utf8_string)
 }

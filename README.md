@@ -25,7 +25,6 @@ It uses the [`efi_ffi`](https://github.com/gurry/efi_ffi) crate to interface wit
 
 - Is a work in progress. API surface can change without notice.
 - Currently only `x64` architecture is supported.
-- Tested to compile only with Rust nightly version `nightly-2023-01-12`. May not compile with others. You must force this version using a `rust-toolchain` file (as shown in the following section)
 
 ## Writing a UEFI Application
 
@@ -33,8 +32,7 @@ To write a UEFI application using this framework follow the below steps:
 
 1. Create a new crate for your application by running `cargo new my_efi_app`, where `my_efi_app` is the name of the application
 2. Add `efi = "0.3"` under `[dependencies]` in `Cargo.toml`
-3. Add a file named `rust-toolchain` containing the text `nightly-2023-01-12` at the root of the crate. This will ensure that the crate is always built with nightly-2023-01-12.
-4. Add the below code in `my_efi_app/src/main.rs`. Comments in the code explain each part:
+3. Add the below code in `my_efi_app/src/main.rs`. Comments in the code explain each part:
 
 ```rust
 #![no_std] // Indicates to the Rust compiler that the app does not depend on the standard library but is a 'standalone' application.
@@ -66,12 +64,7 @@ fn panic(_: &core::panic::PanicInfo) -> ! {
 ```
 
 ### Building
-Building the application requires the target `x86_64-unknown-uefi` to be installed on your machine. To install it:
-
-1. Open a commmand shell in the root of your crate (i.e. `my_efi_app` folder in this case)
-2. Run the command `rustup target add x86_64-unknown-uefi`
-
-This must be done in the root of the crate because then the target will be installed for the Rust toolchain we specified above with the `root-toolchain` file.
+Building the application requires the target `x86_64-unknown-uefi` to be installed on your machine. Install it by running `rustup target add x86_64-unknown-uefi` in command shell.
 
 After the target is installed, build the application with the command `cargo build --target x86_64-unknown-uefi`. When the build completes the resulting EFI application `my_efi_app.efi` will be found in `target\x86_64-unknown-uefi\debug\`
 
