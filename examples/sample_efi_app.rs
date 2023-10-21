@@ -103,7 +103,7 @@ fn run(_sys_table: &mut SystemTable) -> Result<(), String> {
 }
 
 // The below code is required to make Rust compiler happy. Without it compilation will fail.
-// But if you want you can use these functions to handle panics and allocation failures.
+// But if you want, you can also use this function to handle panics.
 #[panic_handler]
 fn panic(_: &PanicInfo) -> ! {
     loop {}
