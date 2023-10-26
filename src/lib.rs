@@ -58,7 +58,6 @@ pub fn system_table() -> &'static EFI_SYSTEM_TABLE {
     }
 }
 
-// TODO: if a function (like this) returns an raw pointer, shouldn't it be marked unsafe?
 #[inline]
 pub fn image_handle() -> EFI_HANDLE {
     unsafe {
