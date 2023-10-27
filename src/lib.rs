@@ -17,14 +17,6 @@ pub mod time;
 mod allocator;
 mod boot_services;
 
-// Hack: this std declartion is to work around a bug in failure crate
-// wherein it looks for std even in no_std crates. Will remove it when
-// the bug is fixed.
-mod std {
-    pub use core::option;
-    pub use core::fmt;
-}
-
 use core::{fmt::{Debug, Display, Formatter}, ptr, mem::transmute};
 use ffi::{
     tcp4,
