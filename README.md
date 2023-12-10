@@ -19,7 +19,7 @@ Also offers an ergonomic API for UEFI-specific functionality such as:
 - PXE
 - Device paths
 
-It uses the [`efi_ffi`](https://github.com/gurry/efi_ffi) crate to interface with the UEFI platform.
+It uses a sister crate [`efi_ffi`](https://github.com/gurry/efi_ffi) to interface with the UEFI platform.
 
 ## Limitations
 
