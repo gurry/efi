@@ -18,5 +18,7 @@ jobs:
           toolchain: stable
           target: x86_64-unknown-uefi
           override: true
+    - name: Install UEFI target
+      run: rustup target add x86_64-unknown-uefi
     - name: Build
       run: cargo build --verbose --target x86_64-unknown-uefi
