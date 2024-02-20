@@ -14,10 +14,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-      with:
-          toolchain: stable
-          target: x86_64-unknown-uefi
-          override: true
     - name: Install UEFI target
       run: rustup target add x86_64-unknown-uefi
     - name: Build
