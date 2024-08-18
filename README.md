@@ -24,7 +24,14 @@ It uses a sister crate [`efi_ffi`](https://github.com/gurry/efi_ffi) to interfac
 ## Limitations
 
 - Is a work in progress. API surface can change without notice.
-- Currently only `x64` architecture is supported.
+- Currently only `x64` architecture is supported. In terms of Rust this implies that the crate builds only with the target `x86_64-unknown-uefi`.
+
+
+## Building the Crate
+To build this crate:
+1. Make sure the Rust target `x86_64-unknown-uefi` is installed. If not, install it by running the command `rustup target add x86_64-unknown-uefi`
+2. Build the crate by navigating into this repo and running the command `cargo build --target x86_64-unknown-uefi`
+
 
 ## Writing a UEFI Application
 
