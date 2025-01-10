@@ -28,7 +28,8 @@ It uses a sister crate [`efi_ffi`](https://github.com/gurry/efi_ffi) to interfac
 
 
 ## Building the Crate
-To build this crate:
+
+To build the crate:
 1. Make sure the Rust target `x86_64-unknown-uefi` is installed. If not, install it by running the command `rustup target add x86_64-unknown-uefi`
 2. Build the crate by navigating into this repo and running the command `cargo build --target x86_64-unknown-uefi`
 
@@ -43,14 +44,14 @@ To write a UEFI application using this framework follow the below steps:
 
 ```rust
 #![no_std] // Indicates to the Rust compiler that the app does not depend on the standard library but is a 'standalone' application.
-#![no_main] // Indicates that this application does not have a "main" function typically found in a Linux or Windows application (although it does have its own "main" function "efi_main" as declared below)
+#![no_main] // Indicates that this application does not have a standard "main" function typically found in a Linux or Windows application (although it does have its own main function "efi_main")
 
 // Externs for efi and alloc crates (alloc crate is the one that contains definitions of String and Vec etc.)
 #[macro_use] extern crate efi;
 extern crate alloc;
 
 
-// EFI entrypoint or main function. UEFI firmware will call this function to start the application.
+// EFI entrypoint or main function. UEFI firmware will call it to start the application.
 // The signature and the name of this function must be exactly as below.
 #[no_mangle]
 pub extern "win64" fn efi_main(image_handle: efi::ffi::EFI_HANDLE, sys_table : *const efi::ffi::EFI_SYSTEM_TABLE) -> isize {
@@ -71,6 +72,7 @@ fn panic(_: &core::panic::PanicInfo) -> ! {
 ```
 
 ### Building
+
 Building the application requires the target `x86_64-unknown-uefi` to be installed on your machine. Install it by running `rustup target add x86_64-unknown-uefi` in command shell.
 
 After the target is installed, build the application with the command `cargo build --target x86_64-unknown-uefi`. When the build completes the resulting EFI application `my_efi_app.efi` will be found in `target\x86_64-unknown-uefi\debug\`
